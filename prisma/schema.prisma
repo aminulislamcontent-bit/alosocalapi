@@ -1,0 +1,542 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Admin (Al-Amin) master account
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// Client onboarding accounts — created by admin with temp credentials
+model ClientAccount {
+  id           String            @id @default(cuid())
+  name         String
+  business     String
+  phone        String?
+  username     String            @unique
+  passwordHash String
+  // active | locked | completed
+  status       String            @default("active")
+  // JSON array of platform keys e.g. ["facebook","whatsapp"]
+  platforms    String            @default("[]")
+  note         String?
+  createdAt    DateTime          @default(now())
+  completedAt  DateTime?
+  entries      CredentialEntry[]
+  logs         ActivityLog[]
+  // Growth engine (tenant workspace)
+  targetingProfiles    TargetingProfile[]
+  acquisitionCampaigns AcquisitionCampaign[]
+  acqLeads             AcqLead[]
+  approvalRequests     ApprovalRequest[]
+  governanceEntries    ContactGovernance[]
+  websiteAudits        WebsiteAudit[]
+  contentItems         ContentItem[]
+}
+
+// Server-side sessions (revocable)
+model PortalSession {
+  token     String   @id
+  role      String // admin | client
+  adminId   String?
+  clientId  String?
+  ip        String?
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// One collected credential value per (client, platform, field)
+model CredentialEntry {
+  id        String        @id @default(cuid())
+  clientId  String
+  client    ClientAccount @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  platform  String
+  fieldKey  String
+  value     String        @default("")
+  // pending | collected | skipped
+  status    String        @default("pending")
+  // SetupBot health-check result: none | valid | invalid | error
+  validationStatus  String   @default("none")
+  validationNote    String   @default("")
+  validatedAt       DateTime?
+  updatedAt DateTime      @updatedAt
+
+  @@unique([clientId, platform, fieldKey])
+}
+
+// Audit trail — who did what (fits "IP Access" theme)
+model ActivityLog {
+  id        String         @id @default(cuid())
+  clientId  String?
+  client    ClientAccount? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  actor     String // admin | client | system
+  action    String
+  detail    String?
+  ip        String?
+  createdAt DateTime       @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// ALO Education BD — CRM & Automation
+// ─────────────────────────────────────────────────────────────
+
+// Students / guardians / business contacts
+model Contact {
+  id           String        @id @default(cuid())
+  name         String
+  phone        String?
+  email        String?
+  // student | guardian | business | other
+  kind         String        @default("student")
+  grade        String? // interested class/course level
+  // youtube | facebook | whatsapp | referral | walk_in | phone | manual
+  source       String        @default("manual")
+  address      String?
+  note         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  leads        Lead[]
+  interactions Interaction[]
+  tasks        CrmTask[]
+
+  @@index([name])
+  @@index([phone])
+}
+
+// Enrollment opportunities moving through the admission pipeline
+model Lead {
+  id           String        @id @default(cuid())
+  contactId    String
+  contact      Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  title        String // e.g. "IELTS কোর্সে ভর্তি"
+  // new | contacted | demo | negotiated | enrolled | lost
+  stage        String        @default("new")
+  value        Int           @default(0) // expected fee in BDT
+  course       String?
+  note         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  interactions Interaction[]
+  tasks        CrmTask[]
+
+  @@index([stage])
+  @@index([contactId])
+}
+
+// Follow-up tasks (manual or automation-generated)
+model CrmTask {
+  id          String    @id @default(cuid())
+  title       String
+  done        Boolean   @default(false)
+  dueAt       DateTime?
+  // low | medium | high
+  priority    String    @default("medium")
+  contactId   String?
+  contact     Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  // manual | rule:<automationRuleId>
+  origin      String    @default("manual")
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([done])
+  @@index([dueAt])
+}
+
+// Timeline of communications (calls, WhatsApp, notes, system events)
+model Interaction {
+  id        String   @id @default(cuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  // call | whatsapp | email | meeting | note | system
+  channel   String   @default("note")
+  body      String
+  // manual | rule:<automationRuleId>
+  origin    String   @default("manual")
+  createdAt DateTime @default(now())
+
+  @@index([contactId])
+  @@index([createdAt])
+}
+
+// If-This-Then-That rules evaluated server-side on CRM events
+model AutomationRule {
+  id        String          @id @default(cuid())
+  name      String
+  // lead_created | stage_changed | task_completed
+  trigger   String
+  // for stage_changed: the stage value to match, e.g. "enrolled"; null = any
+  condition String?
+  // create_task | log_interaction
+  action    String
+  // JSON: {title, dueInHours, priority, channel, body}
+  payload   String          @default("{}")
+  enabled   Boolean         @default(true)
+  builtIn   Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  runs      AutomationRun[]
+
+  @@index([trigger])
+}
+
+// Execution record for every automation firing
+model AutomationRun {
+  id        String         @id @default(cuid())
+  ruleId    String
+  rule      AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  leadId    String?
+  contactId String?
+  detail    String?
+  // success | skipped
+  status    String         @default("success")
+  createdAt DateTime       @default(now())
+
+  @@index([ruleId])
+  @@index([createdAt])
+}
+
+// Knowledge base — courses, fees, schedules, policies, FAQs
+model KnowledgeEntry {
+  id        String   @id @default(cuid())
+  title     String
+  // course | fee | schedule | policy | faq
+  category  String   @default("general")
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
+// ─────────────────────────────────────────────────────────────
+// UNIVERSAL LEAD DISCOVERY & GROWTH ENGINE (multi-tenant)
+// ─────────────────────────────────────────────────────────────
+
+// Dynamic industry taxonomy — admin-extensible, no code rewrites
+model IndustryTaxonomy {
+  id         String  @id @default(cuid())
+  slug       String  @unique
+  nameEn     String
+  nameBn     String
+  parentSlug String? // null = top-level category
+  level      Int     @default(1) // 1 = category, 2 = sub-industry
+  keywords   String  @default("[]") // JSON array of en/bn match keywords
+  custom     Boolean @default(false)
+  active     Boolean @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([parentSlug])
+}
+
+// Maintained country reference (ISO 3166-1 alpha-2)
+model GeoCountry {
+  code    String  @id // ISO alpha-2
+  nameEn  String
+  nameBn  String
+  region  String // continent / UN region
+  currency String?
+  active  Boolean @default(true)
+}
+
+// Admin-added regions/cities/postal areas for granular targeting
+model GeoArea {
+  id          String   @id @default(cuid())
+  countryCode String
+  admin1      String? // state/division
+  city        String?
+  postal      String?
+  lat         Float?
+  lon         Float?
+  custom      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([countryCode])
+}
+
+// Provider registry — never claimed free/integrated until verified
+model ProviderRegistry {
+  key               String    @id
+  name              String
+  // google | market | social | opendata | directory
+  category          String
+  sourceUrl         String
+  accessMethod      String // rss | rest_api | sparql | oauth2_api | manual
+  dataFields        String    @default("[]")
+  authRequired      Boolean   @default(false)
+  freeTier          String    @default("{}") // JSON limits
+  paidTier          String    @default("{}")
+  rateLimit         String    @default("{}")
+  licensing         String
+  geoCoverage       String    @default("global")
+  lastVerifiedAt    DateTime?
+  // planned | verified | rate_limited | blocked_here | requires_credentials | failing
+  integrationStatus String    @default("planned")
+  reliability       String    @default("unknown") // high | medium | low | unknown
+  notes             String?
+  lastCheck         String? // JSON of last verification result
+  updatedAt         DateTime  @updatedAt
+}
+
+// Reusable targeting profile (client-scoped)
+model TargetingProfile {
+  id             String        @id @default(cuid())
+  clientId       String
+  client         ClientAccount @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name           String
+  industries     String        @default("[]") // JSON slugs
+  countries      String        @default("[]") // JSON ISO codes
+  areas          String        @default("[]") // JSON GeoArea ids or free text
+  audience       String? // target customer description
+  keywords       String        @default("[]")
+  intentSignals  String        @default("[]")
+  competitorRefs String        @default("[]")
+  exclusions     String        @default("[]")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([clientId])
+}
+
+// Campaign — Mode B targeting + budget policy + source selection
+model AcquisitionCampaign {
+  id                    String        @id @default(cuid())
+  clientId              String
+  client                ClientAccount @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  profileId             String?
+  name                  String
+  // universal | targeted
+  mode                  String        @default("targeted")
+  objective             String?
+  // free_only | free_first | paid_with_approval
+  budgetPreference      String        @default("free_first")
+  sourceKeys            String        @default("[]") // enabled provider keys
+  qualificationCriteria String        @default("{}") // JSON thresholds
+  exclusions            String        @default("[]")
+  // draft | active | paused | completed
+  status                String        @default("draft")
+  stats                 String        @default("{}")
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  runs                  DiscoveryRun[]
+
+  @@index([clientId, status])
+}
+
+// One discovery execution with full provenance
+model DiscoveryRun {
+  id         String               @id @default(cuid())
+  clientId   String
+  campaignId String?
+  campaign   AcquisitionCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  mode       String
+  // queued | running | completed | partial | failed
+  status     String               @default("queued")
+  params     String               @default("{}")
+  stats      String               @default("{}")
+  logs       String               @default("[]")
+  startedAt  DateTime             @default(now())
+  finishedAt DateTime?
+
+  @@index([clientId, startedAt])
+}
+
+// Discovered public business lead (tenant-isolated, provenance-required)
+model AcqLead {
+  id                   String        @id @default(cuid())
+  clientId             String
+  client               ClientAccount @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  campaignId           String?
+  runId                String?
+  fingerprint          String // dedupe hash
+  businessName         String
+  website              String?
+  category             String? // industry slug
+  countryCode          String?
+  regionName           String?
+  cityName             String?
+  publicContactChannel String? // public business contact channel only
+  contactType          String? // website_form | public_email | public_phone | social_page
+  productsServices     String?
+  description          String?
+  // provenance (mandatory)
+  sourceProviderKey    String
+  sourceUrl            String
+  evidence             String        @default("[]") // JSON [{type, detail, url}]
+  usageRestrictions    String?
+  confidence           Float         @default(0.5)
+  freshnessAt          DateTime?
+  // unverified | verified | rejected | duplicate
+  reviewStatus         String        @default("unverified")
+  // discovered | data_validation | qualification_review | qualified | assigned |
+  // contact_permitted | contacted | follow_up | opportunity | customer | closed |
+  // rejected | duplicate | unverified | do_not_contact | opted_out | data_expired
+  pipelineStatus       String        @default("discovered")
+  score                Float?
+  scoreBreakdown       String? // JSON component scores + explanations
+  intentSignals        String        @default("[]")
+  assignedTo           String?
+  lawfulBasis          String? // public_business_info | consent | contract
+  consentStatus        String        @default("not_collected") // not_collected | granted | refused
+  firstSeenAt          DateTime      @default(now())
+  lastSeenAt           DateTime      @default(now())
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  activities           AcqLeadActivity[]
+
+  @@unique([clientId, fingerprint])
+  @@index([clientId, pipelineStatus])
+  @@index([clientId, reviewStatus])
+}
+
+model AcqLeadActivity {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      AcqLead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  clientId  String
+  // note | status_change | score | assignment | contact | import | governance
+  type      String
+  actor     String
+  data      String   @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+}
+
+// Human-approval workflow (paid usage, publishing, exports, outbound contact…)
+model ApprovalRequest {
+  id            String         @id @default(cuid())
+  clientId      String?
+  client        ClientAccount? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  // paid_usage | bulk_export | outbound_contact | public_publish | credential_change | integration_change
+  type          String
+  payload       String         @default("{}")
+  // pending | approved | rejected | expired
+  status        String         @default("pending")
+  justification String?
+  requestedBy   String?
+  decidedBy     String?
+  decidedAt     DateTime?
+  createdAt     DateTime       @default(now())
+
+  @@index([clientId, status])
+}
+
+// Per-provider consumption tracking + cost ledger (USD)
+model ProviderUsage {
+  id          String   @id @default(cuid())
+  clientId    String?
+  providerKey String
+  units       Int      @default(1)
+  // requests | articles | entities | audits
+  unitType    String   @default("requests")
+  windowStart DateTime @default(now())
+
+  @@index([providerKey, windowStart])
+}
+
+model CostLedger {
+  id           String   @id @default(cuid())
+  clientId     String?
+  providerKey  String
+  period       String // YYYY-MM
+  units        Int      @default(0)
+  estimatedUsd Float    @default(0)
+  note         String?
+
+  @@unique([clientId, providerKey, period])
+}
+
+// Contact governance: DNC / opt-out / consent registry
+model ContactGovernance {
+  id         String        @id @default(cuid())
+  clientId   String
+  client     ClientAccount @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  // website_form | public_email | public_phone | social_page | whatsapp | sms | email
+  channel    String
+  identifier String // normalized phone/email/domain
+  // allow | dnc | opted_out
+  status     String        @default("dnc")
+  reason     String?
+  source     String? // who registered it
+  createdAt  DateTime      @default(now())
+
+  @@unique([clientId, channel, identifier])
+  @@index([clientId, status])
+}
+
+// Immutable audit events for engine actions
+model AuditEvent {
+  id            String   @id @default(cuid())
+  clientId      String?
+  actor         String
+  actorRole     String
+  action        String
+  resource      String
+  resourceId    String?
+  before        String? // JSON
+  after         String? // JSON
+  justification String?
+  ip            String?
+  createdAt     DateTime @default(now())
+
+  @@index([clientId, createdAt])
+  @@index([action])
+}
+
+// Universal discovery output — market opportunity reports
+model OpportunityReport {
+  id          String   @id @default(cuid())
+  clientId    String?
+  runId       String?
+  scope       String   @default("{}") // JSON countries, industries
+  findings    String   @default("[]") // JSON ranked opportunities with evidence
+  sources     String   @default("[]") // JSON provider keys used
+  generatedAt DateTime @default(now())
+}
+
+// Website growth audits (PageSpeed Insights real data)
+model WebsiteAudit {
+  id              String        @id @default(cuid())
+  clientId        String
+  client          ClientAccount @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  url             String
+  psiData         String        @default("{}") // raw PSI lab data
+  scores          String        @default("{}") // performance/seo/accessibility/bp
+  recommendations String        @default("[]") // JSON actionable items
+  // completed | rate_limited | failed
+  status          String        @default("completed")
+  createdAt       DateTime      @default(now())
+
+  @@index([clientId, createdAt])
+}
+
+// Social content calendar (draft → approval → publish; no fake engagement)
+model ContentItem {
+  id           String        @id @default(cuid())
+  clientId     String
+  client       ClientAccount @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  platform     String // facebook | instagram | youtube | linkedin | tiktok | x
+  scheduledFor DateTime?
+  draft        String
+  hashtags     String        @default("[]")
+  // idea | draft | awaiting_approval | approved | published | rejected
+  status       String        @default("idea")
+  approvedBy   String?
+  publishedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([clientId, status])
+}
