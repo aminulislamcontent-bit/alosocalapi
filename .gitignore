@@ -17,13 +17,9 @@ server.log
 
 # platform/workspace-only dirs (not part of the app)
 integrations/
-upload/
-download/
 tool-results/
 skills/
 .zscripts/
-mini-services/
-examples/
 
 # misc
 .DS_Store
