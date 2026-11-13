@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
       assignedTo: l.assignedTo,
       lawfulBasis: l.lawfulBasis,
       consentStatus: l.consentStatus,
+      followUpAt: l.followUpAt?.toISOString() ?? null,
       freshnessAt: l.freshnessAt?.toISOString() ?? null,
       firstSeenAt: l.firstSeenAt.toISOString(),
     })),
@@ -261,6 +262,20 @@ export async function PATCH(req: NextRequest) {
       await writeAudit({ clientId, actor, actorRole: role, action: 'lead.dnc', resource: 'acq_lead', resourceId: lead.id, after: { identifier, channel } });
       return NextResponse.json({ ok: true });
     }
+    case 'schedule_followup': {
+      // §8 follow-up scheduling — body.value = ISO date/datetime string
+      const when = body.value ? new Date(body.value) : null;
+      if (!when || Number.isNaN(when.getTime())) {
+        return NextResponse.json({ error: 'value হিসেবে বৈধ ISO তারিখ দিন।' }, { status: 400 });
+      }
+      const before = lead.followUpAt?.toISOString() ?? null;
+      await db.acqLead.update({ where: { id: lead.id }, data: { followUpAt: when } });
+      await db.acqLeadActivity.create({
+        data: { leadId: lead.id, clientId, type: 'note', actor, data: JSON.stringify({ followup_scheduled: when.toISOString(), previous: before }) },
+      });
+      await writeAudit({ clientId, actor, actorRole: role, action: 'lead.schedule_followup', resource: 'acq_lead', resourceId: lead.id, before: { followUpAt: before }, after: { followUpAt: when.toISOString() } });
+      return NextResponse.json({ ok: true, followUpAt: when.toISOString() });
+    }
     case 'data_expired': {
       await db.acqLead.update({ where: { id: lead.id }, data: { pipelineStatus: 'data_expired' } });
       await db.acqLeadActivity.create({
@@ -305,13 +320,15 @@ export async function PATCH(req: NextRequest) {
         hasWebsite: Boolean(lead.website),
       });
       const criteria = json<{ minScore?: number }>(campaign.qualificationCriteria, {});
+      // §12: suggest_only autonomy = suggestions only, no auto-advance
+      const noAutoAdvance = campaign.autonomy === 'suggest_only';
       await db.acqLead.update({
         where: { id: lead.id },
         data: {
           score: score.score,
           scoreBreakdown: JSON.stringify(score),
           category: match.slug ?? lead.category,
-          pipelineStatus: autoAdvanceStatus(score.score, criteria),
+          ...(noAutoAdvance ? {} : { pipelineStatus: autoAdvanceStatus(score.score, criteria) }),
         },
       });
       await db.acqLeadActivity.create({

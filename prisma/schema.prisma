@@ -25,6 +25,8 @@ model ClientAccount {
   passwordHash String
   // active | locked | completed
   status       String            @default("active")
+  // §8 tenant-level data retention window in days (null = retention sweep disabled)
+  retentionDays Int?
   // JSON array of platform keys e.g. ["facebook","whatsapp"]
   platforms    String            @default("[]")
   note         String?
@@ -321,6 +323,8 @@ model AcquisitionCampaign {
   objective             String?
   // free_only | free_first | paid_with_approval
   budgetPreference      String        @default("free_first")
+  // §12: suggest_only | approval_required | approved_automation
+  autonomy              String        @default("approval_required")
   sourceKeys            String        @default("[]") // enabled provider keys
   qualificationCriteria String        @default("{}") // JSON thresholds
   exclusions            String        @default("[]")
@@ -389,6 +393,7 @@ model AcqLead {
   assignedTo           String?
   lawfulBasis          String? // public_business_info | consent | contract
   consentStatus        String        @default("not_collected") // not_collected | granted | refused
+  followUpAt           DateTime?     // §8 scheduled follow-up
   firstSeenAt          DateTime      @default(now())
   lastSeenAt           DateTime      @default(now())
   createdAt            DateTime      @default(now())

@@ -18,9 +18,10 @@ interface Lead {
   id: string; businessName: string; website?: string | null; category?: string | null; countryCode?: string | null;
   pipelineStatus: string; reviewStatus: string; score?: number | null; sourceProviderKey: string; sourceUrl: string;
   confidence: number; lawfulBasis?: string | null; consentStatus: string; contactType?: string | null;
+  followUpAt?: string | null;
   scoreBreakdown?: { summary?: string; breakdown?: { key: string; max: number; got: number; why: string }[] } | null;
 }
-interface Campaign { id: string; name: string; profileId?: string | null; budgetPreference: string; status: string; stats: Record<string, unknown>; sourceKeys: string[] }
+interface Campaign { id: string; name: string; profileId?: string | null; budgetPreference: string; autonomy: string; status: string; stats: Record<string, unknown>; sourceKeys: string[] }
 interface Profile { id: string; name: string; industries: string[]; countries: string[]; keywords: string[] }
 interface RunRow { id: string; campaignId?: string | null; mode: string; status: string; stats: Record<string, unknown>; logs: string[]; startedAt: string }
 interface Finding { country: string; industry: string | null; industryName: string | null; demandSignals: number; newsMentions: number; opportunityScore: number; sampleTrends: { title: string; traffic?: string; url?: string }[]; sampleNews: { title: string; url: string; source?: string }[] }
@@ -317,6 +318,7 @@ function Campaigns({ clientId, taxonomy, providers, onToast }: { clientId: strin
   const [cName, setCName] = useState('');
   const [cProfile, setCProfile] = useState('');
   const [cBudget, setCBudget] = useState('free_first');
+  const [cAutonomy, setCAutonomy] = useState('approval_required');
   const [cSources, setCSources] = useState<string[]>(['wikidata_sparql', 'google_news_rss']);
 
   const load = () => {
@@ -345,7 +347,7 @@ function Campaigns({ clientId, taxonomy, providers, onToast }: { clientId: strin
     try {
       const r = await api<{ campaignId: string }>('/api/engine/campaigns', {
         method: 'POST',
-        body: JSON.stringify({ clientId, name: cName, profileId: cProfile, budgetPreference: cBudget, sourceKeys: cSources, qualificationCriteria: { minScore: 55 } }),
+        body: JSON.stringify({ clientId, name: cName, profileId: cProfile, budgetPreference: cBudget, autonomy: cAutonomy, sourceKeys: cSources, qualificationCriteria: { minScore: 55 } }),
       });
       await api('/api/engine/campaigns', { method: 'PATCH', body: JSON.stringify({ clientId, id: r.campaignId, status: 'active' }) });
       onToast('ক্যাম্পেইন তৈরি + সক্রিয়'); setCName(''); load();
@@ -388,6 +390,11 @@ function Campaigns({ clientId, taxonomy, providers, onToast }: { clientId: strin
               <option value="free_first">Free First</option>
               <option value="paid_with_approval">Paid With Approval</option>
             </select>
+            <select value={cAutonomy} onChange={e => setCAutonomy(e.target.value)} className="w-full px-2 py-1.5 rounded bg-slate-900 border border-slate-700 text-slate-200">
+              <option value="suggest_only">Suggest Only (§12)</option>
+              <option value="approval_required">Approval Required (§12)</option>
+              <option value="approved_automation">Approved Automation (§12)</option>
+            </select>
             <div className="flex flex-wrap gap-1.5">
               {freeProviders.map(p => (
                 <button
@@ -409,6 +416,7 @@ function Campaigns({ clientId, taxonomy, providers, onToast }: { clientId: strin
               <span className="font-semibold text-slate-100">{c.name}</span>
               <Badge status={c.status} />
               <span className="text-slate-500 font-mono text-[10px]">{c.budgetPreference}</span>
+              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300" title="§12 autonomy level">{c.autonomy}</span>
               <span className="text-slate-500 text-[10px]">sources: {c.sourceKeys.join(', ') || '—'}</span>
               {Boolean(c.stats?.lastRunId) ? (<span className="text-[10px] text-slate-400">শেষ রান: inserted {String(c.stats.inserted ?? 0)}, updated {String(c.stats.updated ?? 0)}</span>) : null}
               <button onClick={() => runDiscovery(c.id)} className="ml-auto px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-500 text-white text-[11px] font-semibold">
@@ -494,6 +502,7 @@ function Leads({ clientId, onToast }: { clientId: string; onToast: (m: string, t
               {l.category && <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">{l.category}</span>}
               <span className="font-mono text-cyan-300">score {l.score?.toFixed(0) ?? '—'}</span>
               <Badge status={l.pipelineStatus} />
+              {l.followUpAt && <span className="px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-300 text-[10px]" title="§8 scheduled follow-up">follow-up: {new Date(l.followUpAt).toLocaleDateString('en-GB')}</span>}
               <select
                 value={l.pipelineStatus}
                 onChange={e => patch(l.id, 'pipeline_status', e.target.value)}

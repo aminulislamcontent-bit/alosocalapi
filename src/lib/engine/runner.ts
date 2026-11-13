@@ -69,6 +69,8 @@ export async function runTargetedDiscovery(opts: {
   const campaign = await db.acquisitionCampaign.findUnique({ where: { id: opts.campaignId } });
   if (!campaign) return { ok: false, error: 'ক্যাম্পেইন পাওয়া যায়নি।' };
   if (campaign.clientId !== opts.clientId) return { ok: false, error: 'টেন্যান্ট আইসোলেশন ভায়োলেশন।' };
+  // §12 autonomy: suggest_only = AI suggestions only, leads never auto-advance
+  const suggestOnly = campaign.autonomy === 'suggest_only';
 
   const run = await db.discoveryRun.create({
     data: {
@@ -100,6 +102,7 @@ export async function runTargetedDiscovery(opts: {
   });
   stats.enabledSources = activeSources;
   logs.push(`সক্রিয় সোর্স (যাচাইকৃত + ফ্রি-বাজেট সামঞ্জস্যপূর্ণ): ${activeSources.join(', ') || 'কোনোটি নয়'}`);
+  if (suggestOnly) logs.push('autonomy=suggest_only — লিড শুধু প্রস্তাব হিসেবে থাকবে (auto-advance নেই, review_status=unverified)।');
 
   let inserted = 0;
   let updated = 0;
@@ -176,7 +179,8 @@ export async function runTargetedDiscovery(opts: {
             usageRestrictions: 'Wikidata CC0 — business-level public info only; সরাসরি যোগাযোগের আগে governance চেক আবশ্যক।',
             confidence: 0.6 + (match.strength * 0.2) + (biz.website ? 0.1 : 0),
             freshnessAt: new Date(),
-            pipelineStatus: autoAdvanceStatus(score.score, { minScore: config.minScore }),
+            pipelineStatus: suggestOnly ? 'discovered' : autoAdvanceStatus(score.score, { minScore: config.minScore }),
+            reviewStatus: suggestOnly ? 'unverified' : 'verified',
             score: score.score,
             scoreBreakdown: JSON.stringify(score),
             intentSignals: JSON.stringify([]),
