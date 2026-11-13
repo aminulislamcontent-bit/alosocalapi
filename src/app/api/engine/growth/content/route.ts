@@ -128,7 +128,29 @@ export async function PATCH(req: NextRequest) {
   }
 
   const allowed = STATUS_FLOW[item.status] ?? [];
-  if (!allowed.includes(body.status)) {
+  // §12 approved_automation: an ACTIVE campaign with autonomy=approved_automation
+  // authorizes direct draft→published transition (contact/paid/export stay gated)
+  let autoAutomation = false;
+  if (item.status === 'draft' && body.status === 'published' && !allowed.includes('published')) {
+    const autoCampaign = await db.acquisitionCampaign.findFirst({
+      where: { clientId: item.clientId, status: 'active', autonomy: 'approved_automation' },
+    });
+    if (autoCampaign) {
+      autoAutomation = true;
+      if (scope.scope.user.role !== 'admin') {
+        await writeAudit({
+          clientId: item.clientId,
+          actor: scope.scope.user.username ?? scope.scope.user.name ?? 'user',
+          actorRole: scope.scope.user.role,
+          action: 'content.published_auto',
+          resource: 'content_item',
+          resourceId: item.id,
+          after: { autonomy: 'approved_automation', campaignId: autoCampaign.id },
+        });
+      }
+    }
+  }
+  if (!autoAutomation && !allowed.includes(body.status)) {
     return NextResponse.json(
       { error: `"${item.status}" থেকে "${body.status}"-এ যাওয়া যায় না। অনুমোদিত: ${allowed.join(', ') || 'কোনোটি নয়'}` },
       { status: 400 },
