@@ -11,20 +11,38 @@ ALOAPI continues the existing Next.js/TypeScript/Prisma application. It keeps th
 
 ## Local install and startup
 
+Install the global `aloapi` terminal command (macOS, Linux, and WSL2):
+
 ```bash
-npm ci
-npm run aloapi -- setup
-npm run aloapi -- start
+./scripts/install.sh
 ```
+
+Then from any directory, run:
+
+```bash
+aloapi
+```
+
+`aloapi` (or `aloapi start`) creates `.env` on first launch if missing, applies reviewed SQLite migrations, generates Prisma Client, safely encrypts any legacy plaintext credential rows, builds the standalone app when needed, starts the managed local service on `127.0.0.1:47831`, waits for `/api/health`, and opens `http://localhost:47831` in your default browser (reusing the running instance without opening duplicate tabs on subsequent runs).
+
+Available lifecycle commands:
+
+```bash
+aloapi                # start service and open http://localhost:47831
+aloapi start          # same as `aloapi` (supports --dev, --no-open, --rebuild)
+aloapi stop           # stop only the matching managed ALOAPI process
+aloapi restart        # stop and restart the managed service
+aloapi status         # inspect running state, PID, port, and database health
+aloapi logs [-f]      # view or follow ~/.aloapi/aloapi.log
+aloapi doctor         # run non-destructive environment, security, and port checks
+aloapi setup          # create private .env and one-time admin credentials only
+```
+
+See [docs/CLI_LAUNCHER.md](docs/CLI_LAUNCHER.md) for installation details, WSL2/macOS/Linux browser integration, and troubleshooting.
 
 `setup` creates a private `.env` only if one does not already exist. It generates a random vault key and one-time administrator password and prints the bootstrap credentials once. Store those securely; after first login remove `ADMIN_BOOTSTRAP_USERNAME` and `ADMIN_BOOTSTRAP_PASSWORD` from `.env`. Do not change `ALOAPI_VAULT_KEY` after values have been encrypted unless they are re-encrypted with the original key. If you want to require administrator MFA, first leave `ALOAPI_REQUIRE_ADMIN_MFA=false`, sign in locally and enroll MFA in Security, then set it to `true`; requiring it before enrollment blocks initial login.
 
-`start` applies the reviewed SQLite migrations, generates Prisma Client, safely encrypts any legacy plaintext credential rows, builds the standalone app, starts the managed local service, and opens a browser. By default it binds only to `127.0.0.1:47831`; the CLI rejects non-loopback host values. Use `--no-open` to suppress automatic browser launch, or `--dev` for the development server. The managed service supports:
-
-```bash
-npm run aloapi -- status
-npm run aloapi -- stop
-```
+By default it binds only to `127.0.0.1:47831`; the CLI rejects non-loopback host values unless `ALOAPI_ALLOW_PUBLIC_BIND="true"` is explicitly set. Use `--no-open` to suppress automatic browser launch, or `--dev` for the development server. The `npm run aloapi -- <command>` wrapper also remains supported.
 
 The foreground `npm start` command is for a process manager/container after the production build and migrations have been prepared. Do not expose the admin app directly to the public Internet. An owner-managed, reviewed HTTPS reverse proxy is required for any external webhook callback; the default service itself remains loopback-only.
 
