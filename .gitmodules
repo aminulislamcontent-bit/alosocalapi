@@ -1,0 +1,21 @@
+[submodule "providers/ybt-army-135m"]
+	path = providers/ybt-army-135m
+	url = https://github.com/YouBTech01/YBT-Army-135M.git
+[submodule "providers/agency-orchestrator"]
+	path = providers/agency-orchestrator
+	url = https://github.com/jnMetaCode/agency-orchestrator.git
+[submodule "providers/ai-agency-agents"]
+	path = providers/ai-agency-agents
+	url = https://github.com/Anas-Khan93/ai-agency-agents.git
+[submodule "providers/agency-agents"]
+	path = providers/agency-agents
+	url = https://github.com/msitarzewski/agency-agents.git
+[submodule "providers/agency-agents-zh"]
+	path = providers/agency-agents-zh
+	url = https://github.com/jnMetaCode/agency-agents-zh.git
+[submodule "providers/nginx"]
+	path = providers/nginx
+	url = https://github.com/nginx/nginx.git
+[submodule "providers/obs-studio"]
+	path = providers/obs-studio
+	url = https://github.com/obsproject/obs-studio.git
