@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSameOriginRequest } from '@/lib/security/request';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { ensureBuiltInRules } from '@/lib/automation';
@@ -45,6 +46,7 @@ export async function GET() {
 
 /** POST /api/crm/automations — create a custom rule (or {"action":"seed"}) */
 export async function POST(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const user = await getSessionUser();
   if (user?.role !== 'admin') return NextResponse.json({ error: 'অননুমোদিত।' }, { status: 401 });
 
@@ -88,6 +90,7 @@ export async function POST(req: NextRequest) {
 
 /** PATCH /api/crm/automations — toggle enabled / edit rule */
 export async function PATCH(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const user = await getSessionUser();
   if (user?.role !== 'admin') return NextResponse.json({ error: 'অননুমোদিত।' }, { status: 401 });
 
@@ -112,6 +115,7 @@ export async function PATCH(req: NextRequest) {
 
 /** DELETE /api/crm/automations — only custom rules can be deleted */
 export async function DELETE(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const user = await getSessionUser();
   if (user?.role !== 'admin') return NextResponse.json({ error: 'অননুমোদিত।' }, { status: 401 });
 

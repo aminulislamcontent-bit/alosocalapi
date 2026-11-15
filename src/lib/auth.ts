@@ -1,12 +1,10 @@
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'crypto';
+import { createHash, randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
 
 export const SESSION_COOKIE = 'aia_session';
 export const CLIENT_SESSION_HOURS = 4;
 export const ADMIN_SESSION_HOURS = 12;
-
-// ─── Password hashing (scrypt, zero deps) ───────────────────────────
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex');
@@ -17,7 +15,7 @@ export function hashPassword(password: string): string {
 export function verifyPassword(password: string, stored: string): boolean {
   try {
     const [salt, hash] = stored.split(':');
-    if (!salt || !hash) return false;
+    if (!salt || !/^[a-f0-9]{128}$/i.test(hash ?? '')) return false;
     const candidate = scryptSync(password, salt, 64);
     const expected = Buffer.from(hash, 'hex');
     return candidate.length === expected.length && timingSafeEqual(candidate, expected);
@@ -26,15 +24,9 @@ export function verifyPassword(password: string, stored: string): boolean {
   }
 }
 
-// ─── Readable temp password generator (for client accounts) ─────────
-
-const PW_GROUPS = ['Aip', 'Km7', 'Xq2', 'Bt9', 'Vn4', 'Zr6', 'Ld3', 'Fh8'];
+/** Cryptographically generated, one-time client password; never use Math.random for credentials. */
 export function generateTempPassword(): string {
-  const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
-  const a = pick(PW_GROUPS);
-  const b = pick(PW_GROUPS);
-  const n = String(Math.floor(10 + Math.random() * 90));
-  return `${a}-${b}-${n}`;
+  return `Alo-${randomBytes(18).toString('base64url')}`;
 }
 
 export function generateUsername(business: string): string {
@@ -43,11 +35,8 @@ export function generateUsername(business: string): string {
     .replace(/[^a-z0-9\s]/g, '')
     .trim()
     .split(/\s+/)[0] || 'client';
-  const suffix = Math.floor(1000 + Math.random() * 9000);
-  return `${base}${suffix}`;
+  return `${base}${randomInt(1000, 10_000)}`;
 }
-
-// ─── Sessions ────────────────────────────────────────────────────────
 
 export function hashToken(raw: string): string {
   return createHash('sha256').update(raw).digest('hex');
@@ -72,6 +61,7 @@ export async function createSession(opts: {
       ip: opts.ip ?? null,
       userAgent: opts.userAgent ?? null,
       expiresAt,
+      lastSeenAt: new Date(),
     },
   });
   return raw;
@@ -85,7 +75,18 @@ export interface SessionUser {
   name?: string;
   business?: string;
   status?: string;
+  mfaEnabled?: boolean;
   expiresAt?: string;
+}
+
+export function sessionCookieOptions(maxAge: number) {
+  return {
+    httpOnly: true,
+    sameSite: 'lax' as const,
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge,
+  };
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
@@ -95,80 +96,64 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   const session = await db.portalSession.findUnique({ where: { token: hashToken(raw) } });
   if (!session || session.expiresAt < new Date()) {
-    // Clean up expired session silently
-    if (session) {
-      await db.portalSession.delete({ where: { token: session.token } }).catch(() => undefined);
-    }
+    if (session) await db.portalSession.delete({ where: { token: session.token } }).catch(() => undefined);
     return null;
+  }
+
+  // Do not write on every request: retain useful activity data without excessive DB churn.
+  if (Date.now() - session.lastSeenAt.getTime() > 5 * 60_000) {
+    await db.portalSession.update({ where: { token: session.token }, data: { lastSeenAt: new Date() } }).catch(() => undefined);
   }
 
   if (session.role === 'admin' && session.adminId) {
     const admin = await db.adminUser.findUnique({ where: { id: session.adminId } });
     if (!admin) return null;
-    return { role: 'admin', adminId: admin.id, username: admin.username, expiresAt: session.expiresAt.toISOString() };
+    return {
+      role: 'admin', adminId: admin.id, username: admin.username,
+      mfaEnabled: admin.mfaEnabled, expiresAt: session.expiresAt.toISOString(),
+    };
   }
 
   if (session.role === 'client' && session.clientId) {
     const client = await db.clientAccount.findUnique({ where: { id: session.clientId } });
-    if (!client) return null;
+    if (!client || client.status !== 'active') return null;
     return {
-      role: 'client',
-      clientId: client.id,
-      username: client.username,
-      name: client.name,
-      business: client.business,
-      status: client.status,
+      role: 'client', clientId: client.id, username: client.username,
+      name: client.name, business: client.business, status: client.status,
       expiresAt: session.expiresAt.toISOString(),
     };
   }
-
   return null;
 }
 
 export async function destroySession(): Promise<void> {
   const store = await cookies();
   const raw = store.get(SESSION_COOKIE)?.value;
-  if (raw) {
-    await db.portalSession.delete({ where: { token: hashToken(raw) } }).catch(() => undefined);
-  }
+  if (raw) await db.portalSession.delete({ where: { token: hashToken(raw) } }).catch(() => undefined);
 }
 
-// ─── Lazy seeding (staging-friendly) ────────────────────────────────
+export async function revokeOtherSessions(user: SessionUser): Promise<number> {
+  const store = await cookies();
+  const raw = store.get(SESSION_COOKIE)?.value;
+  if (!raw) return 0;
+  const token = hashToken(raw);
+  const where = user.role === 'admin' && user.adminId
+    ? { role: 'admin', adminId: user.adminId, token: { not: token } }
+    : user.role === 'client' && user.clientId
+      ? { role: 'client', clientId: user.clientId, token: { not: token } }
+      : null;
+  if (!where) return 0;
+  const result = await db.portalSession.deleteMany({ where });
+  return result.count;
+}
 
-export const DEFAULT_ADMIN_USERNAME = 'alamin';
-export const DEFAULT_ADMIN_PASSWORD = 'alamin2026';
-export const DEMO_CLIENT_USERNAME = 'demo';
-export const DEMO_CLIENT_PASSWORD = 'demo1234';
-
-let seeded = false;
-
-export async function ensureSeed(): Promise<void> {
-  if (seeded) return;
-
-  const admin = await db.adminUser.findUnique({ where: { username: DEFAULT_ADMIN_USERNAME } });
-  if (!admin) {
-    await db.adminUser.create({
-      data: {
-        username: DEFAULT_ADMIN_USERNAME,
-        passwordHash: hashPassword(DEFAULT_ADMIN_PASSWORD),
-      },
-    });
-  }
-
-  const demo = await db.clientAccount.findUnique({ where: { username: DEMO_CLIENT_USERNAME } });
-  if (!demo) {
-    await db.clientAccount.create({
-      data: {
-        name: 'ডেমো ক্লায়েন্ট',
-        business: 'Demo Fashion House',
-        phone: '+8801700000000',
-        username: DEMO_CLIENT_USERNAME,
-        passwordHash: hashPassword(DEMO_CLIENT_PASSWORD),
-        status: 'active',
-        platforms: JSON.stringify(['facebook', 'whatsapp', 'google_analytics']),
-      },
-    });
-  }
-
-  seeded = true;
+/** One-time environment bootstrap for unattended first launch; never seeds demo users. */
+export async function ensureBootstrapAdmin(): Promise<'ready' | 'missing' | 'invalid'> {
+  if (await db.adminUser.count() > 0) return 'ready';
+  const username = (process.env.ADMIN_BOOTSTRAP_USERNAME ?? '').trim().toLowerCase();
+  const password = process.env.ADMIN_BOOTSTRAP_PASSWORD ?? '';
+  if (!username || !password) return 'missing';
+  if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(username) || password.length < 16) return 'invalid';
+  await db.adminUser.create({ data: { username, passwordHash: hashPassword(password) } });
+  return 'ready';
 }

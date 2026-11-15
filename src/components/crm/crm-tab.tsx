@@ -79,7 +79,9 @@ export default function CrmTab() {
     }
   }, []);
 
+  // Load CRM data asynchronously on mount; response updates the rendered records.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { generateTempPassword, getSessionUser, hashPassword } from '@/lib/auth';
+import { isSameOriginRequest } from '@/lib/security/request';
+import { credentialPresence } from '@/lib/security/credential-vault';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -34,23 +36,24 @@ export async function GET(_req: NextRequest, { params }: Params) {
       entries: client.entries.map(e => ({
         platform: e.platform,
         fieldKey: e.fieldKey,
-        value: e.value,
+        ...credentialPresence(e.value),
         status: e.status,
+        validationStatus: e.validationStatus,
         updatedAt: e.updatedAt.toISOString(),
       })),
       logs: client.logs.map(l => ({
         actor: l.actor,
         action: l.action,
         detail: l.detail,
-        ip: l.ip,
         createdAt: l.createdAt.toISOString(),
       })),
     },
-  });
+  }, { headers: { 'Cache-Control': 'no-store, private' } });
 }
 
 /** PATCH /api/admin/clients/[id] — lock | unlock | reset_password */
 export async function PATCH(req: NextRequest, { params }: Params) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const user = await getSessionUser();
   if (user?.role !== 'admin') return NextResponse.json({ error: 'অননুমোদিত।' }, { status: 401 });
 
@@ -92,14 +95,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         detail: 'Temp password regenerated — old one invalidated',
       },
     });
-    return NextResponse.json({ ok: true, tempPassword });
+    return NextResponse.json({ ok: true, tempPassword }, { headers: { 'Cache-Control': 'no-store, private' } });
   }
 
   return NextResponse.json({ error: 'অজানা অ্যাকশন।' }, { status: 400 });
 }
 
 /** DELETE /api/admin/clients/[id] */
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, { params }: Params) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const user = await getSessionUser();
   if (user?.role !== 'admin') return NextResponse.json({ error: 'অননুমোদিত।' }, { status: 401 });
 

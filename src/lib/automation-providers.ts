@@ -24,7 +24,7 @@ export interface AutomationProvider {
   configuredEnv: string[];
 }
 
-interface ManifestEntry extends Omit<AutomationProvider, 'present' | 'commit' | 'configuredEnv'> {}
+type ManifestEntry = Omit<AutomationProvider, 'present' | 'commit' | 'configuredEnv'>;
 
 function loadManifest(): ManifestEntry[] {
   try {

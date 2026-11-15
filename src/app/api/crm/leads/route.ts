@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSameOriginRequest } from '@/lib/security/request';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { fireEvent } from '@/lib/automation';
@@ -37,6 +38,7 @@ export async function GET() {
 
 /** POST /api/crm/leads — create lead for existing contact (fires lead_created) */
 export async function POST(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const user = await getSessionUser();
   if (user?.role !== 'admin') return NextResponse.json({ error: 'অননুমোদিত।' }, { status: 401 });
 
@@ -82,6 +84,7 @@ export async function POST(req: NextRequest) {
 
 /** PATCH /api/crm/leads — update stage/fields (stage change fires automation + timeline log) */
 export async function PATCH(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const user = await getSessionUser();
   if (user?.role !== 'admin') return NextResponse.json({ error: 'অননুমোদিত।' }, { status: 401 });
 
@@ -144,6 +147,7 @@ export async function PATCH(req: NextRequest) {
 
 /** DELETE /api/crm/leads */
 export async function DELETE(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const user = await getSessionUser();
   if (user?.role !== 'admin') return NextResponse.json({ error: 'অননুমোদিত।' }, { status: 401 });
 

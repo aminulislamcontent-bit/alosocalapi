@@ -21,15 +21,12 @@ import {
   type ChannelStatusMap,
   type CompanyProfile
 } from '@/lib/channels-data';
-import type { VaultToken, PasswordAuditEntry } from '@/lib/vault-data';
 
 interface Props {
   company: CompanyProfile;
   onCompanyChange: (c: CompanyProfile) => void;
   channelStatus: ChannelStatusMap;
-  tokens: VaultToken[];
-  passwordAudit: Record<string, PasswordAuditEntry>;
-  onGoTo: (tab: 'channels' | 'planner' | 'credentials' | 'rotation' | 'env') => void;
+  onGoTo: (tab: 'channels' | 'planner' | 'integrations' | 'security' | 'env') => void;
 }
 
 const FOUNDATION_IDS = ['website-seo', 'google-analytics'];
@@ -48,38 +45,31 @@ export default function DashboardTab({
   company,
   onCompanyChange,
   channelStatus,
-  tokens,
-  passwordAudit,
   onGoTo
 }: Props) {
-  const isLive = (id: string) => !!channelStatus[id]?.live;
+  const isChecklistComplete = (id: string) => !!channelStatus[id]?.live;
 
-  // Readiness score: 0-100
-  const foundationScore = FOUNDATION_IDS.filter(isLive).length * 15; // 30
-  const coreScore = CORE_IDS.filter(isLive).length * 10; // 40
-  const contentScore = CONTENT_IDS.some(isLive) ? 15 : 0;
-  const retentionScore = RETENTION_IDS.some(isLive) ? 15 : 0;
+  // Self-reported planning score: 0-100; it is not a live provider status.
+  const foundationScore = FOUNDATION_IDS.filter(isChecklistComplete).length * 15; // 30
+  const coreScore = CORE_IDS.filter(isChecklistComplete).length * 10; // 40
+  const contentScore = CONTENT_IDS.some(isChecklistComplete) ? 15 : 0;
+  const retentionScore = RETENTION_IDS.some(isChecklistComplete) ? 15 : 0;
   const score = foundationScore + coreScore + contentScore + retentionScore;
 
-  const liveCount = CHANNELS.filter(c => isLive(c.id)).length;
+  const completedCount = CHANNELS.filter(c => isChecklistComplete(c.id)).length;
 
-  // Next best actions: first not-live channels in phase order
+  // Next best actions: first unchecked channels in phase order
   const seen = new Set<string>();
   const nextActions: { channelId: string; title: string; why: string }[] = [];
   for (const phase of LAUNCH_PHASES) {
     for (const step of phase.steps) {
       if (seen.has(step.channelId)) continue;
       seen.add(step.channelId);
-      if (!isLive(step.channelId) && nextActions.length < 4) {
+      if (!isChecklistComplete(step.channelId) && nextActions.length < 4) {
         nextActions.push({ channelId: step.channelId, title: step.title, why: step.why });
       }
     }
   }
-
-  // Vault stats
-  const rotatedCount = Object.values(passwordAudit).filter(a => a.rotated).length;
-  const totalPlatforms = Object.keys(passwordAudit).length || 1;
-  const rotationPct = Math.round((rotatedCount / totalPlatforms) * 100);
 
   // Score ring geometry
   const ringRadius = 52;
@@ -97,11 +87,11 @@ export default function DashboardTab({
             Operations Dashboard
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            One glance: launch readiness, channel coverage, vault security, and what to do next.
+            A local planning overview. Checklist progress is self-reported and does not reflect provider connectivity.
           </p>
         </div>
         <span className="text-xs font-mono px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 self-start">
-          Channels Live: <strong className="text-emerald-400">{liveCount} / {CHANNELS.length}</strong>
+          Checklist marked: <strong className="text-cyan-300">{completedCount} / {CHANNELS.length}</strong>
         </span>
       </div>
 
@@ -132,14 +122,14 @@ export default function DashboardTab({
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-slate-500">Auto-saved to this browser. Appears in the .env export header.</p>
+            <p className="text-[10px] text-slate-500">Profile notes are stored in this browser only. Do not enter passwords, tokens or other secrets.</p>
           </div>
 
           {/* Readiness Score */}
           <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Gauge className="w-4 h-4 text-cyan-400" />
-              Lead-Gen Readiness Score
+              Local Planning Checklist Score
             </h3>
             <div className="flex items-center gap-5">
               <svg width="128" height="128" viewBox="0 0 128 128" className="shrink-0">
@@ -163,8 +153,8 @@ export default function DashboardTab({
                 {([
                   { label: 'Foundation (site + analytics)', value: foundationScore, max: 30 },
                   { label: 'Core lead channels', value: coreScore, max: 40 },
-                  { label: 'Content engine running', value: contentScore, max: 15 },
-                  { label: 'Retention active', value: retentionScore, max: 15 }
+                  { label: 'Content planning checklist', value: contentScore, max: 15 },
+                  { label: 'Retention planning checklist', value: retentionScore, max: 15 }
                 ]).map(row => (
                   <div key={row.label} className="space-y-1">
                     <div className="flex items-center justify-between">
@@ -197,8 +187,8 @@ export default function DashboardTab({
 
             {nextActions.length === 0 ? (
               <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center">
-                <p className="text-xs font-semibold text-emerald-300">🎉 All planned channels are live!</p>
-                <p className="text-[11px] text-slate-400 mt-1">Move to paid amplification and scale your winners.</p>
+                <p className="text-xs font-semibold text-emerald-300">All planned checklist items are marked complete.</p>
+                <p className="text-[11px] text-slate-400 mt-1">These checkboxes are not independent verification.</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -264,62 +254,21 @@ export default function DashboardTab({
           </div>
         </div>
 
-        {/* Right: Vault snapshot */}
+        {/* Right: honest integration and local security links */}
         <div className="space-y-6">
           <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 h-fit">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                Access Vault Snapshot
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center">
-                <p className="text-xl font-bold text-cyan-300 font-mono">{tokens.length}</p>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1">Active Tokens</p>
-              </div>
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center">
-                <p className="text-xl font-bold text-emerald-300 font-mono">{rotationPct}%</p>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1">Rotation Compliant</p>
-              </div>
-            </div>
-
+            <h3 className="text-sm font-bold text-white flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-cyan-400" />Integration and security</h3>
+            <p className="text-xs leading-relaxed text-slate-400">No provider authorization or live account verification is claimed. Review documented setup requirements and ALOAPI admin security separately.</p>
             <div className="space-y-2">
-              <button
-                onClick={() => onGoTo('credentials')}
-                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold border border-slate-700 transition-all flex items-center justify-center gap-2"
-              >
-                <Lock className="w-3.5 h-3.5 text-cyan-400" />
-                Open OAuth App Vault
-              </button>
-              <button
-                onClick={() => onGoTo('rotation')}
-                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold border border-slate-700 transition-all flex items-center justify-center gap-2"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                Rotation Audit
-              </button>
-              <button
-                onClick={() => onGoTo('env')}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-[11px] font-bold transition-all flex items-center justify-center gap-2 shadow-md shadow-cyan-500/20"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                Export .env Config
-              </button>
+              <button onClick={() => onGoTo('integrations')} className="w-full rounded-xl border border-cyan-500/20 bg-slate-800 px-3 py-2.5 text-left text-xs font-semibold text-cyan-200 hover:bg-slate-700">Open API Intelligence</button>
+              <button onClick={() => onGoTo('security')} className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-left text-xs font-semibold text-slate-200 hover:bg-slate-700">Admin MFA and sessions</button>
+              <button onClick={() => onGoTo('env')} className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-left text-xs font-semibold text-slate-200 hover:bg-slate-700">Blank environment template</button>
             </div>
           </div>
 
-          {/* Goal reminder */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-950/40 via-slate-900 to-cyan-950/40 border border-emerald-500/20 space-y-2 h-fit">
-            <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              <Target className="w-4 h-4 text-emerald-400" />
-              Primary Objective
-            </h4>
-            <p className="text-[11px] text-slate-300 leading-relaxed">
-              Prioritize channels that <strong className="text-emerald-300">collect leads</strong> and <strong className="text-emerald-300">increase sales</strong> —
-              while automation (auto-replies, broadcasts, token vaults) keeps marketing operations running on easy mode.
-            </p>
+            <h4 className="text-sm font-bold text-white flex items-center gap-2"><Target className="w-4 h-4 text-emerald-400" />Planning note</h4>
+            <p className="text-[11px] text-slate-300 leading-relaxed">Use the official provider interface for account creation, OAuth consent, MFA, permissions and policy checks. ALOAPI does not send messages, publish content, spend money or modify provider assets.</p>
           </div>
         </div>
       </div>

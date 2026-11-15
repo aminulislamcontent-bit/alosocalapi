@@ -4,40 +4,26 @@ import React from 'react';
 import {
   Rocket,
   ExternalLink,
-  Wand2,
-  Copy,
-  Trash2,
   CheckCircle2,
   Circle,
-  KeyRound,
   ChevronRight,
-  Sparkles
 } from 'lucide-react';
 import {
   LAUNCH_PHASES,
   getChannel,
-  type ChannelStatusMap,
-  type AccessIdMap
+  type ChannelStatusMap
 } from '@/lib/channels-data';
 
 interface Props {
   channelStatus: ChannelStatusMap;
-  accessIds: AccessIdMap;
-  onToggleLive: (id: string) => void;
-  onGenerateXX: (id: string) => void;
-  onRemoveXX: (id: string, xxId: string) => void;
-  onCopy: (text: string, label: string) => void;
-  onOpenVault: () => void;
+  onToggleChecklist: (id: string) => void;
+  onOpenIntegrations: () => void;
 }
 
 export default function PlannerTab({
   channelStatus,
-  accessIds,
-  onToggleLive,
-  onGenerateXX,
-  onRemoveXX,
-  onCopy,
-  onOpenVault
+  onToggleChecklist,
+  onOpenIntegrations
 }: Props) {
   // Overall progress: unique channels across all phases
   const allStepChannelIds = Array.from(new Set(LAUNCH_PHASES.flatMap(p => p.steps.map(s => s.channelId))));
@@ -50,16 +36,16 @@ export default function PlannerTab({
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Rocket className="w-5 h-5 text-cyan-400" />
-            New Company Launch Planner
+            Local Setup Checklist
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            No marketing site or platform yet? Start at Phase 0 and follow the roadmap — each step creates one channel and issues placeholder XX Access IDs.
+            Use these phases as a manual planning checklist. A checked item is self-reported only; ALOAPI does not inspect or change provider accounts.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <p className="text-[10px] font-mono text-slate-500 uppercase">Launch Progress</p>
-            <p className="text-sm font-bold text-cyan-300 font-mono">{completedCount} / {allStepChannelIds.length} channels</p>
+            <p className="text-[10px] font-mono text-slate-500 uppercase">Checklist progress</p>
+            <p className="text-sm font-bold text-cyan-300 font-mono">{completedCount} / {allStepChannelIds.length} steps marked</p>
           </div>
           <div className="w-28 h-2 rounded-full bg-slate-800 overflow-hidden">
             <div className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
@@ -67,23 +53,8 @@ export default function PlannerTab({
         </div>
       </div>
 
-      {/* XX ID System Explainer */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/60 via-slate-900 to-cyan-950/60 border border-cyan-500/30 relative overflow-hidden">
-        <div className="flex items-start gap-3.5">
-          <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shrink-0">
-            <KeyRound className="w-6 h-6" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-bold text-white flex items-center gap-2">
-              XX Access ID System
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono">Pre-Launch Mode</span>
-            </p>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              When a platform is not created yet, generate a placeholder <span className="font-mono text-cyan-300">XX-XXXX-XXXX</span> Access ID per channel.
-              Use these codes in planning docs, agency briefs and the .env export — then swap in real credentials later from the OAuth App Vault.
-            </p>
-          </div>
-        </div>
+      <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 text-xs leading-relaxed text-amber-100">
+        These checkboxes and optional account handles are local planning notes, not proof of connection or authorization. ALOAPI no longer generates placeholder account IDs. Any legacy “XX” values in browser storage are ignored and are never exported.
       </div>
 
       {/* Phases */}
@@ -130,19 +101,18 @@ export default function PlannerTab({
               <div className="space-y-3">
                 {phase.steps.map((step, sIdx) => {
                   const channel = getChannel(step.channelId);
-                  const isLive = !!channelStatus[step.channelId]?.live;
-                  const ids = accessIds[step.channelId] ?? [];
+                  const markedComplete = !!channelStatus[step.channelId]?.live;
 
                   return (
                     <div
                       key={`${phase.id}-${step.channelId}-${sIdx}`}
                       className={`p-4 rounded-xl border transition-all ${
-                        isLive ? 'bg-slate-950/40 border-emerald-500/20' : 'bg-slate-950 border-slate-800'
+                        markedComplete ? 'bg-slate-950/40 border-emerald-500/20' : 'bg-slate-950 border-slate-800'
                       }`}
                     >
                       <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
                         <div className="flex items-start gap-3 min-w-0">
-                          {isLive ? (
+                          {markedComplete ? (
                             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                           ) : (
                             <Circle className="w-5 h-5 text-slate-600 shrink-0 mt-0.5" />
@@ -171,53 +141,19 @@ export default function PlannerTab({
                             </a>
                           )}
                           <button
-                            onClick={() => onGenerateXX(step.channelId)}
-                            className="px-2.5 py-1.5 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 text-[10px] font-medium border border-indigo-500/30 transition-all flex items-center gap-1"
-                          >
-                            <Wand2 className="w-3 h-3" />
-                            Generate XX ID
-                          </button>
-                          <button
-                            onClick={() => onToggleLive(step.channelId)}
+                            onClick={() => onToggleChecklist(step.channelId)}
                             className={`px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all flex items-center gap-1 ${
-                              isLive
+                              markedComplete
                                 ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                                 : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20'
                             }`}
                           >
-                            {isLive ? 'Undo Live' : 'Mark Live'}
-                            {!isLive && <ChevronRight className="w-3 h-3" />}
+                            {markedComplete ? 'Undo checklist' : 'Mark setup checklist complete'}
+                            {!markedComplete && <ChevronRight className="w-3 h-3" />}
                           </button>
                         </div>
                       </div>
 
-                      {/* Issued XX IDs */}
-                      {ids.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                            <Sparkles className="w-3 h-3 text-cyan-400" /> XX Access IDs:
-                          </span>
-                          {ids.map(xx => (
-                            <span key={xx} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900 border border-cyan-500/30 font-mono text-[10px] text-cyan-300">
-                              {xx}
-                              <button
-                                onClick={() => onCopy(xx, 'XX Access ID')}
-                                className="text-slate-500 hover:text-cyan-300 transition-colors"
-                                aria-label={`Copy ${xx}`}
-                              >
-                                <Copy className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={() => onRemoveXX(step.channelId, xx)}
-                                className="text-slate-600 hover:text-red-400 transition-colors"
-                                aria-label={`Remove ${xx}`}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -227,20 +163,19 @@ export default function PlannerTab({
         })}
       </div>
 
-      {/* After launch: real credentials */}
+      {/* Manual setup handoff */}
       <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="space-y-1 text-center sm:text-left">
-          <h4 className="text-sm font-bold text-white">Channels created? Replace XX placeholders with real OAuth credentials.</h4>
+          <h4 className="text-sm font-bold text-white">Need provider-specific setup details?</h4>
           <p className="text-xs text-slate-400">
-            Head to the OAuth App Vault, paste your real App IDs &amp; Secrets, then export the final .env for production.
+            Use API Intelligence to review official documentation and requirements. Provider access and verification remain unclaimed until supported evidence exists.
           </p>
         </div>
         <button
-          onClick={onOpenVault}
+          onClick={onOpenIntegrations}
           className="shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-cyan-500/20"
         >
-          <KeyRound className="w-4 h-4" />
-          Open OAuth App Vault
+          Open API Intelligence
         </button>
       </div>
     </div>

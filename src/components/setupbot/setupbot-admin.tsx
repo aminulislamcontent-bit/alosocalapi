@@ -28,21 +28,7 @@ export default function SetupBotAdminTab() {
   const [jsonBusy, setJsonBusy] = useState(false);
   const [json, setJson] = useState<string | null>(null);
 
-  const loadClients = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/clients');
-      const d = await res.json();
-      if (!res.ok) { toast({ title: d.error ?? 'লোড ব্যর্থ', variant: 'destructive' }); return; }
-      setClients(d.clients);
-      if (d.clients.length > 0 && !selId) pickClient(d.clients[0].id);
-    } catch {
-      toast({ title: 'নেটওয়ার্ক সমস্যা', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const pickClient = async (id: string) => {
+  const pickClient = useCallback(async (id: string) => {
     setSelId(id);
     setJson(null);
     try {
@@ -53,9 +39,25 @@ export default function SetupBotAdminTab() {
     } catch {
       toast({ title: 'নেটওয়ার্ক সমস্যা', variant: 'destructive' });
     }
-  };
+  }, [toast]);
 
-  useEffect(() => { loadClients(); }, [loadClients]);
+  const loadClients = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/clients');
+      const d = await res.json();
+      if (!res.ok) { toast({ title: d.error ?? 'লোড ব্যর্থ', variant: 'destructive' }); return; }
+      setClients(d.clients);
+      if (d.clients.length > 0) void pickClient(d.clients[0].id);
+    } catch {
+      toast({ title: 'নেটওয়ার্ক সমস্যা', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  }, [pickClient, toast]);
+
+  // Initial data fetch; updates occur only after the asynchronous requests settle.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadClients(); }, [loadClients]);
 
   const coverage = (() => {
     if (!detail) return null;

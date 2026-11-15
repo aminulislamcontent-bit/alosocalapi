@@ -1,38 +1,63 @@
-# ALO Education BD — CRM, Automation & Universal Growth Engine
+# ALOAPI — private CRM, Growth Engine & integration intelligence
 
-Full-stack Next.js application for ALO Education BD: client credential portal, CRM, automations, SetupBot platform library, and a Universal AI Lead Discovery & Customer Acquisition Engine (industry-agnostic, country-agnostic, multi-tenant, free-first).
+ALOAPI continues the existing Next.js/TypeScript/Prisma application. It keeps the existing CRM and Growth Engine, and adds a local-first administration CLI, encrypted write-only credential handling, administrator security controls, provider documentation/permission guidance, a WhatsApp webhook-signature helper, and offline integration handoff exports.
 
 ## Stack
 
-- Next.js (App Router) + TypeScript + Tailwind CSS
-- Prisma ORM + SQLite (`db/custom.db`, created at runtime)
-- scrypt password hashing, DB-backed httpOnly-cookie sessions
-- Bengali-first UI with English engine tabs
+- Node.js 22.5+ and npm (the checked-in `package-lock.json` is the reproducible install source)
+- Next.js App Router, React, TypeScript, Tailwind CSS
+- Prisma ORM with SQLite; checked-in, additive migrations
+- scrypt password hashes, revocable database sessions, optional TOTP MFA, login throttling, and same-origin mutation guards
 
-## What is inside
-
-| Area | Highlights |
-|---|---|
-| Client Access Portal | Temp-credential login, 13-platform credential knowledge base (49 fields, Bengali guides), auto-logout, activity audit |
-| CRM | Clients, tasks, notes, pipeline APIs (`/api/crm/*`) |
-| Growth Engine | Dual-mode discovery (universal + targeted campaigns), 19-provider free-first registry with live verification, provenance on every lead, explainable 7-component scoring, 11-state pipeline, DNC/opt-out governance, approval gates, USD cost ledger, audit events |
-| SetupBot | Platform credential library with per-field guides |
-| AI Automation Providers | 7 pinned open-source providers under `providers/` (agency-orchestrator + 3 agent libraries, YBT-Army-135M local LLM, OBS Studio, NGINX) — see `providers/README.md`, status at `GET /api/automation/providers` |
-| MERN Topic Catalogue | All 2,290 repos from github.com/topics/mern-project catalogued in `docs/mern-projects/` (clone-all script included) |
-
-## Run it
+## Local install and startup
 
 ```bash
-bun install                 # or npm install
-cp .env.example .env        # DATABASE_URL="file:./db/custom.db"
-bun run db:push             # create schema
-node scripts/seed-alo-info.mjs
-node scripts/seed-engine.mjs
-bun run dev                 # http://localhost:3000
+npm ci
+npm run aloapi -- setup
+npm run aloapi -- start
 ```
 
-## Security notes
+`setup` creates a private `.env` only if one does not already exist. It generates a random vault key and one-time administrator password and prints the bootstrap credentials once. Store those securely; after first login remove `ADMIN_BOOTSTRAP_USERNAME` and `ADMIN_BOOTSTRAP_PASSWORD` from `.env`. Do not change `ALOAPI_VAULT_KEY` after values have been encrypted unless they are re-encrypted with the original key. If you want to require administrator MFA, first leave `ALOAPI_REQUIRE_ADMIN_MFA=false`, sign in locally and enroll MFA in Security, then set it to `true`; requiring it before enrollment blocks initial login.
 
-- Demo admin credentials are dev-only defaults; change them before any real deployment.
-- `.env`, the SQLite database, and all runtime data are git-ignored.
-- The Growth Engine never fabricates data: unverified providers are shown as unavailable, and outbound contact is impossible without governance + explicit approval.
+`start` applies the reviewed SQLite migrations, generates Prisma Client, safely encrypts any legacy plaintext credential rows, builds the standalone app, starts the managed local service, and opens a browser. By default it binds only to `127.0.0.1:47831`; the CLI rejects non-loopback host values. Use `--no-open` to suppress automatic browser launch, or `--dev` for the development server. The managed service supports:
+
+```bash
+npm run aloapi -- status
+npm run aloapi -- stop
+```
+
+The foreground `npm start` command is for a process manager/container after the production build and migrations have been prepared. Do not expose the admin app directly to the public Internet. An owner-managed, reviewed HTTPS reverse proxy is required for any external webhook callback; the default service itself remains loopback-only.
+
+### Existing SQLite database
+
+A database made by the old, migration-less version must be strictly compared with the checked-in baseline before Prisma can apply the new additive migration. Back up the database first, then run:
+
+```bash
+npm run aloapi -- baseline-existing
+```
+
+The normal startup preflight opens an existing SQLite file read-only and allows automatic migration only for a fresh database or a schema matching this repository's known, completed migration history. A migration-less database is refused before Prisma migration commands run. This baseline command checks tables, columns, defaults, indexes, foreign keys, and migration history without changing rows. It refuses schema drift. Only after the exact original schema matches does it record the baseline and apply the checked-in additive migration. The workflow never runs `db push`, reset, drop, or data deletion. A mismatch is a stop condition for a separately reviewed migration.
+
+## Development and verification
+
+```bash
+npm run dev                    # loopback-only service on port 47831
+npm run typecheck
+npm run lint
+npm test                       # CLI, vault, registry, migration, and export-package tests
+DATABASE_URL='file:./db/custom.db' npm run db:validate
+```
+
+All production migrations are checked into `prisma/migrations/`. The normal startup path uses `prisma migrate deploy`; there is intentionally no `db push --accept-data-loss` or reset script. `vault:migrate:credentials` is idempotent, authenticates already-encrypted rows before writing, encrypts legacy values in bounded transactions, compares old values before replacing them, and never prints credential contents.
+
+## Product boundaries and provider state
+
+- Growth Engine, CRM, SetupBot and existing portal functionality remain part of this repository. Provider manifest entries report local checkout/environment presence, not a running service or authorization.
+- Integration Intelligence is a documentation and manual-setup assistant. Catalog entries, required-scope lists, identifiers in environment templates, and local records are not proof of a provider grant. No OAuth authorization or live provider verification is performed by this workspace.
+- The WhatsApp workflow directs the owner to Meta's official business/developer interfaces. This deployment does not collect WhatsApp phone numbers, WABA IDs, Phone Number IDs, or access tokens and does not infer authorization from a phone number. A separate write-only vault can hold only the Meta app webhook-signature secret and a locally chosen webhook verification token. The webhook handler checks signatures and records event names only; it does not store webhook bodies, send messages, or authorize an account.
+- Integration exports are offline documentation packages with blank environment templates, official documentation pointers, setup requirements, scopes, endpoint/webhook notes, aggregate state metadata, and checksums. They exclude credential values, ciphertext, identifiers, phone numbers, OTPs, and raw webhook payloads.
+- ALOAPI does not connect to or modify any external CRM or its database. Exports are intended for owner-managed, manual handoff.
+
+## Submodules
+
+The seven pinned provider submodules under `providers/` are retained at their existing commits. They are not automatically initialized, installed, launched, or connected.

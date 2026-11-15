@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSameOriginRequest } from '@/lib/security/request';
 import { db } from '@/lib/db';
 import { requireEngineScope } from '@/lib/engine/guard';
 import { writeAudit } from '@/lib/engine/audit';
@@ -63,6 +64,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const { id } = await params;
   const sp = req.nextUrl.searchParams;
   const scope = await requireEngineScope(sp.get('clientId'));

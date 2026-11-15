@@ -16,6 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { encryptCredentialForTransfer } from '@/lib/security/credential-transfer-client';
 import { PlatformIcon } from '@/components/portal/platform-icons';
 import SetupBotWizard from '@/components/setupbot/setupbot-wizard';
 import {
@@ -27,7 +28,8 @@ import type { SessionUser } from '@/lib/auth';
 interface EntryItem {
   platform: string;
   fieldKey: string;
-  value: string;
+  hasValue: boolean;
+  encryptedAtRest: boolean;
   status: string;
   updatedAt: string;
 }
@@ -57,6 +59,7 @@ export default function ClientPortal({
   const [clientData, setClientData] = useState<ClientData | null>(null);
   const [entries, setEntries] = useState<EntryItem[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [transferPassphrase, setTransferPassphrase] = useState('');
   const [saveState, setSaveState] = useState<Record<string, 'saving' | 'saved'>>({});
   const [openPlatform, setOpenPlatform] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState<Record<string, boolean>>({});
@@ -69,7 +72,7 @@ export default function ClientPortal({
   const [mode, setMode] = useState<'guided' | 'bot'>('guided');
   const savingRef = useRef(false);
 
-  const handleAuthLost = useCallback(() => onLogout(), [onLogout]);
+  const handleAuthLost = useCallback(() => { setTransferPassphrase(''); onLogout(); }, [onLogout]);
 
   // ── Load data ──
   const load = useCallback(async () => {
@@ -83,11 +86,8 @@ export default function ClientPortal({
       }
       setClientData(data.client);
       setEntries(data.entries);
-      const d: Record<string, string> = {};
-      for (const e of data.entries) {
-        if (e.status === 'collected') d[fieldId(e.platform, e.fieldKey)] = e.value;
-      }
-      setDrafts(d);
+      // Saved credential values are write-only; never rehydrate them into client state.
+      setDrafts({});
       // Open first incomplete platform
       const progress = computeProgress(data.client.platforms, data.entries);
       const firstOpen = data.client.platforms.find(
@@ -101,6 +101,8 @@ export default function ClientPortal({
     }
   }, [handleAuthLost, toast]);
 
+  // Load portal state asynchronously; do not derive it synchronously during render.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   // ── Session expiry countdown ──
@@ -156,13 +158,18 @@ export default function ClientPortal({
       toast({ title: 'আগে ভ্যালুটি লিখুন', variant: 'destructive' });
       return;
     }
+    if (status === 'collected' && !transferPassphrase) {
+      toast({ title: 'নিরাপদ ট্রান্সফার পাসফ্রেজ দিন', description: '১৬+ UTF-8 byte-এর আলাদা পাসফ্রেজ ব্যবহার করুন; provider password নয়।', variant: 'destructive' });
+      return;
+    }
     savingRef.current = true;
     setSaveState(s => ({ ...s, [id]: 'saving' }));
     try {
+      const transfer = status === 'collected' ? await encryptCredentialForTransfer(value, transferPassphrase) : undefined;
       const res = await fetch('/api/portal/entries', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform, fieldKey: field.key, value, status }),
+        body: JSON.stringify({ platform, fieldKey: field.key, ...(transfer ? { transfer } : {}), status }),
       });
       if (res.status === 401) return handleAuthLost();
       const data = await res.json();
@@ -174,15 +181,15 @@ export default function ClientPortal({
         const rest = prev.filter(e => !(e.platform === platform && e.fieldKey === field.key));
         return [...rest, data.entry];
       });
-      if (status === 'skipped') setDrafts(d => ({ ...d, [id]: '' }));
+      setDrafts(d => ({ ...d, [id]: '' }));
       setSaveState(s => ({ ...s, [id]: 'saved' }));
       toast({
         title: status === 'skipped'
           ? `${field.labelBn} — স্কিপ করা হলো`
           : `${field.labelBn} সংরক্ষিত হয়েছে ✔`,
       });
-    } catch {
-      toast({ title: 'নেটওয়ার্ক সমস্যা', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : 'নিরাপদে সংরক্ষণ করা যায়নি', variant: 'destructive' });
     } finally {
       savingRef.current = false;
     }
@@ -203,6 +210,8 @@ export default function ClientPortal({
         toast({ title: data.error ?? 'সম্পন্ন করা যায়নি', variant: 'destructive' });
         return;
       }
+      setTransferPassphrase('');
+      setDrafts({});
       setDone(data.summary);
       setCountdown(15);
     } catch {
@@ -255,9 +264,9 @@ export default function ClientPortal({
                 <ShieldCheck className="w-4 h-4 text-cyan-400" /> নিরাপত্তা নোট
               </div>
               <ul className="space-y-2 text-sm text-slate-400 leading-relaxed">
-                <li className="flex gap-2"><Lock className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />আপনার সাময়িক পাসওয়ার্ড এখন <strong className="text-slate-200">নিষ্ক্রিয়</strong> হয়ে গেছে — আর কেউ এই পোর্টালে ঢুকতে পারবে না।</li>
-                <li className="flex gap-2"><RefreshCcw className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />আপনি চাইলে এখন <strong className="text-slate-200">নিরাপদে আপনার সোশ্যাল মিডিয়া পাসওয়ার্ড পরিবর্তন করতে পারেন</strong> — দেওয়া API টোকেনগুলো পাসওয়ার্ড বদলালেও কাজ করতে থাকে।</li>
-                <li className="flex gap-2"><Sparkles className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />কাজ শেষ হলে চাইলে টোকেনগুলো আপনি নিজেই রিভোক (বাতিল) করতে পারবেন।</li>
+                <li className="flex gap-2"><Lock className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />Collection সম্পন্ন হলে এই ALOAPI client account নিষ্ক্রিয় এবং portal session বন্ধ হয়। এটি provider account-এর login বা access পরিবর্তন করে না।</li>
+                <li className="flex gap-2"><RefreshCcw className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />Provider password বা access বদলাতে হলে শুধু provider-এর official site/app ব্যবহার করুন। কোনো saved token-এর প্রভাব provider ও grant অনুযায়ী ভিন্ন হতে পারে।</li>
+                <li className="flex gap-2"><Sparkles className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />Provider token আর দরকার না হলে provider-এর security settings থেকে revoke করুন। ALOAPI এখানে provider token revoke বা export করে না; local copy retention সম্পর্কে admin-এর সঙ্গে কথা বলুন।</li>
               </ul>
             </div>
 
@@ -291,7 +300,7 @@ export default function ClientPortal({
 
   // ── SetupBot Pro mode — full-screen conversational wizard ──
   if (mode === 'bot') {
-    return <SetupBotWizard onAuthLost={handleAuthLost} />;
+    return <SetupBotWizard onAuthLost={handleAuthLost} transferPassphrase={transferPassphrase} onTransferPassphraseChange={setTransferPassphrase} />;
   }
 
   return (
@@ -340,8 +349,13 @@ export default function ClientPortal({
                   &quot;<span className="text-cyan-400">কীভাবে পাবেন?</span>&quot; খুললে বাংলায় ধাপে ধাপে দেখানো আছে।
                   কোনোটি না পেলে বা না থাকলে <span className="text-amber-400">&quot;নেই / স্কিপ&quot;</span> চাপুন —
                   সমস্যা নেই। সব শেষ হলে নিচের <span className="text-emerald-400">&quot;সংগ্রহ সম্পন্ন করুন&quot;</span> চাপবেন।
-                  <strong className="text-slate-200"> কোনো পাসওয়ার্ড দেওয়ার দরকার নেই — শুধু আইডি ও টোকেন।</strong>
+                  <strong className="text-slate-200"> কোনো provider account password, OTP বা recovery code এখানে দেবেন না। শুধু অনুমোদিত API value দিন।</strong>
                 </p>
+                <div className="mt-4 rounded-xl border border-cyan-500/25 bg-slate-950/60 p-4">
+                  <label htmlFor="credential-transfer-passphrase" className="block text-xs font-semibold text-cyan-200">Credential transfer passphrase (required to save)</label>
+                  <Input id="credential-transfer-passphrase" type="password" autoComplete="off" value={transferPassphrase} onChange={event => setTransferPassphrase(event.target.value)} placeholder="Use a unique passphrase, 16+ UTF-8 bytes" className="mt-2 bg-slate-900 border-slate-700 text-sm text-slate-100" />
+                  <p className="mt-2 text-[11px] leading-relaxed text-slate-500">This user-chosen passphrase encrypts values in the browser before transfer. It is wrapped to a single-use server key, is not written to browser storage, and should not be a provider password. It remains in page memory only; clear it when finished. Saved values are separately encrypted at rest by ALOAPI.</p>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -478,7 +492,7 @@ export default function ClientPortal({
                                     onChange={e => setDrafts(d => ({ ...d, [id]: e.target.value }))}
                                     onBlur={() => {
                                       const cur = (drafts[id] ?? '').trim();
-                                      if (cur && cur !== (entry?.value ?? '') && st !== 'skipped') {
+                                      if (cur && st !== 'skipped') {
                                         saveField(tpl.key, f, 'collected');
                                       }
                                     }}

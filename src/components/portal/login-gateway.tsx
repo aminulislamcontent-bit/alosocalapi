@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Radar, ShieldCheck, LogIn, UserRound, KeyRound, Lock,
-  ClipboardCopy, Zap, ArrowDownToLine, Landmark, RefreshCcw, Eye, EyeOff, Loader2
+  ClipboardCopy, Zap, Landmark, RefreshCcw, Eye, EyeOff, Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,33 +16,33 @@ import { useToast } from '@/hooks/use-toast';
 const HOW_IT_WORKS = [
   {
     icon: Landmark,
-    title: '১. অ্যাকাউন্ট তৈরি',
-    desc: 'আমরা (এজেন্সি) আপনার জন্য সাময়িক ইউজারনেম ও পাসওয়ার্ড বানিয়ে WhatsApp-এ পাঠাই।',
+    title: '১. ALOAPI অ্যাকাউন্ট',
+    desc: 'অ্যাডমিন ALOAPI লগইন তৈরি করে সম্মত কোনো মাধ্যমে আপনাকে তথ্য দেন। এই অ্যাপ নিজে WhatsApp বা SMS পাঠায় না।',
   },
   {
     icon: ClipboardCopy,
-    title: '২. তথ্য সংগ্রহ',
-    desc: 'লগইন করে সিস্টেমের দেখানো ধাপ অনুসরণ করুন — প্রতিটি আইডি/টোকেন কোথায় পাবেন বাংলায় লেখা আছে।',
+    title: '২. নির্দেশনা দেখে তথ্য দিন',
+    desc: 'বাংলা নির্দেশনা অনুসরণ করে শুধু চাওয়া API value দিন। Provider account password, OTP বা recovery code দেবেন না।',
   },
   {
     icon: RefreshCcw,
-    title: '৩. অটো-লগআউট ও নিরাপত্তা',
-    desc: 'সংগ্রহ শেষ হলে সেশন বন্ধ হয়ে যায়। এরপর আপনি নিশ্চিন্তে আপনার পাসওয়ার্ড বদলে নিতে পারেন — API টোকেনে কোনো প্রভাব পড়ে না।',
+    title: '৩. সংগ্রহ শেষ ও সেশন বন্ধ',
+    desc: 'শেষ করলে ALOAPI সেশন বন্ধ করে এবং collection সম্পন্ন হিসেবে চিহ্নিত করে। এতে কোনো provider account-এ login বা verification হয় না।',
   },
 ];
 
 const SECURITY_CHIPS = [
-  { icon: Lock, label: 'সাময়িক পাসওয়ার্ড' },
-  { icon: ShieldCheck, label: 'অটো-লগআউট' },
-  { icon: EyeOff, label: 'পাসওয়ার্ড কখনো লাগে না' },
-  { icon: Zap, label: '৫ মিনিটে সেটআপ' },
+  { icon: Lock, label: 'ALOAPI লগইন' },
+  { icon: ShieldCheck, label: 'শেষে ALOAPI সেশন বন্ধ' },
+  { icon: EyeOff, label: 'Provider password চাই না' },
+  { icon: Zap, label: 'Provider authorization আলাদা' },
 ];
 
 export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void }) {
   const { toast } = useToast();
   const router = useRouter();
   const [clientForm, setClientForm] = useState({ username: '', password: '' });
-  const [adminForm, setAdminForm] = useState({ username: '', password: '' });
+  const [adminForm, setAdminForm] = useState({ username: '', password: '', mfaCode: '' });
   const [showPw, setShowPw] = useState<{ client: boolean; admin: boolean }>({ client: false, admin: false });
   const [loading, setLoading] = useState<'client' | 'admin' | null>(null);
 
@@ -74,8 +74,6 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
     }
   };
 
-  const fillDemo = () => setClientForm({ username: 'demo', password: 'demo1234' });
-
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 relative overflow-hidden">
       {/* Ambient glows */}
@@ -104,9 +102,7 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
               ক্লায়েন্ট নিজেই দিয়ে দেবে, <span className="text-cyan-400">ধাপে ধাপে</span>
             </h2>
             <p className="text-slate-400 leading-relaxed mb-8">
-              CRM, অটোমেশন বা মার্কেটিং চালাতে যেসব API টোকেন, WhatsApp Lite ID, Page ID ও Web URL দরকার —
-              সেগুলো খুঁজে বের করতে যে সময় নষ্ট হয়, এই পোর্টাল সেটা শূন্যে নামিয়ে আনে (১৩টি প্ল্যাটফর্ম)।
-              ক্লায়েন্ট লগইন করে বাংলা গাইড দেখে নিজের তথ্য জমা দেয়; কালেকশন শেষ হলে অ্যাকাউন্ট অটো-লক।
+              এই পোর্টাল বাংলা নির্দেশনা দিয়ে নির্বাচিত integration-এর জন্য অনুমোদিত API value সংগ্রহে সাহায্য করে। এতে provider-এর কাছে login, OAuth authorization, live verification বা কোনো বাহ্যিক কাজ স্বয়ংক্রিয়ভাবে হয় না।
             </p>
 
             <div className="space-y-4 mb-8">
@@ -143,7 +139,7 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
                     <CardDescription className="text-slate-400 mt-1">আপনার অ্যাকাউন্টের ধরন বেছে নিন</CardDescription>
                   </div>
                   <Badge variant="outline" className="border-amber-500/40 text-amber-400 bg-amber-500/10 font-mono text-[10px]">
-                    STAGING
+                    ALOAPI ACCESS
                   </Badge>
                 </div>
               </CardHeader>
@@ -165,7 +161,7 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
                       <Input
                         id="client-user"
                         autoComplete="username"
-                        placeholder="যেমন: fashion1234"
+                        placeholder="অ্যাডমিনের দেওয়া ইউজারনেম"
                         value={clientForm.username}
                         onChange={e => setClientForm(f => ({ ...f, username: e.target.value }))}
                         onKeyDown={e => e.key === 'Enter' && doLogin('client')}
@@ -203,12 +199,6 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
                       {loading === 'client' ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
                       তথ্য সংগ্রহ শুরু করুন
                     </Button>
-                    <button
-                      onClick={fillDemo}
-                      className="w-full text-xs text-slate-500 hover:text-cyan-400 transition-colors"
-                    >
-                      ডেমো টেস্ট: demo / demo1234 — ক্লিক করে অটো-ফিল করুন
-                    </button>
                   </TabsContent>
 
                   {/* Admin login */}
@@ -218,7 +208,7 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
                       <Input
                         id="admin-user"
                         autoComplete="username"
-                        placeholder="alamin"
+                        placeholder="Administrator username"
                         value={adminForm.username}
                         onChange={e => setAdminForm(f => ({ ...f, username: e.target.value }))}
                         onKeyDown={e => e.key === 'Enter' && doLogin('admin')}
@@ -248,6 +238,23 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
                         </button>
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <label htmlFor="admin-mfa-code" className="text-sm font-medium text-slate-300">Authenticator / recovery code (if enabled)</label>
+                      <Input
+                        id="admin-mfa-code"
+                        type="text"
+                        inputMode="text"
+                        autoCapitalize="characters"
+                        autoComplete="one-time-code"
+                        maxLength={32}
+                        placeholder="6-digit authenticator or one-time recovery code"
+                        value={adminForm.mfaCode}
+                        onChange={event => setAdminForm(form => ({ ...form, mfaCode: event.target.value }))}
+                        onKeyDown={event => event.key === 'Enter' && doLogin('admin')}
+                        className="bg-slate-950 border-slate-800 text-slate-100 font-mono"
+                      />
+                      <p className="text-xs text-slate-500">If MFA is enabled, enter the current code from your authenticator. Recovery codes are one-time. Never share either code.</p>
+                    </div>
                     <Button
                       onClick={() => doLogin('admin')}
                       disabled={loading !== null}
@@ -257,23 +264,23 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
                       অ্যাডমিন কনসোলে প্রবেশ
                     </Button>
                     <p className="text-xs text-slate-500 leading-relaxed">
-                      প্রথমবার: <span className="font-mono text-slate-400">alamin / alamin2026</span> — লগইনের পর অ্যাকাউন্ট সেটিংস থেকে পাসওয়ার্ড বদলে নিন।
+                      অ্যাডমিন অ্যাকাউন্ট ডেমো বা নমুনা credential দিয়ে seed করা হয় না। ইনস্টলেশনের সময় তৈরি করা administrator account ব্যবহার করুন; প্রথম লগইনের পর Security ট্যাবে MFA চালু করুন।
                     </p>
                   </TabsContent>
                 </Tabs>
               </CardContent>
             </Card>
 
-            <div className="mt-4 flex items-center gap-2 justify-center text-xs text-slate-600">
-              <ArrowDownToLine className="w-3.5 h-3.5" />
-              সব ডেটা এই স্টেজিং এনভায়রনমেন্টেই থাকে — বাইরে কোথাও প্রকাশিত হয় না
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs leading-relaxed text-slate-400">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
+              Credential values are encrypted in the browser for transfer and encrypted at rest by the configured ALOAPI vault key. The ALOAPI server still decrypts them briefly to store them; use HTTPS and a trusted, private deployment. Provider authorization remains separate.
             </div>
           </section>
         </div>
       </main>
 
       <footer className="mt-auto border-t border-slate-800/60 py-4 text-center text-xs text-slate-600">
-        Al-Amin IP Access — Personal Agency Tool · Staging Environment · {new Date().getFullYear()}
+        ALOAPI · self-hosted integration assistant · no provider grant implied · {new Date().getFullYear()}
       </footer>
     </div>
   );
