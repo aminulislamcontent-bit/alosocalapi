@@ -23,3 +23,6 @@ skills/
 
 # misc
 .DS_Store
+
+# Cloned third-party MERN topic repos (see scripts/clone-mern-projects.sh) — never commit these
+/mern-projects/

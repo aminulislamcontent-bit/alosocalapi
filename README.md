@@ -17,6 +17,8 @@ Full-stack Next.js application for ALO Education BD: client credential portal, C
 | CRM | Clients, tasks, notes, pipeline APIs (`/api/crm/*`) |
 | Growth Engine | Dual-mode discovery (universal + targeted campaigns), 19-provider free-first registry with live verification, provenance on every lead, explainable 7-component scoring, 11-state pipeline, DNC/opt-out governance, approval gates, USD cost ledger, audit events |
 | SetupBot | Platform credential library with per-field guides |
+| AI Automation Providers | 7 pinned open-source providers under `providers/` (agency-orchestrator + 3 agent libraries, YBT-Army-135M local LLM, OBS Studio, NGINX) — see `providers/README.md`, status at `GET /api/automation/providers` |
+| MERN Topic Catalogue | All 2,290 repos from github.com/topics/mern-project catalogued in `docs/mern-projects/` (clone-all script included) |
 
 ## Run it
 

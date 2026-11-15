@@ -1,0 +1,93 @@
+{
+  "stack": "AI Automation Server Provider Stack",
+  "source": "Added 2026-11-15 at project owner's request",
+  "note": "Each entry is a pinned git submodule under providers/. This project does NOT vendor or re-license their code; run scripts/providers.sh init to fetch them. Licences remain those of the upstream projects — see each `license` field before any redistribution or commercial use.",
+  "providers": [
+    {
+      "key": "agency-orchestrator",
+      "repo": "jnMetaCode/agency-orchestrator",
+      "url": "https://github.com/jnMetaCode/agency-orchestrator",
+      "path": "providers/agency-orchestrator",
+      "role": "orchestration-core",
+      "purpose": "One sentence -> team of AI expert agents -> verified deliverable. Zero-code YAML workflows, DAG multi-agent collaboration, 15 LLM providers (11 key-free), Web Studio / Desktop / Docker.",
+      "runtime": "TypeScript / Node (docker-compose.yml included upstream)",
+      "license": "Apache-2.0",
+      "integration": "Primary automation engine. Run upstream Docker/Web Studio; call from this app via AUTOMATION_ORCHESTRATOR_URL.",
+      "env": ["AUTOMATION_ORCHESTRATOR_URL"]
+    },
+    {
+      "key": "agency-agents",
+      "repo": "msitarzewski/agency-agents",
+      "url": "https://github.com/msitarzewski/agency-agents",
+      "path": "providers/agency-agents",
+      "role": "agent-library-en",
+      "purpose": "Complete AI agency agent library (frontend, marketing, community, QA personas with processes and deliverables). Feeds agent definitions into the orchestrator.",
+      "runtime": "Markdown/Shell agent definitions (Claude Code / Cursor / Copilot compatible)",
+      "license": "MIT",
+      "integration": "Agent persona source for agency-orchestrator. No server process.",
+      "env": []
+    },
+    {
+      "key": "agency-agents-zh",
+      "repo": "jnMetaCode/agency-agents-zh",
+      "url": "https://github.com/jnMetaCode/agency-agents-zh",
+      "path": "providers/agency-agents-zh",
+      "role": "agent-library-zh",
+      "purpose": "277 plug-and-play AI expert roles (Chinese market: Xiaohongshu/Douyin/WeChat/Feishu/DingTalk) for 20 tools. Companion agent library for agency-orchestrator.",
+      "runtime": "Markdown/Shell agent definitions",
+      "license": "MIT",
+      "integration": "Agent persona source for agency-orchestrator. No server process.",
+      "env": []
+    },
+    {
+      "key": "ai-agency-agents",
+      "repo": "Anas-Khan93/ai-agency-agents",
+      "url": "https://github.com/Anas-Khan93/ai-agency-agents",
+      "path": "providers/ai-agency-agents",
+      "role": "agent-library-workforce",
+      "purpose": "Open-source AI workforce: specialized agents for development, growth, research, strategy and creativity with structured workflows.",
+      "runtime": "Agent definitions",
+      "license": "MIT",
+      "integration": "Additional agent persona source for agency-orchestrator. No server process.",
+      "env": []
+    },
+    {
+      "key": "ybt-army-135m",
+      "repo": "YouBTech01/YBT-Army-135M",
+      "url": "https://github.com/YouBTech01/YBT-Army-135M",
+      "path": "providers/ybt-army-135m",
+      "role": "local-llm",
+      "purpose": "Compact 135M-parameter local AI assistant with chat UI (ybt_app.py). Cheap/free on-device inference for drafts, classification and triage before escalating to larger models.",
+      "runtime": "Python (requirements.txt, run_you_b_tech.bat)",
+      "license": "NOASSERTION",
+      "licenseWarning": "No clear open-source licence detected upstream. Treat as research/evaluation only — do NOT redistribute or build a commercial offering on it until the owner grants a licence.",
+      "integration": "Optional local model sidecar; call via YBT_ARMY_URL when running.",
+      "env": ["YBT_ARMY_URL"]
+    },
+    {
+      "key": "obs-studio",
+      "repo": "obsproject/obs-studio",
+      "url": "https://github.com/obsproject/obs-studio",
+      "path": "providers/obs-studio",
+      "role": "media-server",
+      "purpose": "Live streaming and screen recording: automated video/lesson/webinar capture, scene automation (obs-websocket) for content production pipelines.",
+      "runtime": "C/C++ desktop application (has 3 nested submodules of its own — fetch with --recursive)",
+      "license": "GPL-2.0",
+      "licenseWarning": "GPL-2.0 copyleft. Run as a separate process/service; do not link its code into this proprietary app.",
+      "integration": "Separate media service. Control via OBS websocket (OBS_WEBSOCKET_URL / OBS_WEBSOCKET_PASSWORD).",
+      "env": ["OBS_WEBSOCKET_URL", "OBS_WEBSOCKET_PASSWORD"]
+    },
+    {
+      "key": "nginx",
+      "repo": "nginx/nginx",
+      "url": "https://github.com/nginx/nginx",
+      "path": "providers/nginx",
+      "role": "server-edge",
+      "purpose": "HTTP server / reverse proxy / load balancer: the public edge in front of this Next.js app, the orchestrator and media services (TLS termination, rate limiting, caching).",
+      "runtime": "C server (build from source, or use the official nginx Docker image / OS package using this tree as reference config source)",
+      "license": "BSD-2-Clause",
+      "integration": "Deployment-time edge proxy. Reference config: providers/nginx.conf.example. The repo already ships a Caddyfile as a simpler alternative — use ONE edge proxy, not both.",
+      "env": []
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+# Example edge config if you choose NGINX (providers/nginx) as the server edge.
+# Alternative already in repo: Caddyfile — run ONE edge proxy, not both.
+# This file is a starting point, not a turnkey production config.
+
+upstream alo_app        { server 127.0.0.1:3000; }  # this Next.js app
+upstream orchestrator   { server 127.0.0.1:8080; }  # agency-orchestrator (when running)
+
+server {
+    listen 80;
+    server_name _;
+
+    # This app (CRM / portal / Growth Engine)
+    location / {
+        proxy_pass http://alo_app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # AI automation orchestrator (agency-orchestrator Web/API)
+    location /automation/ {
+        proxy_pass http://orchestrator/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Long-running agent workflows:
+        proxy_read_timeout 600s;
+    }
+
+    # Rate-limit the API surface a little by default
+    location /api/ {
+        limit_req zone=api burst=20 nodelay;
+        proxy_pass http://alo_app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# Place in http{} block:  limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
