@@ -47,11 +47,12 @@ v=$(cat /tmp/verified_count)
 check "at least 2 free sources verified by live test" $([ "$v" -ge 2 ] && echo 0 || echo 1) "verified=$v (blocked/rate-limited recorded honestly)"
 
 echo "── 3. Tenants ───────────────────────────────────────────"
-A=$(curl -s -b "$JAR_A" "$BASE/api/admin/clients" | jqr 'd.clients[0].id')
+A=$(curl -s -b "$JAR_A" "$BASE/api/admin/clients" | jqr '[...d.clients].sort((x,y)=>x.createdAt<y.createdAt?-1:1)[0].id')
 check "tenant A picked" $([ -n "$A" ] && echo 0 || echo 1) "id=$A"
 curl -s -b "$JAR_A" -X POST "$BASE/api/admin/clients" -H 'Content-Type: application/json' \
   -d '{"name":"Engine Test B","business":"EngineTestB","platforms":["facebook"]}' -o /tmp/newb.json
 BUSER=$(jqr 'd.client.username' < /tmp/newb.json); BPASS=$(jqr 'd.tempPassword' < /tmp/newb.json)
+B=$(jqr 'd.client.id' < /tmp/newb.json)
 check "tenant B created" $([ -n "$BUSER" ] && echo 0 || echo 1) "user=$BUSER"
 code=$(curl -s -c "$JAR_B" -o /tmp/loginb.json -w "%{http_code}" -X POST "$BASE/api/auth/login" \
   -H 'Content-Type: application/json' -d "{\"username\":\"$BUSER\",\"password\":\"$BPASS\"}")
@@ -173,6 +174,81 @@ code=$(curl -s -b "$JAR_A" -o /tmp/crm.json -w "%{http_code}" "$BASE/api/crm/lea
 crmok=$(jqr 'Array.isArray(d.leads)' < /tmp/crm.json 2>/dev/null)
 check "existing CRM leads API still 200" $([ "$code" = "200" ] && [ "$crmok" = "true" ] && echo 0 || echo 1) "http=$code"
 
+
+echo "── 14. Spec-compliance additions (§8, §12) ──────────────"
+TS=$(date +%s)
+# §12: suggest_only campaign — imported+recalced lead must NOT auto-advance
+PID2=$(curl -s -b "$JAR_A" -X POST "$BASE/api/engine/profiles" -H 'Content-Type: application/json' \
+  -d "{\"clientId\":\"$A\",\"name\":\"E2E SuggestOnly\",\"countries\":[\"BD\"],\"industries\":[\"education\"],\"keywords\":[\"suggestonlykw\"]}" \
+  | jqr 'd.profileId')
+CID2=$(curl -s -b "$JAR_A" -X POST "$BASE/api/engine/campaigns" -H 'Content-Type: application/json' \
+  -d "{\"clientId\":\"$A\",\"name\":\"E2E SuggestOnly Camp\",\"profileId\":\"$PID2\",\"autonomy\":\"suggest_only\",\"budgetPreference\":\"free_first\",\"sourceKeys\":[\"wikidata_sparql\"],\"qualificationCriteria\":{\"minScore\":10}}" \
+  | jqr 'd.campaignId')
+auto_ok=$(curl -s -b "$JAR_A" -X PATCH "$BASE/api/engine/campaigns" -H 'Content-Type: application/json' \
+  -d "{\"clientId\":\"$A\",\"id\":\"$CID2\",\"autonomy\":\"approval_required\"}" -o /dev/null -w "%{http_code}")
+check "campaign autonomy accepted on PATCH" $([ "$auto_ok" = "200" ] && echo 0 || echo 1)
+curl -s -b "$JAR_A" -X PATCH "$BASE/api/engine/campaigns" -H 'Content-Type: application/json' \
+  -d "{\"clientId\":\"$A\",\"id\":\"$CID2\",\"autonomy\":\"suggest_only\"}" -o /dev/null
+SL_LEAD=$(curl -s -b "$JAR_A" -X POST "$BASE/api/engine/leads" -H 'Content-Type: application/json' \
+  -d "{\"clientId\":\"$A\",\"campaignId\":\"$CID2\",\"leads\":[{\"businessName\":\"SuggestOnly Test Co $TS\",\"website\":\"https://suggestonly-test.example\",\"countryCode\":\"BD\",\"cityName\":\"Dhaka\",\"category\":\"education\",\"productsServices\":\"suggestonlykw training academy\",\"sourceProviderKey\":\"wikidata_sparql\",\"sourceUrl\":\"https://query.wikidata.org/sparql\",\"evidence\":[{\"type\":\"directory\",\"detail\":\"test entity\",\"url\":\"https://query.wikidata.org/sparql\"}]}]}" \
+  | jqr 'd.inserted')
+SLID=$(curl -s -b "$JAR_A" "$BASE/api/engine/leads?clientId=$A&campaignId=$CID2&limit=1" | jqr 'd.leads[0].id')
+rcok=$(curl -s -b "$JAR_A" -X PATCH "$BASE/api/engine/leads" -H 'Content-Type: application/json' \
+  -d "{\"clientId\":\"$A\",\"id\":\"$SLID\",\"action\":\"recalc_score\"}" | jqr 'd.ok')
+check "recalc_score runs under suggest_only" $([ "$rcok" = "true" ] && echo 0 || echo 1)
+sl_status=$(curl -s -b "$JAR_A" "$BASE/api/engine/leads?clientId=$A&campaignId=$CID2&limit=1" | jqr 'd.leads[0].pipelineStatus')
+check "suggest_only: recalc does NOT auto-advance" $([ "$sl_status" = "discovered" ] && echo 0 || echo 1) "status=$sl_status"
+
+# §8: follow-up scheduling
+FLEAD=$(curl -s -b "$JAR_A" "$BASE/api/engine/leads?clientId=$A&campaignId=$CID2&limit=1" | jqr 'd.leads[0].id')
+fu=$(curl -s -b "$JAR_A" -X PATCH "$BASE/api/engine/leads" -H 'Content-Type: application/json' \
+  -d "{\"clientId\":\"$A\",\"id\":\"$FLEAD\",\"action\":\"schedule_followup\",\"value\":\"2027-01-15T09:00:00.000Z\"}" | jqr 'd.followUpAt')
+check "follow-up scheduled (§8)" $([ -n "$fu" ] && [ "$fu" != "null" ] && echo 0 || echo 1) "followUpAt=$fu"
+fugot=$(curl -s -b "$JAR_A" "$BASE/api/engine/leads/$FLEAD?clientId=$A" | jqr 'd.lead.followUpAt')
+check "followUpAt persisted on lead detail" $([ "$fugot" != "null" ] && echo 0 || echo 1) "detail=$fugot"
+
+# §8: retention settings + sweep (tenant B isolated)
+code=$(curl -s -b "$JAR_B" -o /tmp/ret1.json -w "%{http_code}" -X POST "$BASE/api/engine/governance" -H 'Content-Type: application/json' \
+  -d "{\"clientId\":\"$A\",\"action\":\"set_retention\",\"retentionDays\":30}")
+check "set_retention blocked cross-tenant" $([ "$code" = "403" ] && echo 0 || echo 1) "http=$code"
+code=$(curl -s -b "$JAR_A" -o /tmp/ret2.json -w "%{http_code}" -X POST "$BASE/api/engine/governance" -H 'Content-Type: application/json' \
+  -d "{\"clientId\":\"$B\",\"action\":\"retention_sweep\"}")
+check "sweep before retention set → 400" $([ "$code" = "400" ] && echo 0 || echo 1) "http=$code"
+code=$(curl -s -b "$JAR_A" -o /dev/null -w "%{http_code}" -X POST "$BASE/api/engine/governance" -H 'Content-Type: application/json' \
+  -d "{\"clientId\":\"$B\",\"action\":\"set_retention\",\"retentionDays\":30}")
+check "admin set_retention works" $([ "$code" = "200" ] && echo 0 || echo 1)
+swept=$(curl -s -b "$JAR_B" -X POST "$BASE/api/engine/governance" -H 'Content-Type: application/json' \
+  -d "{\"action\":\"retention_sweep\"}" | jqr 'd.ok')
+check "tenant sweep on own workspace (client role)" $([ "$swept" = "true" ] && echo 0 || echo 1)
+
+# §8 deletion workflow: hard delete is admin-only + justification required
+curl -s -b "$JAR_B" -X POST "$BASE/api/engine/leads" -H 'Content-Type: application/json' \
+  -d "{\"leads\":[{\"businessName\":\"B Tenant Del Test $TS\",\"website\":\"https://bdeltest.example\",\"sourceProviderKey\":\"wikidata_sparql\",\"sourceUrl\":\"https://query.wikidata.org/sparql\"}]}" -o /dev/null
+BLEAD=$(curl -s -b "$JAR_B" "$BASE/api/engine/leads?limit=1" | jqr 'd.leads[0].id')
+code=$(curl -s -b "$JAR_B" -o /dev/null -w "%{http_code}" -X DELETE "$BASE/api/engine/leads/$BLEAD?actionClientId=$B")
+check "client hard delete → 403" $([ "$code" = "403" ] && echo 0 || echo 1) "http=$code"
+code=$(curl -s -b "$JAR_A" -o /dev/null -w "%{http_code}" -X DELETE "$BASE/api/engine/leads/$BLEAD?clientId=$B")
+check "admin hard delete w/o justification → 400" $([ "$code" = "400" ] && echo 0 || echo 1) "http=$code"
+code=$(curl -s -b "$JAR_A" -o /dev/null -w "%{http_code}" -X DELETE "$BASE/api/engine/leads/$BLEAD?clientId=$B&justification=e2e%20deletion%20workflow%20test")
+check "admin hard delete with justification → 200" $([ "$code" = "200" ] && echo 0 || echo 1) "http=$code"
+gone=$(curl -s -b "$JAR_B" -o /dev/null -w "%{http_code}" "$BASE/api/engine/leads/$BLEAD")
+check "deleted lead gone (404)" $([ "$gone" = "404" ] && echo 0 || echo 1) "http=$gone"
+
+# §12 approved_automation: client can draft→published when campaign authorizes
+BID=$(curl -s -b "$JAR_B" -X POST "$BASE/api/engine/growth/content" -H 'Content-Type: application/json' \
+  -d "{\"platform\":\"facebook\",\"topic\":\"automation test post\"}" | jqr 'd.item.id')
+code=$(curl -s -b "$JAR_B" -o /dev/null -w "%{http_code}" -X PATCH "$BASE/api/engine/growth/content" -H 'Content-Type: application/json' \
+  -d "{\"id\":\"$BID\",\"status\":\"published\"}")
+check "draft→published WITHOUT automation → 400" $([ "$code" = "400" ] && echo 0 || echo 1) "http=$code"
+BPROF=$(curl -s -b "$JAR_B" -X POST "$BASE/api/engine/profiles" -H 'Content-Type: application/json' \
+  -d "{\"name\":\"B Auto Profile\",\"countries\":[\"BD\"],\"keywords\":[\"automation\"],\"industries\":[\"software\"]}" | jqr 'd.profileId')
+BCAMP=$(curl -s -b "$JAR_B" -X POST "$BASE/api/engine/campaigns" -H 'Content-Type: application/json' \
+  -d "{\"name\":\"B Auto Camp\",\"profileId\":\"$BPROF\",\"autonomy\":\"approved_automation\",\"sourceKeys\":[\"wikidata_sparql\"]}" | jqr 'd.campaignId')
+curl -s -b "$JAR_B" -X PATCH "$BASE/api/engine/campaigns" -H 'Content-Type: application/json' \
+  -d "{\"id\":\"$BCAMP\",\"status\":\"active\"}" -o /dev/null
+code=$(curl -s -b "$JAR_B" -o /tmp/autopub.json -w "%{http_code}" -X PATCH "$BASE/api/engine/growth/content" -H 'Content-Type: application/json' \
+  -d "{\"id\":\"$BID\",\"status\":\"published\"}")
+check "approved_automation authorizes client draft→published" $([ "$code" = "200" ] && echo 0 || echo 1) "http=$code"
 echo ""
 echo "═══ RESULT: PASS=$PASS FAIL=$FAIL ═══"
 [ "$FAIL" = "0" ] && exit 0 || exit 1
