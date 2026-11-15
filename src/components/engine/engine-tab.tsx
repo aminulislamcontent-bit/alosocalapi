@@ -234,7 +234,7 @@ function Opportunities({ clientId, taxonomy, countries, onToast }: { clientId: s
   const [busy, setBusy] = useState(false);
 
   const load = () => api<{ reports: Report[] }>(`/api/engine/universal?clientId=${clientId}`).then(d => setReports(d.reports)).catch(e => onToast(e.message, 'error'));
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId]);
+  useEffect(() => { load(); }, [clientId]);
 
   const runScan = async () => {
     setBusy(true);
@@ -326,7 +326,7 @@ function Campaigns({ clientId, taxonomy, providers, onToast }: { clientId: strin
     api<{ campaigns: Campaign[] }>(`/api/engine/campaigns?clientId=${clientId}`).then(d => setCampaigns(d.campaigns)).catch(() => undefined);
     api<{ runs: RunRow[] }>(`/api/engine/discovery?clientId=${clientId}`).then(d => setRuns(d.runs)).catch(() => undefined);
   };
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId]);
+  useEffect(() => { load(); }, [clientId]);
 
   const createProfile = async () => {
     try {
@@ -458,7 +458,7 @@ function Leads({ clientId, onToast }: { clientId: string; onToast: (m: string, t
       .then(d => { setLeads(d.leads); setTotal(d.total); })
       .catch(e => onToast(e.message, 'error'));
   };
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId, filter]);
+  useEffect(() => { load(); }, [clientId, filter]);
 
   const patch = async (id: string, action: string, value?: string, text?: string) => {
     try {
@@ -552,7 +552,7 @@ function WebsiteGrowth({ clientId, onToast }: { clientId: string; onToast: (m: s
   const [busy, setBusy] = useState(false);
 
   const load = () => api<{ audits: AuditRowWebsite[] }>(`/api/engine/growth/website?clientId=${clientId}`).then(d => setAudits(d.audits)).catch(() => undefined);
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId]);
+  useEffect(() => { load(); }, [clientId]);
 
   const run = async () => {
     setBusy(true);
@@ -609,7 +609,7 @@ function Content({ clientId, onToast }: { clientId: string; onToast: (m: string,
   const [topic, setTopic] = useState('');
 
   const load = () => api<{ items: ContentRow[] }>(`/api/engine/growth/content?clientId=${clientId}`).then(d => setItems(d.items)).catch(() => undefined);
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId]);
+  useEffect(() => { load(); }, [clientId]);
 
   const generate = async () => {
     try {
@@ -707,7 +707,7 @@ function ApprovalsCost({ clientId, onToast }: { clientId: string; onToast: (m: s
     api<{ requests: Approval[] }>(`/api/engine/approvals?clientId=${clientId}`).then(d => setRequests(d.requests)).catch(() => undefined);
     api<typeof cost>(`/api/engine/cost?clientId=${clientId}`).then(setCost).catch(() => undefined);
   };
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId]);
+  useEffect(() => { load(); }, [clientId]);
 
   const decide = async (id: string, decision: string) => {
     try {

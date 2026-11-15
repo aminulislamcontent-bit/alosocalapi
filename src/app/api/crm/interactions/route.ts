@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSameOriginRequest } from '@/lib/security/request';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
@@ -34,6 +35,7 @@ export async function GET(req: NextRequest) {
 
 /** POST /api/crm/interactions — log a manual call/whatsapp/note */
 export async function POST(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const user = await getSessionUser();
   if (user?.role !== 'admin') return NextResponse.json({ error: 'অননুমোদিত।' }, { status: 401 });
 

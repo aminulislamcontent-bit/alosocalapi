@@ -25,9 +25,8 @@ import {
 
 interface Props {
   channelStatus: ChannelStatusMap;
-  onToggleLive: (id: string) => void;
+  onToggleChecklist: (id: string) => void;
   onSetHandle: (id: string, handle: string) => void;
-  onCopy: (text: string, label: string) => void;
 }
 
 const GROUP_FILTERS: { id: ChannelGroup | 'all'; label: string }[] = [
@@ -40,7 +39,7 @@ const GROUP_FILTERS: { id: ChannelGroup | 'all'; label: string }[] = [
   { id: 'retention', label: 'Retention' }
 ];
 
-export default function ChannelsTab({ channelStatus, onToggleLive, onSetHandle }: Props) {
+export default function ChannelsTab({ channelStatus, onToggleChecklist, onSetHandle }: Props) {
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState<ChannelGroup | 'all'>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -55,7 +54,7 @@ export default function ChannelsTab({ channelStatus, onToggleLive, onSetHandle }
     });
   }, [group, query]);
 
-  const liveCount = CHANNELS.filter(c => channelStatus[c.id]?.live).length;
+  const completedCount = CHANNELS.filter(c => channelStatus[c.id]?.live).length;
 
   return (
     <div className="space-y-6">
@@ -66,12 +65,12 @@ export default function ChannelsTab({ channelStatus, onToggleLive, onSetHandle }
             Marketing Channel Matrix
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            All {CHANNELS.length} channels with asset types, creative sizes, and best posting windows — prioritized for lead generation &amp; sales.
+            Planning reference for {CHANNELS.length} channels, asset types, creative sizes and suggested posting windows. This is not a live connection check.
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-mono">
           <span className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
-            Live: <strong className="text-emerald-400">{liveCount} / {CHANNELS.length}</strong>
+            Local checklist: <strong className="text-cyan-300">{completedCount} / {CHANNELS.length}</strong>
           </span>
         </div>
       </div>
@@ -104,11 +103,13 @@ export default function ChannelsTab({ channelStatus, onToggleLive, onSetHandle }
         </div>
       </div>
 
+      <p className="-mt-4 text-[11px] text-slate-500">Checklist state is stored locally in this browser. It is self-reported and does not mean the provider account is configured, authorized or verified.</p>
+
       {/* Channel Cards */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         {filtered.map(channel => {
           const status = channelStatus[channel.id];
-          const isLive = !!status?.live;
+          const markedComplete = !!status?.live;
           const gm = GROUP_META[channel.group];
           const tm = TIER_META[channel.leadTier];
           const isOpen = expanded === channel.id;
@@ -117,7 +118,7 @@ export default function ChannelsTab({ channelStatus, onToggleLive, onSetHandle }
             <div
               key={channel.id}
               className={`p-5 rounded-2xl border transition-all space-y-4 ${
-                isLive
+                markedComplete
                   ? 'bg-slate-900 border-emerald-500/30'
                   : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
               }`}
@@ -138,16 +139,16 @@ export default function ChannelsTab({ channelStatus, onToggleLive, onSetHandle }
                 </div>
 
                 <button
-                  onClick={() => onToggleLive(channel.id)}
+                  onClick={() => onToggleChecklist(channel.id)}
                   className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all flex items-center gap-1.5 ${
-                    isLive
+                    markedComplete
                       ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
                       : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
                   }`}
-                  aria-label={`Mark ${channel.name} as ${isLive ? 'not live' : 'live'}`}
+                  aria-label={`${markedComplete ? 'Unmark' : 'Mark'} ${channel.name} setup checklist`}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  {isLive ? 'Live' : 'Mark Live'}
+                  {markedComplete ? 'Marked complete' : 'Mark setup complete'}
                 </button>
               </div>
 
@@ -259,10 +260,10 @@ export default function ChannelsTab({ channelStatus, onToggleLive, onSetHandle }
                 </div>
               )}
 
-              {/* Live handle input */}
-              {isLive && (
+              {/* Optional self-reported reference; this is not a provider verification. */}
+              {status?.live && (
                 <div className="space-y-1">
-                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Live handle / URL</label>
+                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Self-reported account URL</label>
                   <input
                     value={status?.handle ?? ''}
                     onChange={(e) => onSetHandle(channel.id, e.target.value)}

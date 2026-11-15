@@ -5,7 +5,8 @@ out/
 
 # environment & secrets
 .env
-.env*.local
+.env.*
+!.env.example
 
 # runtime data (SQLite lives here; created by prisma db push)
 db/
@@ -16,12 +17,13 @@ server.log
 *.log
 
 # platform/workspace-only dirs (not part of the app)
-integrations/
+/integrations/
 tool-results/
 skills/
 .zscripts/
 
 # misc
+*.tsbuildinfo
 .DS_Store
 
 # Cloned third-party MERN topic repos (see scripts/clone-mern-projects.sh) — never commit these

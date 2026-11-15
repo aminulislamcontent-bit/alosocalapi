@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSameOriginRequest } from '@/lib/security/request';
 import { db } from '@/lib/db';
 import { generateTempPassword, generateUsername, getSessionUser, hashPassword } from '@/lib/auth';
 import { getTemplate } from '@/lib/platforms';
@@ -32,11 +33,12 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ clients: list });
+  return NextResponse.json({ clients: list }, { headers: { 'Cache-Control': 'no-store, private' } });
 }
 
 /** POST /api/admin/clients — create client account with temp credentials */
 export async function POST(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const user = await getSessionUser();
   if (user?.role !== 'admin') return NextResponse.json({ error: 'অননুমোদিত।' }, { status: 401 });
 
@@ -93,5 +95,5 @@ export async function POST(req: NextRequest) {
     ok: true,
     client: { id: client.id, name, business, username },
     tempPassword,
-  });
+  }, { headers: { 'Cache-Control': 'no-store, private' } });
 }

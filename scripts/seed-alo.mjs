@@ -1,6 +1,5 @@
-// ALO Education BD — one-time staging seed (idempotent)
-// Creates: master client account with ALL 13 platforms, built-in automation
-// rules, knowledge base entries, demo CRM pipeline data.
+// ALO Education BD — optional local staging seed (idempotent for built-in records).
+// It is never run by installation/startup. Pass --apply to create demo CRM data.
 import { PrismaClient } from '@prisma/client';
 import { randomBytes, scryptSync } from 'crypto';
 
@@ -39,13 +38,17 @@ const KB = [
 ];
 
 async function main() {
+  if (!process.argv.includes('--apply')) {
+    console.log('No rows written. Re-run with --apply only in an isolated local staging database to add demo data.');
+    return;
+  }
   console.log('— ALO Education BD seed শুরু —');
 
   // 1) Master client account with ALL 13 platforms
   const exists = await db.clientAccount.findUnique({ where: { username: 'aloeducation' } });
   let pw = null;
   if (!exists) {
-    pw = 'Alo-2026-Edu';
+    pw = `Alo-${randomBytes(18).toString('base64url')}`;
     await db.clientAccount.create({
       data: {
         name: 'আলো এডুকেশন (মাস্টার)',
@@ -58,7 +61,7 @@ async function main() {
         note: 'মাস্টার অ্যাকাউন্ট — নিজের সব প্ল্যাটফর্মের ক্রেডেনশিয়াল সংগ্রহের জন্য (১৩/১৩)',
       },
     });
-    console.log('✅ মাস্টার অ্যাকাউন্ট তৈরি: aloeducation / ' + pw + ' (১৩ প্ল্যাটফর্ম)');
+    console.log(`✅ Local demo account created: aloeducation / ${pw} (one-time generated password; save it securely)`);
   } else {
     console.log('ℹ️  মাস্টার অ্যাকাউন্ট আগেই আছে (username: aloeducation)');
   }
@@ -119,4 +122,4 @@ async function main() {
   console.log('— সিড সম্পন্ন —');
 }
 
-main().catch(e => { console.error(e); process.exit(1); }).finally(() => db.$disconnect());
+main().catch(() => { console.error('Local seed failed. No remote CRM was accessed; inspect the local staging database and schema.'); process.exitCode = 1; }).finally(() => db.$disconnect());

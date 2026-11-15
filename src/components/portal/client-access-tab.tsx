@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Plus, Copy, Download, Eye, EyeOff, Lock, Unlock, KeyRound, Trash2, RefreshCcw,
+  Plus, Copy, Eye, Lock, Unlock, KeyRound, Trash2, RefreshCcw,
   Users, UserCheck, CheckCircle2, ListChecks, Loader2, MessageCircle, FileJson,
   History, Search,
 } from 'lucide-react';
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { PlatformIcon } from '@/components/portal/platform-icons';
-import { PLATFORM_TEMPLATES, buildEnvText, buildReportText, getTemplate } from '@/lib/platforms';
+import { PLATFORM_TEMPLATES, getTemplate } from '@/lib/platforms';
 
 interface ClientRow {
   id: string;
@@ -38,8 +38,11 @@ interface ClientRow {
   stats: { collected: number; skipped: number; done: number };
 }
 
-interface EntryItem { platform: string; fieldKey: string; value: string; status: string; updatedAt: string }
-interface LogItem { actor: string; action: string; detail: string | null; ip: string | null; createdAt: string }
+interface EntryItem {
+  platform: string; fieldKey: string; hasValue: boolean; encryptedAtRest: boolean;
+  status: string; validationStatus: string; updatedAt: string;
+}
+interface LogItem { actor: string; action: string; detail: string | null; createdAt: string }
 interface ClientDetail extends ClientRow { entries: EntryItem[]; logs: LogItem[] }
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
@@ -87,7 +90,6 @@ export default function ClientAccessTab() {
   // Detail
   const [detail, setDetail] = useState<ClientDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [reveal, setReveal] = useState<Record<string, boolean>>({});
   const [deleteTarget, setDeleteTarget] = useState<ClientRow | null>(null);
 
   const load = useCallback(async () => {
@@ -153,12 +155,11 @@ export default function ClientAccessTab() {
   };
 
   const whatsappInvite = (c: { name: string; business: string; username: string; tempPassword: string }) =>
-    `স্বাগতম ${c.name} ভাই/আপু! 👋\n\nআপনার মার্কেটিং অটোমেশন সেটআপ শুরু করতে নিচের লিংকে লগইন করুন:\n\n🔗 লিংক: [আপনার পোর্টাল লিংক]\n👤 ইউজারনেম: ${c.username}\n🔑 সাময়িক পাসওয়ার্ড: ${c.tempPassword}\n\n📌 করণীয়:\n১. লগইন করে প্রতিটি ফিল্ডের "কীভাবে পাবেন?" গাইড দেখুন (বাংলায়)\n২. আইডি/টোকেনগুলো কপি করে জমা দিন — পাসওয়ার্ড দেওয়ার দরকার নেই\n৩. শেষ হলে "সংগ্রহ সম্পন্ন করুন" চাপুন — সেশন অটো-লগআউট হবে\n\n🔒 নিরাপত্তা: কালেকশন শেষ হলে এই সাময়িক পাসওয়ার্ড নিষ্ক্রিয় হয়ে যাবে। এরপর আপনি আপনার অ্যাকাউন্টের পাসওয়ার্ড নিরাপদে বদলে নিতে পারবেন — আমাদের কাজে কোনো সমস্যা হবে না।`;
+    `স্বাগতম ${c.name} ভাই/আপু! 👋\n\nALOAPI-এর guided integration setup শুরু করতে নিচের পোর্টালে লগইন করুন:\n\n🔗 লিংক: [আপনার পোর্টাল লিংক]\n👤 ইউজারনেম: ${c.username}\n🔑 সাময়িক ALOAPI পাসওয়ার্ড: ${c.tempPassword}\n\n📌 করণীয়:\n১. প্রতিটি ফিল্ডের বাংলা নির্দেশনা দেখুন।\n২. শুধু আপনার অনুমোদিত API value জমা দিন; provider account password, OTP বা recovery code দেবেন না।\n৩. Save করার সময় একটি আলাদা ১৬+ UTF-8 byte transfer passphrase দিন। এটি provider password নয়, browser storage-এ রাখা হয় না, এবং WhatsApp-এ পাঠাবেন না।\n৪. শেষ হলে "সংগ্রহ সম্পন্ন করুন" চাপুন। ALOAPI client account নিষ্ক্রিয় ও session বন্ধ হবে।\n\n🔒 এই collection provider-এ login, authorize, verify বা token revoke করে না। কোনো saved token-এর পরবর্তী আচরণ provider policy অনুযায়ী ভিন্ন হতে পারে।`;
 
   // ── Detail ──
   const openDetail = async (id: string) => {
     setDetailLoading(true);
-    setReveal({});
     try {
       const res = await fetch(`/api/admin/clients/${id}`);
       const data = await res.json();
@@ -200,7 +201,7 @@ export default function ClientAccessTab() {
   };
 
   const download = (filename: string, text: string) => {
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -216,6 +217,27 @@ export default function ClientAccessTab() {
 
   const detailEntry = (platform: string, fieldKey: string) =>
     detail?.entries.find(e => e.platform === platform && e.fieldKey === fieldKey);
+
+  const downloadStatusReport = () => {
+    if (!detail) return;
+    const report = {
+      exportType: 'aloapi-client-credential-status-only',
+      exportedAt: new Date().toISOString(),
+      client: { username: detail.username },
+      platforms: detail.platforms,
+      entries: detail.entries.map(({ platform, fieldKey, hasValue, encryptedAtRest, status, validationStatus, updatedAt }) => ({
+        platform, fieldKey, hasValue, encryptedAtRest, status, validationStatus, updatedAt,
+      })),
+      security: {
+        credentialValuesIncluded: false,
+        encryptedCredentialValuesIncluded: false,
+        phoneNumbersIncluded: false,
+        providerAuthorizationPerformed: false,
+        liveVerificationPerformed: false,
+      },
+    };
+    download(`${detail.username}-credential-status.json`, JSON.stringify(report, null, 2));
+  };
 
   // ────────────────────────────────────────────────────────────────
   return (
@@ -531,27 +553,10 @@ export default function ClientAccessTab() {
                 </DialogDescription>
               </DialogHeader>
 
-              {/* Export buttons */}
-              <div className="flex flex-wrap gap-2 py-1">
-                <Button size="sm" variant="outline" className="border-slate-700 text-slate-200 gap-1.5"
-                  onClick={() => copyOr(buildEnvText(detail.platforms, detail.entries, detail.business), '.env')}
-                >
-                  <Copy className="w-3.5 h-3.5" /> .env কপি
-                </Button>
-                <Button size="sm" variant="outline" className="border-slate-700 text-slate-200 gap-1.5"
-                  onClick={() => download(`${detail.username}-credentials.env`, buildEnvText(detail.platforms, detail.entries, detail.business))}
-                >
-                  <Download className="w-3.5 h-3.5" /> .env ডাউনলোড
-                </Button>
-                <Button size="sm" variant="outline" className="border-slate-700 text-slate-200 gap-1.5"
-                  onClick={() => copyOr(buildReportText(detail.platforms, detail.entries, detail.business), 'রিপোর্ট')}
-                >
-                  <MessageCircle className="w-3.5 h-3.5" /> রিপোর্ট কপি
-                </Button>
-                <Button size="sm" variant="outline" className="border-slate-700 text-slate-200 gap-1.5"
-                  onClick={() => download(`${detail.username}-data.json`, JSON.stringify(detail.entries, null, 2))}
-                >
-                  <FileJson className="w-3.5 h-3.5" /> JSON
+              <div className="flex flex-wrap items-center justify-between gap-3 py-1">
+                <p className="text-xs text-slate-500">Credential values are write-only and cannot be copied or exported. The status report contains presence and offline-check metadata only.</p>
+                <Button size="sm" variant="outline" className="border-slate-700 text-slate-200 gap-1.5" onClick={downloadStatusReport}>
+                  <FileJson className="w-3.5 h-3.5" /> Status-only JSON
                 </Button>
               </div>
 
@@ -578,8 +583,6 @@ export default function ClientAccessTab() {
                       <div className="divide-y divide-slate-800/60">
                         {tpl.fields.map(f => {
                           const e = detailEntry(pKey, f.key);
-                          const id = `${pKey}:${f.key}`;
-                          const shown = reveal[id] ?? false;
                           return (
                             <div key={f.key} className="px-4 py-2.5 flex items-center gap-3">
                               <div className="flex-1 min-w-0">
@@ -591,23 +594,13 @@ export default function ClientAccessTab() {
                                 ) : e.status === 'skipped' ? (
                                   <p className="text-xs text-amber-500/80 mt-0.5">স্কিপ করা হয়েছে</p>
                                 ) : (
-                                  <p className="text-xs font-mono text-emerald-300/90 mt-0.5 truncate">
-                                    {shown || f.sensitive === false ? e.value : `${e.value.slice(0, 4)}••••••••${e.value.slice(-4)}`}
+                                  <p className="text-xs text-emerald-300/90 mt-0.5">
+                                    {e.hasValue ? 'Value saved · plaintext hidden' : 'Marked collected · no value present'}
+                                    {e.encryptedAtRest ? ' · encrypted at rest' : ' · legacy plaintext requires vault migration'}
+                                    {e.validationStatus !== 'none' ? ` · offline check: ${e.validationStatus}` : ''}
                                   </p>
                                 )}
                               </div>
-                              {e?.status === 'collected' && e.value && (
-                                <div className="flex gap-1 shrink-0">
-                                  {f.sensitive !== false && (
-                                    <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-500" onClick={() => setReveal(r => ({ ...r, [id]: !shown }))} aria-label="দেখান/লুকান">
-                                      {shown ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                    </Button>
-                                  )}
-                                  <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-500" onClick={() => copyOr(e.value, f.labelBn)} aria-label="কপি">
-                                    <Copy className="w-3.5 h-3.5" />
-                                  </Button>
-                                </div>
-                              )}
                             </div>
                           );
                         })}
@@ -635,7 +628,7 @@ export default function ClientAccessTab() {
                         <div className="flex-1 min-w-0">
                           <p className="text-slate-300">{l.detail ?? l.action}</p>
                           <p className="text-slate-600 mt-0.5 font-mono text-[10px]">
-                            {new Date(l.createdAt).toLocaleString('bn-BD')}{l.ip ? ` · IP: ${l.ip}` : ''}
+                            {new Date(l.createdAt).toLocaleString('bn-BD')}
                           </p>
                         </div>
                       </div>
@@ -655,7 +648,7 @@ export default function ClientAccessTab() {
             <AlertDialogTitle>ক্লায়েন্ট মুছে ফেলবেন?</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-400">
               <strong>{deleteTarget?.name}</strong> ({deleteTarget?.business}) এর সব সংগৃহীত ডেটা স্থায়ীভাবে মুছে যাবে।
-              প্রয়োজন হলে আগে .env এক্সপোর্ট করে রাখুন।
+              Credential plaintext/ciphertext export করা যায় না; প্রয়োজনীয় status-only রিপোর্ট আগে ডাউনলোড করুন।
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

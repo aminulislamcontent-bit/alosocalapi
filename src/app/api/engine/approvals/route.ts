@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSameOriginRequest } from '@/lib/security/request';
 import { db } from '@/lib/db';
 import { requireEngineScope } from '@/lib/engine/guard';
 import { writeAudit } from '@/lib/engine/audit';
@@ -36,6 +37,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const body = (await req.json().catch(() => ({}))) as {
     clientId?: string;
     type?: string;
@@ -71,6 +73,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const body = (await req.json().catch(() => ({}))) as {
     id?: string;
     decision?: string;

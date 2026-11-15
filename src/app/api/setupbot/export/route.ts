@@ -1,78 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdminOrClient } from '@/lib/setupbot-guard';
-import { getSbPlatform, getSbCategoryOf, SB_VERSION, TOKEN_REFRESH_SCHEDULE } from '@/lib/setupbot';
-import { encryptSecret } from '@/lib/crypto';
+import { getSbPlatform, getSbCategoryOf, SB_VERSION } from '@/lib/setupbot';
+import { credentialPresence } from '@/lib/security/credential-vault';
 
 /**
- * GET /api/setupbot/export[?clientId=xxx]
- * Master JSON handoff (spec Phase 4). Secrets encrypted with AES-256-GCM
- * (fields suffixed _encrypted). Client → own data; admin → any client.
+ * Status-only SetupBot handoff. The export deliberately excludes all credential
+ * values (including encrypted ciphertext), identifiers, phone numbers and OTPs.
  */
 export async function GET(req: NextRequest) {
   const clientIdParam = req.nextUrl.searchParams.get('clientId') ?? undefined;
   const auth = await requireAdminOrClient(req, clientIdParam);
   if ('error' in auth) return auth.error;
-
   const entries = await db.credentialEntry.findMany({
     where: { clientId: auth.client.id, status: 'collected' },
-    orderBy: { platform: 'asc' },
+    orderBy: [{ platform: 'asc' }, { fieldKey: 'asc' }],
   });
-
-  const tplCache = new Map<string, ReturnType<typeof getSbPlatform>>();
-
-  const integrations: Record<string, Record<string, Record<string, string>>> = {};
-  const validatedPlatforms: Record<string, string> = {};
-
-  for (const e of entries) {
-    let tpl = tplCache.get(e.platform);
-    if (tpl === undefined) {
-      tpl = getSbPlatform(e.platform);
-      tplCache.set(e.platform, tpl);
-    }
-
-    const bucket = tpl ? (getSbCategoryOf(e.platform)?.key ?? 'legacy') : 'legacy';
+  const integrations: Record<string, Record<string, Record<string, unknown>>> = {};
+  const platforms = new Set<string>();
+  for (const entry of entries) {
+    const template = getSbPlatform(entry.platform);
+    const bucket = template ? (getSbCategoryOf(entry.platform)?.key ?? 'legacy') : 'legacy';
     integrations[bucket] ??= {};
-    integrations[bucket][e.platform] ??= {};
-
-    const isSecret = tpl ? (tpl.fields.find(f => f.k === e.fieldKey)?.sens ?? false) : /token|secret|password|key/i.test(e.fieldKey);
-    const outKey = isSecret ? `${e.fieldKey}_encrypted` : e.fieldKey;
-    integrations[bucket][e.platform][outKey] = isSecret ? encryptSecret(e.value) : e.value;
-
-    if (e.validationStatus && e.validationStatus !== 'none') {
-      validatedPlatforms[e.platform] = e.validationStatus;
-    }
+    integrations[bucket][entry.platform] ??= {};
+    const { hasValue, encryptedAtRest } = credentialPresence(entry.value);
+    integrations[bucket][entry.platform][entry.fieldKey] = {
+      configured: hasValue,
+      encryptedAtRest,
+      validationStatus: entry.validationStatus,
+      validatedAt: entry.validatedAt?.toISOString() ?? null,
+      updatedAt: entry.updatedAt.toISOString(),
+    };
+    platforms.add(entry.platform);
   }
-
-  const allPlatforms = new Set<string>();
-  for (const plats of Object.values(integrations)) {
-    for (const p of Object.keys(plats)) allPlatforms.add(p);
-  }
-  const totalIntegrations = allPlatforms.size;
-
-  const master = {
-    client_id: auth.client.username,
-    client_name: auth.client.name,
-    setup_completed_at: new Date().toISOString(),
-    setupbot_version: SB_VERSION,
-    password_dependency: false,
-    total_integrations: totalIntegrations,
+  await db.activityLog.create({ data: {
+    clientId: auth.client.id, actor: auth.admin ? 'admin' : 'client', action: 'setupbot_status_export',
+    detail: `status-only export: ${platforms.size} integrations; credential values omitted`,
+  } });
+  return NextResponse.json({
+    exportType: 'aloapi-setupbot-status-only',
+    exportedAt: new Date().toISOString(),
+    client: { username: auth.client.username, name: auth.client.name },
+    setupbotVersion: SB_VERSION,
+    totalIntegrations: platforms.size,
     integrations,
-    validation_summary: validatedPlatforms,
-    token_refresh_schedule: TOKEN_REFRESH_SCHEDULE,
-    notes:
-      'All tokens are long-lived or auto-refreshable. Password change will NOT break any integration. ' +
-      'Secrets are AES-256-GCM encrypted (v1:<iv>.<tag>.<ciphertext>); non-secret fields are plaintext.',
-  };
-
-  await db.activityLog.create({
-    data: {
-      clientId: auth.client.id,
-      actor: auth.admin ? 'admin' : 'client',
-      action: 'setupbot_export',
-      detail: `master JSON — ${totalIntegrations} integrations`,
+    security: {
+      credentialValuesIncluded: false,
+      encryptedCredentialValuesIncluded: false,
+      plaintextSecretsIncluded: false,
+      phoneNumbersIncluded: false,
+      otpOrRecoveryCodesIncluded: false,
+      note: 'This report contains configuration-presence and offline format-check metadata only. It does not prove authorization, account access, or provider connectivity.',
     },
-  });
-
-  return NextResponse.json(master);
+  }, { headers: { 'Cache-Control': 'no-store' } });
 }

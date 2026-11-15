@@ -21,7 +21,6 @@ export function isFieldRequired(field: CredentialField): boolean {
 export interface EntryLite {
   platform: string;
   fieldKey: string;
-  value: string;
   status: string;
 }
 
@@ -66,60 +65,4 @@ export function computeProgress(platforms: string[], entries: EntryLite[]) {
     percent: total === 0 ? 0 : Math.round((done / total) * 100),
     perPlatform,
   };
-}
-
-/** Format collected entries as an .env-style text for the main automation project */
-export function buildEnvText(platforms: string[], entries: EntryLite[], clientName: string): string {
-  const entryMap = new Map(entries.map(e => [`${e.platform}:${e.fieldKey}`, e]));
-  const lines: string[] = [];
-  lines.push('# ═══════════════════════════════════════════════════════════');
-  lines.push('# AL-AMIN IP ACCESS — Client Credential Export');
-  lines.push(`# Client: ${clientName}`);
-  lines.push(`# Generated: ${new Date().toISOString()}`);
-  lines.push('# ═══════════════════════════════════════════════════════════');
-  lines.push('');
-
-  for (const pKey of platforms) {
-    const tpl = TEMPLATE_MAP[pKey];
-    if (!tpl) continue;
-    lines.push(`# ─── ${tpl.name} (${tpl.nameBn}) ───`);
-    for (const f of tpl.fields) {
-      const entry = entryMap.get(`${pKey}:${f.key}`);
-      if (!entry || entry.status !== 'collected' || !entry.value) continue;
-      const envKey = `${pKey}_${f.key}`.toUpperCase().replace(/[^A-Z0-9_]/g, '_');
-      const oneLine = entry.value.replace(/\r?\n/g, ' | ');
-      lines.push(`${envKey}="${oneLine}"`);
-    }
-    lines.push('');
-  }
-  lines.push('# End of export — values collected via Al-Amin IP Access staging portal');
-  return lines.join('\n');
-}
-
-/** Human-readable full report (for WhatsApp / copy) */
-export function buildReportText(platforms: string[], entries: EntryLite[], clientName: string): string {
-  const entryMap = new Map(entries.map(e => [`${e.platform}:${e.fieldKey}`, e]));
-  const lines: string[] = [];
-  lines.push(`📋 ক্রেডেনশিয়াল রিপোর্ট — ${clientName}`);
-  lines.push(`সংগৃহীত: ${new Date().toLocaleDateString('bn-BD')}`);
-  lines.push('');
-  for (const pKey of platforms) {
-    const tpl = TEMPLATE_MAP[pKey];
-    if (!tpl) continue;
-    lines.push(`━━ ${tpl.name} ━━`);
-    for (const f of tpl.fields) {
-      const entry = entryMap.get(`${pKey}:${f.key}`);
-      if (!entry || entry.status === 'pending') continue;
-      if (entry.status === 'skipped') {
-        lines.push(`○ ${f.label}: [স্কিপ করা হয়েছে]`);
-      } else {
-        const masked = f.sensitive !== false && entry.value.length > 8
-          ? `${entry.value.slice(0, 6)}••••••${entry.value.slice(-4)}`
-          : entry.value;
-        lines.push(`✔ ${f.label}: ${masked.replace(/\r?\n/g, ' | ')}`);
-      }
-    }
-    lines.push('');
-  }
-  return lines.join('\n');
 }

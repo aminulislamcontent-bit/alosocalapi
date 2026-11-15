@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSameOriginRequest } from '@/lib/security/request';
 import { requireEngineScope } from '@/lib/engine/guard';
 import { recordVerification } from '@/lib/engine/registry';
 import { db } from '@/lib/db';
@@ -27,6 +28,7 @@ const VERIFIERS: Record<string, () => Promise<{ status: string; check: Record<st
 };
 
 export async function POST(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const scope = await requireEngineScope();
   if (!scope.ok) return NextResponse.json({ error: scope.error }, { status: scope.status });
   if (scope.scope.user.role !== 'admin') {

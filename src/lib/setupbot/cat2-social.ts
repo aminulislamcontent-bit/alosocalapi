@@ -164,15 +164,7 @@ export const CAT_SOCIAL: SbCategory = {
     },
     {
       key: 'whatsapp', name: 'WhatsApp Business Cloud API', bn: 'হোয়াটসঅ্যাপ বিজনেস', icon: 'whatsapp', grad: 'from-emerald-500 to-green-700',
-      vHint: 'GET /v19.0/{phone-id}?fields=quality_rating', expiry: 'System user token — never',
-      fields: [
-        { k: 'wa_display_phone', label: 'Business Phone Number', bn: 'বিজনেস নম্বর', desc: 'যে নম্বর থেকে মেসেজ যাবে।', steps: ['দেশের কোড সহ লিখুন'], ph: '+8801XXXXXXXXX' },
-        { k: 'phone_number_id', label: 'Phone Number ID', bn: 'ফোন নাম্বার আইডি', desc: 'WhatsApp API-র মূল আইডি।', steps: ['developers.facebook.com → অ্যাপ → WhatsApp → API Setup'], pat: '^\\d{10,20}$', hint: 'সংখ্যার আইডি' },
-        { k: 'waba_id', label: 'WABA ID', bn: 'হোয়াটসঅ্যাপ অ্যাকাউন্ট আইডি', desc: 'WhatsApp Business Account আইডি।', steps: ['একই API Setup পেজে উপরে দেখাবে'] },
-        { k: 'system_user_token', label: 'System User Token', bn: 'সিস্টেম ইউজার টোকেন', desc: 'পার্মানেন্ট টোকেন — কখনো শেষ হয় না।', steps: ['business.facebook.com/settings → System Users → Generate Token'], sens: true },
-        { k: 'webhook_verify_token', label: 'Webhook Verify Token', bn: 'ওয়েবহুক ভেরিফাই টোকেন', desc: 'আপনার নিজের বানানো সিক্রেট স্ট্রিং।', steps: ['যেকোনো শক্তিশালী স্ট্রিং বানিয়ে দিন'], sens: true },
-        { k: 'app_secret', label: 'App Secret (webhook sign)', bn: 'অ্যাপ সিক্রেট', desc: 'Webhook সিগনেচার যাচাইয়ে লাগে।', steps: ['App settings → Basic → App secret'], sens: true },
-      ],
+      fields: [],
     },
   ],
 };

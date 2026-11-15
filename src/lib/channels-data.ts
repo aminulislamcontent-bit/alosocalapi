@@ -33,6 +33,7 @@ export interface MarketingChannel {
 }
 
 export interface ChannelStatusEntry {
+  // Legacy storage key; this is only a self-reported local checklist, never provider state.
   live: boolean;
   handle: string;
 }

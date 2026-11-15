@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSameOriginRequest } from '@/lib/security/request';
 import { db } from '@/lib/db';
 import { requireEngineScope } from '@/lib/engine/guard';
 import { runPsi } from '@/lib/engine/adapters/psi';
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const body = (await req.json().catch(() => ({}))) as { clientId?: string; url?: string };
   const scope = await requireEngineScope(body.clientId ?? null);
   if (!scope.ok) return NextResponse.json({ error: scope.error }, { status: scope.status });

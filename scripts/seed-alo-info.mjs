@@ -1,78 +1,60 @@
-// Seed ALO Education BD's OWN known info into the master account (aloeducation).
-// Idempotent: upserts known values only; leaves ID/token fields pending for
-// the owner to collect via the Bengali-guided portal.
-//   node scripts/seed-alo-info.mjs
+// Explicitly gated local data helper for ALO Education BD's own account.
+// It never accesses an external CRM. It is not run by install/start scripts.
+// Usage: node scripts/seed-alo-info.mjs --apply
+import path from 'node:path';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { parseEnvFile } from './aloapi.mjs';
+import { encryptVaultValue } from '../src/lib/security/vault-crypto-core.mjs';
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const KNOWN = [
-  // Facebook — page identity (URL is known; ID/token must come from Meta Business)
-  {
-    platform: 'facebook',
-    fieldKey: 'page_url',
-    value: 'https://www.facebook.com/ALOLearningJourney',
-  },
-  // WhatsApp — business number given by owner (+880 1805-020103)
-  {
-    platform: 'whatsapp',
-    fieldKey: 'wa_display_phone',
-    value: '+880 1805-020103',
-  },
-  // Website — primary domain from brand info
-  {
-    platform: 'website',
-    fieldKey: 'web_domain',
-    value: 'aloeducation.bd',
-  },
-  // YouTube — official channel
-  {
-    platform: 'youtube',
-    fieldKey: 'yt_channel_url',
-    value: 'https://www.youtube.com/@aloeducationbd',
-  },
+  { platform: 'facebook', fieldKey: 'page_url', value: 'https://www.facebook.com/ALOLearningJourney' },
+  { platform: 'website', fieldKey: 'web_domain', value: 'aloeducation.bd' },
+  { platform: 'youtube', fieldKey: 'yt_channel_url', value: 'https://www.youtube.com/@aloeducationbd' },
 ];
 
-// Legacy/mistyped keys to remove if present (self-heal on re-run)
-const STALE = ['website_url', 'channel_url'];
-
-async function main() {
-  const client = await prisma.clientAccount.findUnique({
-    where: { username: 'aloeducation' },
-    select: { id: true, username: true },
-  });
-  if (!client) {
-    console.error('ERROR: master account "aloeducation" not found. Run scripts/seed-alo.mjs first.');
-    process.exit(1);
-  }
-
-  for (const fieldKey of STALE) {
-    const gone = await prisma.credentialEntry.deleteMany({
-      where: { clientId: client.id, fieldKey },
-    });
-    if (gone.count) console.log(`removed stale fieldKey: ${fieldKey}`);
-  }
-
-  for (const item of KNOWN) {
-    const entry = await prisma.credentialEntry.upsert({
-      where: {
-        clientId_platform_fieldKey: {
-          clientId: client.id,
-          platform: item.platform,
-          fieldKey: item.fieldKey,
-        },
-      },
-      update: { value: item.value, status: 'collected' },
-      create: { ...item, clientId: client.id, status: 'collected' },
-    });
-    console.log(`upserted ${item.platform}.${item.fieldKey} = ${entry.value} (${entry.status})`);
-  }
-
-  const total = await prisma.credentialEntry.count({ where: { clientId: client.id } });
-  console.log(`\nOK — aloeducation now has ${total} entries (known info pre-filled, tokens pending).`);
+function loadLocalEnv() {
+  try {
+    const values = parseEnvFile(readFileSync(path.join(ROOT, '.env'), 'utf8'));
+    for (const [key, value] of Object.entries(values)) if (process.env[key] === undefined) process.env[key] = value;
+  } catch { /* environment variables may be supplied by the invoking process */ }
 }
 
-main()
-  .catch((e) => { console.error(e); process.exit(1); })
-  .finally(() => prisma.$disconnect());
+async function main() {
+  if (!process.argv.includes('--apply')) {
+    console.log('No changes made. Review this file and pass --apply to update only the local SQLite account.');
+    return;
+  }
+  loadLocalEnv();
+  if (!process.env.DATABASE_URL?.startsWith('file:')) throw new Error('A local SQLite DATABASE_URL is required.');
+  if (!process.env.ALOAPI_VAULT_KEY || Buffer.byteLength(process.env.ALOAPI_VAULT_KEY, 'utf8') < 32) {
+    throw new Error('A stable ALOAPI_VAULT_KEY of at least 32 bytes is required.');
+  }
+
+  const { PrismaClient } = await import('@prisma/client');
+  const prisma = new PrismaClient();
+  try {
+    const client = await prisma.clientAccount.findUnique({ where: { username: 'aloeducation' }, select: { id: true } });
+    if (!client) throw new Error('Local account "aloeducation" was not found; no rows were changed.');
+    let saved = 0;
+    for (const item of KNOWN) {
+      const encryptedValue = encryptVaultValue(item.value);
+      await prisma.credentialEntry.upsert({
+        where: { clientId_platform_fieldKey: { clientId: client.id, platform: item.platform, fieldKey: item.fieldKey } },
+        update: { value: encryptedValue, status: 'collected' },
+        create: { ...item, value: encryptedValue, clientId: client.id, status: 'collected' },
+      });
+      saved += 1;
+    }
+    console.log(`Updated ${saved} reviewed local profile field(s) with encrypted storage. Existing unrelated rows were not deleted or exported.`);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+main().catch(() => {
+  console.error('Local profile update failed. No row contents were logged; confirm that the stable vault key, database, and reviewed schema are available.');
+  process.exitCode = 1;
+});

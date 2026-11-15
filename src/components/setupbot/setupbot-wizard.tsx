@@ -1,13 +1,11 @@
 'use client';
 
-// SetupBot Pro v2.0 — conversational onboarding wizard for the client portal.
-// Implements spec phases: 0 auth-greeting → 1 category/platform menus +
-// one-question-at-a-time collection → 2 OTP guidance → 3 health-check table
-// → 4 encrypted master export. Resume & skip supported throughout.
+// SetupBot Pro — guided, local-only collection of user-supplied integration values.
+// Provider authorization and live connectivity are not performed by this wizard.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ChevronDown, ChevronRight, Check, CheckCircle2, Eye, EyeOff, Loader2, Lock,
+  ChevronDown, ChevronRight, Check, CheckCircle2, Loader2, Lock,
   LogOut, Clock, Bot, ShieldCheck, RefreshCcw, Download, Copy, ArrowLeft,
   ArrowRight, Play, PauseCircle, AlertTriangle, Sparkles,
 } from 'lucide-react';
@@ -18,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+import { encryptCredentialForTransfer } from '@/lib/security/credential-transfer-client';
 import { PlatformIcon } from '@/components/portal/platform-icons';
 import { SB_VERSION } from '@/lib/setupbot/types';
 
@@ -33,16 +32,14 @@ interface SbCategory {
   key: string; emoji: string; name: string; bn: string; desc: string; grad: string; platforms: SbPlatform[];
 }
 interface EntryItem {
-  platform: string; fieldKey: string; value: string; status: string;
+  platform: string; fieldKey: string; hasValue: boolean; encryptedAtRest: boolean; status: string;
   validationStatus: string; validationNote: string; validatedAt: string | null; updatedAt: string;
 }
 
 const BRAND_ICONS = new Set(['facebook', 'instagram', 'whatsapp', 'tiktok', 'youtube', 'linkedin', 'x', 'pinterest', 'telegram', 'google_ads', 'google_analytics', 'messenger', 'website']);
-const mask = (v: string) => (!v ? '' : v.length <= 8 ? v.slice(0, 2) + '…' + v.slice(-2) : `${v.slice(0, 4)}…${v.slice(-4)}`);
+type Phase = 'welcome' | 'cats' | 'plats' | 'collect' | 'review' | 'done';
 
-type Phase = 'welcome' | 'cats' | 'plats' | 'collect' | 'health' | 'done';
-
-export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void }) {
+export default function SetupBotWizard({ onAuthLost, transferPassphrase, onTransferPassphraseChange }: { onAuthLost: () => void; transferPassphrase: string; onTransferPassphraseChange: (value: string) => void }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [catalog, setCatalog] = useState<SbCategory[] | null>(null);
@@ -53,7 +50,6 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
   const [flowIdx, setFlowIdx] = useState(0);
   const [draft, setDraft] = useState('');
   const [guideOpen, setGuideOpen] = useState(false);
-  const [reveal, setReveal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
   const [verdict, setVerdict] = useState<{ platform: string; status: string; note: string } | null>(null);
@@ -61,7 +57,7 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
   const [idlePaused, setIdlePaused] = useState(false);
   const [jsonPreview, setJsonPreview] = useState<string | null>(null);
   const lastActivity = useRef(Date.now());
-  const flowRef = useRef<{ plat: string; f: SbField }[]>([]);
+  const [flow, setFlow] = useState<{ plat: string; f: SbField }[]>([]);
 
   const authLost = useCallback(() => onAuthLost(), [onAuthLost]);
 
@@ -153,28 +149,32 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
   }, [catalog]);
 
   const startCollect = (plats: string[]) => {
-    flowRef.current = buildFlow(plats);
+    const nextFlow = buildFlow(plats);
+    setFlow(nextFlow);
     // skip to first unfinished field
-    const idx = flowRef.current.findIndex(({ plat, f }) => entries.get(`${plat}:${f.k}`)?.status !== 'collected');
+    const idx = nextFlow.findIndex(({ plat, f }) => entries.get(`${plat}:${f.k}`)?.status !== 'collected');
     setFlowIdx(idx === -1 ? 0 : idx);
     setDraft('');
     setVerdict(null);
     setPhase('collect');
   };
 
-  const cur = flowRef.current[flowIdx];
+  const cur = flow[flowIdx];
   const curPlat = cur ? platByKey.get(cur.plat) : undefined;
   const curEntry = cur ? entries.get(`${cur.plat}:${cur.f.k}`) : undefined;
-  const totalSteps = flowRef.current.length || 1;
+  const totalSteps = flow.length || 1;
 
   const saveField = async (status: 'collected' | 'skipped') => {
     if (!cur || saving) return;
+    if (status === 'collected' && !draft.trim()) { toast({ title: 'আগে ভ্যালুটি লিখুন', variant: 'destructive' }); return; }
+    if (status === 'collected' && !transferPassphrase) { toast({ title: 'নিরাপদ ট্রান্সফার পাসফ্রেজ দিন', variant: 'destructive' }); return; }
     setSaving(true);
     try {
+      const transfer = status === 'collected' ? await encryptCredentialForTransfer(draft.trim(), transferPassphrase) : undefined;
       const res = await fetch('/api/setupbot/entries', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform: cur.plat, fieldKey: cur.f.k, value: draft.trim(), status }),
+        body: JSON.stringify({ platform: cur.plat, fieldKey: cur.f.k, ...(transfer ? { transfer } : {}), status }),
       });
       if (res.status === 401) return authLost();
       const d = await res.json();
@@ -182,14 +182,15 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
       setEntries(prev => new Map(prev).set(`${cur.plat}:${cur.f.k}`, d.entry));
       setDraft('');
       setVerdict(null);
-      if (flowIdx + 1 >= flowRef.current.length) {
-        toast({ title: 'সব ধাপ শেষ! 🎉 এখন হেলথ-চেক করুন।' });
-        setPhase('health');
+      if (flowIdx + 1 >= flow.length) {
+        onTransferPassphraseChange('');
+        toast({ title: 'তথ্য দেওয়া শেষ! 🎉 চাইলে offline format check চালান।' });
+        setPhase('review');
       } else {
         setFlowIdx(i => i + 1);
       }
-    } catch {
-      toast({ title: 'নেটওয়ার্ক সমস্যা', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : 'নিরাপদে সংরক্ষণ করা যায়নি', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -224,7 +225,7 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
     }
   };
 
-  const buildMasterJson = useCallback(async (): Promise<string | null> => {
+  const buildStatusReport = useCallback(async (): Promise<string | null> => {
     try {
       const res = await fetch('/api/setupbot/export');
       if (res.status === 401) { authLost(); return null; }
@@ -287,7 +288,7 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
             </Button>
           </div>
         </div>
-        {phase === 'collect' && flowRef.current.length > 0 && (
+        {phase === 'collect' && flow.length > 0 && (
           <div className="max-w-4xl mx-auto mt-3 flex items-center gap-3">
             <Progress value={Math.round((flowIdx / totalSteps) * 100)} className="h-2 bg-slate-900 [&>div]:bg-gradient-to-r [&>div]:from-cyan-500 [&>div]:to-blue-600" />
             <span className="text-xs font-mono text-cyan-400 shrink-0">ধাপ {flowIdx + 1}/{totalSteps}</span>
@@ -302,12 +303,12 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
             <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700 flex items-center justify-center mb-6 shadow-lg shadow-cyan-500/20">
               <Bot className="w-11 h-11 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-3">স্বাগতম! 🎉 আমি SetupBot Pro — আপনার ইন্টিগ্রেশন সহকারী।</h2>
-            <p className="text-slate-400 mb-6 leading-relaxed">আমি ধাপে ধাপে আপনার সব প্ল্যাটফর্ম সংযুক্ত করব — ১০টি ক্যাটাগরিতে ৭৫+ প্ল্যাটফর্ম। একটি একটি করে প্রশ্ন করব, বাংলা গাইড দেখাব, আর শেষে সব যাচাই করে এনক্রিপ্টেড রিপোর্ট বানিয়ে দেব।</p>
+            <h2 className="text-2xl font-bold text-white mb-3">স্বাগতম! 🎉 SetupBot — guided API-value collection</h2>
+            <p className="text-slate-400 mb-6 leading-relaxed">নির্বাচিত প্ল্যাটফর্মের জন্য একবারে একটি করে user-supplied value দিন; বাংলা গাইড সাহায্য করবে। এটি provider-এ login, OAuth authorization, token refresh, live verification বা অন্য কোনো কাজ করে না।</p>
             <div className="text-left rounded-xl bg-slate-900/70 border border-emerald-500/30 p-5 mb-6 space-y-2">
-              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-300"><ShieldCheck className="w-4 h-4" /> লগইন সফল — নিরাপত্তা তথ্য</div>
-              <p className="text-sm text-slate-300 leading-relaxed">✅ আপনি পরে পাসওয়ার্ড পরিবর্তন করলেও কোনো সমস্যা হবে না — কারণ আমাদের সব সংযোগ <strong className="text-white">Long-Lived API Token</strong>-এর মাধ্যমে কাজ করে, পাসওয়ার্ডের উপর নির্ভর করে না।</p>
-              <p className="text-sm text-slate-400 leading-relaxed flex items-start gap-2"><Lock className="w-4 h-4 mt-0.5 shrink-0 text-slate-500" />টোকেনগুলো সেভ হয় AES-256-GCM এনক্রিপশনে; আপনার কাঁচা পাসওয়ার্ড কোথাও সংরক্ষণ করা হয় না।</p>
+              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-300"><ShieldCheck className="w-4 h-4" /> নিরাপদ তথ্য জমা — সীমাবদ্ধতা জানুন</div>
+              <p className="text-sm text-slate-300 leading-relaxed">Provider account password, OTP বা recovery code দেবেন না। শুধু owner-authorized API value দিন।</p>
+              <p className="text-sm text-slate-400 leading-relaxed flex items-start gap-2"><Lock className="w-4 h-4 mt-0.5 shrink-0 text-slate-500" />সেভের আগে browser-side encryption হয়; server-এ অল্প সময় plaintext প্রক্রিয়াকরণের পর configured ALOAPI vault key দিয়ে at-rest encryption হয়। Export-এ value বা ciphertext থাকে না।</p>
             </div>
             {touchedPlats.size > 0 && (
               <div className="text-left rounded-xl bg-amber-500/10 border border-amber-500/30 p-4 mb-6 flex items-center justify-between gap-3">
@@ -437,31 +438,31 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
                     {cur.f.help && <a href={cur.f.help} target="_blank" rel="noreferrer" className="text-xs text-cyan-400 underline">অফিশিয়াল হেল্প লিংক</a>}
                   </div>
                 )}
-                {curEntry?.status === 'collected' && (
-                  <div className="flex items-center gap-2 text-xs text-emerald-300 mb-3">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> সংরক্ষিত: <span className="font-mono">{cur.f.sens ? mask(curEntry.value) : curEntry.value}</span>
-                    {cur.f.sens && (
-                      <button onClick={() => setReveal(r => !r)} className="text-slate-500 hover:text-slate-300">
-                        {reveal ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    )}
-                    <span className="text-slate-500">— নতুন মান দিলে এটি বদলে যাবে</span>
+                {curEntry?.status === 'collected' && curEntry.hasValue && (
+                  <div className="mb-3 flex items-start gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3 text-xs text-emerald-200">
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    Saved encrypted value is present. The server never returns its plaintext; enter a replacement only if needed.
                   </div>
                 )}
+                <div className="mb-3 rounded-lg border border-cyan-500/20 bg-slate-950/70 p-3">
+                  <label htmlFor="setupbot-transfer-passphrase" className="block text-xs font-semibold text-cyan-200">Transfer passphrase (16+ UTF-8 bytes)</label>
+                  <Input id="setupbot-transfer-passphrase" type="password" autoComplete="off" value={transferPassphrase} onChange={event => onTransferPassphraseChange(event.target.value)} placeholder="Unique passphrase; not a provider password" className="mt-2 bg-slate-900 border-slate-700 text-sm" />
+                  <p className="mt-1 text-[10px] text-slate-500">Only held in page memory; the browser encrypts this value before sending it.</p>
+                </div>
                 <div className="flex gap-2">
-                  {cur.f.area ? (
+                  {cur.f.area && !cur.f.sens ? (
                     <Textarea value={draft} onChange={e => setDraft(e.target.value)} placeholder={cur.f.ph ?? 'এখানে পেস্ট করুন'} rows={4}
                       className="bg-slate-950 border-slate-700 text-slate-100 font-mono text-sm" />
                   ) : (
-                    <Input value={draft} onChange={e => setDraft(e.target.value)} placeholder={cur.f.ph ?? 'এখানে পেস্ট করুন'} type="text"
+                    <Input value={draft} onChange={e => setDraft(e.target.value)} placeholder={cur.f.ph ?? 'এখানে পেস্ট করুন'} type={cur.f.sens ? 'password' : 'text'} autoComplete="off"
                       className="bg-slate-950 border-slate-700 text-slate-100 font-mono text-sm" />
                   )}
                 </div>
-                {cur.f.sens && <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1"><Lock className="w-3 h-3" /> সেভ হওয়ার পর শুধু প্রথম ৪ + শেষ ৪ অক্ষর দেখা যাবে (যেমন: EAAB…x7Kq)</p>}
+                {cur.f.sens && <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1"><Lock className="w-3 h-3" /> Credential plaintext is masked while entering; it is not retrieved for display after save.</p>}
 
                 {verdict && verdict.platform === cur.plat && (
-                  <div className={`mt-4 rounded-lg border p-3 text-sm flex items-start gap-2 ${verdict.status === 'valid' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200' : verdict.status === 'invalid' ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-amber-500/40 bg-amber-500/10 text-amber-200'}`}>
-                    {verdict.status === 'valid' ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />}
+                  <div className={`mt-4 rounded-lg border p-3 text-sm flex items-start gap-2 ${verdict.status === 'format_only' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200' : verdict.status === 'invalid' ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-amber-500/40 bg-amber-500/10 text-amber-200'}`}>
+                    {verdict.status === 'format_only' ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />}
                     <span>{verdict.note}</span>
                   </div>
                 )}
@@ -469,7 +470,7 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
                 <div className="flex flex-wrap gap-2 mt-5">
                   <Button onClick={() => saveField('collected')} disabled={saving} className="gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-bold hover:opacity-90">
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                    {flowIdx + 1 >= flowRef.current.length ? 'সংরক্ষণ ও শেষ ধাপ' : 'সংরক্ষণ ও পরবর্তী'}
+                    {flowIdx + 1 >= flow.length ? 'সংরক্ষণ ও শেষ ধাপ' : 'সংরক্ষণ ও পরবর্তী'}
                   </Button>
                   <Button variant="ghost" onClick={() => saveField('skipped')} disabled={saving} className="text-amber-300 gap-1.5">নেই / স্কিপ</Button>
                   {flowIdx > 0 && (
@@ -477,25 +478,25 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
                   )}
                   {curEntry?.status === 'collected' && (
                     <Button variant="ghost" onClick={() => validateCurPlatform(cur.plat)} disabled={validating} className="text-cyan-300 gap-1.5">
-                      {validating ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} এখনই যাচাই করুন
+                      {validating ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} Offline format check
                     </Button>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-600 mt-3">🔐 কোনো প্ল্যাটফর্ম যাচাইয়ের সময় OTP চাইলে: ৬০ সেকেন্ডের মধ্যে ৬-সংখ্যার কোড সেখানে দিন — আপনার প্রগ্রেস এখানে অটো-সেভ থাকে; ব্যর্থ হলে &quot;resume&quot; দিয়ে ফিরে আসতে পারবেন। কোডটি আমরা কোনো লগে রাখি না।</p>
+                <p className="text-[11px] text-slate-600 mt-3">Provider-এর নিজস্ব sign-in-এ MFA চাইলে শুধু সেই official provider page/app-এ দিন। OTP বা recovery code কখনো ALOAPI-তে লিখবেন না। এই wizard কোনো OTP গ্রহণ বা সংরক্ষণ করে না।</p>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* ═══════════ PHASE 3 — HEALTH CHECK ═══════════ */}
-        {phase === 'health' && (
+        {/* ═══════════ PHASE 3 — OFFLINE FORMAT REVIEW ═══════════ */}
+        {phase === 'review' && (
           <div className="max-w-2xl mx-auto">
-            <h2 className="text-xl font-bold text-white mb-1">🩺 হেলথ-চেক — সব যাচাই হয়ে গেল?</h2>
-            <p className="text-sm text-slate-500 mb-5">প্রতিটি প্ল্যাটফর্মের টোকেন ফরম্যাট ও (যেখানে সম্ভব) লাইভ API কল দিয়ে যাচাই করা হয়েছে।</p>
+            <h2 className="text-xl font-bold text-white mb-1">Offline format review</h2>
+            <p className="text-sm text-slate-400 mb-5">Optional local format/presence checks only. No provider API calls, login, authorization, token-validity test, or live account verification is performed.</p>
             <div className="rounded-xl border border-slate-800 overflow-hidden mb-5">
               <table className="w-full text-sm">
                 <thead className="bg-slate-900 text-slate-400 text-xs">
-                  <tr><th className="text-left px-4 py-2.5">প্ল্যাটফর্ম</th><th className="text-left px-4 py-2.5">তথ্য</th><th className="text-left px-4 py-2.5">অবস্থা</th><th className="text-left px-4 py-2.5 hidden sm:table-cell">মেয়াদ</th><th className="px-4 py-2.5"></th></tr>
+                  <tr><th className="text-left px-4 py-2.5">প্ল্যাটফর্ম</th><th className="text-left px-4 py-2.5">তথ্য</th><th className="text-left px-4 py-2.5">অবস্থা</th><th className="px-4 py-2.5"></th></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/70">
                   {[...touchedPlats].map(pk => {
@@ -503,23 +504,24 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
                     if (!p) return null;
                     const es = [...entries.values()].filter(e => e.platform === pk && e.status !== 'pending');
                     const collected = es.filter(e => e.status === 'collected');
-                    const vStatus = collected.find(e => e.validationStatus !== 'none')?.validationStatus ?? 'none';
+                    const statuses = collected.map(entry => entry.validationStatus);
                     const cat = catOf.get(pk);
-                    const row = vStatus === 'valid'
-                      ? { icon: <CheckCircle2 className="w-4 h-4 text-emerald-400 inline" />, label: '✅ ভ্যালিড', cls: 'text-emerald-300' }
-                      : vStatus === 'invalid'
-                        ? { icon: <AlertTriangle className="w-4 h-4 text-red-400 inline" />, label: '❌ ভুল', cls: 'text-red-300' }
-                        : { icon: <Clock className="w-4 h-4 text-slate-500 inline" />, label: '⏳ ফরম্যাট-ওকে', cls: 'text-slate-400' };
+                    const row = statuses.some(status => status === 'invalid')
+                      ? { icon: <AlertTriangle className="w-4 h-4 text-red-400 inline" />, label: 'ফরম্যাট মেলেনি', cls: 'text-red-300' }
+                      : collected.length > 0 && statuses.every(status => status === 'format_only')
+                        ? { icon: <CheckCircle2 className="w-4 h-4 text-emerald-400 inline" />, label: 'ফরম্যাট পরীক্ষা পাস · access অনিরীক্ষিত', cls: 'text-emerald-300' }
+                        : statuses.some(status => status === 'error')
+                          ? { icon: <AlertTriangle className="w-4 h-4 text-amber-400 inline" />, label: 'পরীক্ষা করা যায়নি', cls: 'text-amber-300' }
+                          : { icon: <Clock className="w-4 h-4 text-slate-500 inline" />, label: 'পরীক্ষা হয়নি', cls: 'text-slate-400' };
                     return (
                       <tr key={pk} className="bg-slate-950/40">
                         <td className="px-4 py-2.5 text-white">{p.bn}</td>
                         <td className="px-4 py-2.5 text-slate-400 text-xs">{collected.length}/{p.fields.length} <span className="text-slate-600">({cat?.bn ?? '—'})</span></td>
                         <td className={`px-4 py-2.5 text-xs ${row.cls}`}>{row.icon} {row.label}</td>
-                        <td className="px-4 py-2.5 text-xs text-slate-500 hidden sm:table-cell">{p.expiry ?? '—'}</td>
                         <td className="px-4 py-2.5 text-right">
                           <button onClick={() => startCollect([pk])} className="text-xs text-cyan-400 hover:text-cyan-300">আবার দিন</button>
                           <span className="text-slate-700 mx-1.5">|</span>
-                          <button onClick={() => validateCurPlatform(pk)} disabled={validating} className="text-xs text-slate-400 hover:text-slate-200">যাচাই</button>
+                          <button onClick={() => validateCurPlatform(pk)} disabled={validating} className="text-xs text-slate-400 hover:text-slate-200">ফরম্যাট পরীক্ষা</button>
                         </td>
                       </tr>
                     );
@@ -529,36 +531,36 @@ export default function SetupBotWizard({ onAuthLost }: { onAuthLost: () => void 
             </div>
             <div className="flex flex-wrap gap-3">
               <Button onClick={async () => {
-                const j = await buildMasterJson();
+                const j = await buildStatusReport();
                 if (j) { setJsonPreview(j); setPhase('done'); }
               }} className="gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-slate-950 font-bold hover:opacity-90">
-                Confirm — এক্সপোর্ট করুন <ArrowRight className="w-4 h-4" />
+                Status-only report তৈরি করুন <ArrowRight className="w-4 h-4" />
               </Button>
               <Button variant="ghost" onClick={() => setPhase('cats')} className="text-slate-400 gap-2"><ArrowLeft className="w-4 h-4" /> আরও প্ল্যাটফর্ম যোগ করুন</Button>
             </div>
           </div>
         )}
 
-        {/* ═══════════ PHASE 4 — EXPORT & DONE ═══════════ */}
+        {/* ═══════════ PHASE 4 — STATUS-ONLY REPORT ═══════════ */}
         {phase === 'done' && (
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-6">
               <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto mb-3" />
-              <h2 className="text-2xl font-bold text-white mb-2">🎉 সেটআপ সম্পূর্ণ সফল!</h2>
-              <p className="text-slate-400 text-sm leading-relaxed">✅ সব তথ্য এনক্রিপ্টেড অবস্থায় মাস্টার JSON-এ প্রস্তুত।<br />✅ Token Auto-Refresh সক্রিয় — মেয়াদ শেষ হলেও সিস্টেম নিজেই নতুন Token নেবে।<br />🔐 আপনি এখন নিশ্চিন্তে পাসওয়ার্ড পরিবর্তন করতে পারেন — কোনো সংযোগ ভাঙবে না!</p>
+              <h2 className="text-2xl font-bold text-white mb-2">তথ্য সংগ্রহ সম্পন্ন</h2>
+              <p className="text-slate-400 text-sm leading-relaxed">ALOAPI credentials-কে server-side vault-এ encrypted at rest রাখে, তবে কোনো provider-এ connect, authorize, verify বা token refresh করে না। নিচের JSON-এ শুধু status/format-check metadata আছে — credential value বা ciphertext নেই।</p>
             </div>
             {jsonPreview && (
               <Card className="bg-slate-900/60 border-slate-800 mb-5">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-semibold text-slate-200">মাস্টার JSON (সিক্রেটগুলো AES-256-GCM)</span>
+                    <span className="text-sm font-semibold text-slate-200">Credential-free status JSON</span>
                     <div className="flex gap-2">
                       <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard?.writeText(jsonPreview).then(() => toast({ title: 'কপি হয়েছে ✔' })).catch(() => toast({ title: 'কপি ব্যর্থ', variant: 'destructive' })); }} className="text-cyan-300 gap-1.5 h-8"><Copy className="w-3.5 h-3.5" /> কপি</Button>
                       <Button size="sm" variant="ghost" onClick={() => {
                         const blob = new Blob([jsonPreview], { type: 'application/json' });
                         const a = document.createElement('a');
                         a.href = URL.createObjectURL(blob);
-                        a.download = 'setupbot-master-export.json';
+                        a.download = 'setupbot-status-report.json';
                         a.click();
                         URL.revokeObjectURL(a.href);
                       }} className="text-emerald-300 gap-1.5 h-8"><Download className="w-3.5 h-3.5" /> ডাউনলোড</Button>

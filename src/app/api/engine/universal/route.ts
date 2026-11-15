@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSameOriginRequest } from '@/lib/security/request';
 import { db } from '@/lib/db';
 import { requireEngineScope } from '@/lib/engine/guard';
 import { runUniversalScan } from '@/lib/engine/runner';
@@ -28,6 +29,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: 'Cross-origin request rejected.' }, { status: 403 });
   const body = (await req.json().catch(() => ({}))) as {
     clientId?: string;
     countries?: string[];

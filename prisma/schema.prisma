@@ -9,10 +9,16 @@ datasource db {
 
 // Admin (Al-Amin) master account
 model AdminUser {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id                         String   @id @default(cuid())
+  username                   String   @unique
+  passwordHash               String
+  mfaEnabled                 Boolean  @default(false)
+  mfaSecretCiphertext        String?
+  mfaPendingSecretCiphertext String?
+  mfaPendingSecretExpiresAt  DateTime?
+  // JSON array of SHA-256 hashes; recovery codes are shown only once at creation.
+  recoveryCodeHashes         String   @default("[]")
+  createdAt                  DateTime @default(now())
 }
 
 // Client onboarding accounts — created by admin with temp credentials
@@ -54,7 +60,21 @@ model PortalSession {
   userAgent String?
   expiresAt DateTime
   createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([adminId, expiresAt])
+  @@index([clientId, expiresAt])
 }
+
+// DB-backed login throttle; key is a one-way username/role digest, never an IP or credential.
+model LoginThrottle {
+  key             String   @id
+  failures        Int      @default(0)
+  windowStartedAt DateTime @default(now())
+  lockedUntil     DateTime?
+  updatedAt       DateTime @updatedAt
+}
+
 
 // One collected credential value per (client, platform, field)
 model CredentialEntry {
@@ -66,7 +86,7 @@ model CredentialEntry {
   value     String        @default("")
   // pending | collected | skipped
   status    String        @default("pending")
-  // SetupBot health-check result: none | valid | invalid | error
+  // Offline format check only: none | format_only | invalid | error; never a provider authorization state.
   validationStatus  String   @default("none")
   validationNote    String   @default("")
   validatedAt       DateTime?
@@ -544,4 +564,102 @@ model ContentItem {
   updatedAt    DateTime      @updatedAt
 
   @@index([clientId, status])
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// ALOAPI Integration Intelligence (isolated from CRM/marketing data)
+// ─────────────────────────────────────────────────────────────
+
+model IntegrationProvider {
+  key                String   @id
+  category           String
+  metadata           String   @default("{}") // non-secret structured provider catalogue JSON
+  verificationStatus String   @default("DISCOVERED")
+  lastCheckedAt      DateTime?
+  lastCheck          String   @default("{}") // evidence only; secrets must never be stored here
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  accounts           IntegrationAccount[]
+  credentials        IntegrationSecret[]
+  webhookEvents      IntegrationWebhookEvent[]
+
+  @@index([category, verificationStatus])
+}
+
+model IntegrationAccount {
+  id                    String   @id @default(cuid())
+  providerKey            String
+  provider               IntegrationProvider @relation(fields: [providerKey], references: [key], onDelete: Cascade)
+  businessName           String?
+  accountIdentifier      String? // non-secret provider ID, recorded only when explicitly supplied
+  phoneNumberCiphertext  String? // phone is PII; encrypted with the vault key
+  verificationStatus     String   @default("REQUIRES_USER_ACTION")
+  manualRequirements     String   @default("[]")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  credentials            IntegrationSecret[]
+
+  @@index([providerKey, verificationStatus])
+}
+
+model IntegrationSecret {
+  id          String   @id @default(cuid())
+  providerKey String
+  provider    IntegrationProvider @relation(fields: [providerKey], references: [key], onDelete: Cascade)
+  accountId   String
+  account     IntegrationAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name        String
+  ciphertext  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([providerKey, accountId, name])
+  @@index([providerKey, accountId])
+}
+
+// Security-relevant integration actions, without secret values or raw webhook bodies.
+model IntegrationAuditEvent {
+  id          String   @id @default(cuid())
+  actor       String
+  action      String
+  providerKey String?
+  accountId   String?
+  detail      String   @default("")
+  createdAt   DateTime @default(now())
+
+  @@index([providerKey, createdAt])
+  @@index([action, createdAt])
+}
+
+// WhatsApp webhook receipt log stores only event names/counts, never payload contents.
+model IntegrationWebhookEvent {
+  id          String   @id @default(cuid())
+  providerKey String
+  provider    IntegrationProvider @relation(fields: [providerKey], references: [key], onDelete: Cascade)
+  eventType   String
+  createdAt   DateTime @default(now())
+
+  @@index([providerKey, createdAt])
+  @@index([eventType, createdAt])
+}
+
+// ALOAPI-only retention settings. Payload storage is permanently disabled.
+model IntegrationPrivacyPolicy {
+  id                    String   @id @default("default")
+  retentionDays         Int?     @default(365)
+  storeWebhookPayloads  Boolean  @default(false)
+  updatedAt             DateTime @updatedAt
+}
+
+// Ephemeral RSA key pairs used for browser credential transfer. Private-key
+// ciphertext is encrypted using ALOAPI_VAULT_KEY; rows expire and are deleted
+// atomically on first use, shared across all application workers.
+model CredentialTransferKey {
+  id                   String   @id
+  privateKeyCiphertext String
+  expiresAt            DateTime
+  createdAt            DateTime @default(now())
+
+  @@index([expiresAt])
 }
