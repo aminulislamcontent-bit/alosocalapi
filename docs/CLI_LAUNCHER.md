@@ -47,7 +47,7 @@ aloapi doctor
 | Command | Description |
 |---|---|
 | `aloapi` | Start ALOAPI on `http://localhost:47831` and open the dashboard in your default browser |
-| `aloapi start [--dev] [--no-open] [--rebuild] [--foreground]` | Start the managed service (reuses existing healthy instance without opening duplicate tabs) |
+| `aloapi start [--dev] [--no-open] [--rebuild] [--foreground]` | Start the managed service and open the dashboard (reuses an existing healthy instance) |
 | `aloapi stop` | Gracefully stop only the managed ALOAPI process matching the tracked `instanceId` |
 | `aloapi restart [--dev] [--open] [--no-open] [--rebuild]` | Stop the managed ALOAPI service and start a fresh instance |
 | `aloapi status [--json]` | Show service state, dashboard URL, bind address, PID, mode, and database reachability |
@@ -65,7 +65,7 @@ aloapi doctor
 - **macOS:** opens `http://localhost:47831` with `open`.
 - **Linux:** opens `http://localhost:47831` with `xdg-open`.
 - **WSL2:** detects WSL2 (`WSL_DISTRO_NAME`, `WSL_INTEROP`, or `/proc/version`) and opens the Windows host default browser via `wslview` (if `wslu` is installed), `cmd.exe /c start`, or `powershell.exe Start-Process`.
-- **Single-tab protection:** when ALOAPI is already running on port `47831`, running `aloapi` or `aloapi start` reuses the running service without starting a duplicate or opening extra browser tabs. Use `aloapi open` if you want to open another tab intentionally.
+- If ALOAPI is already running on port `47831`, running `aloapi` or `aloapi start` reuses the service and opens the dashboard in your browser. Pass `--no-open` to start/reuse the service without opening a browser tab.
 
 ---
 

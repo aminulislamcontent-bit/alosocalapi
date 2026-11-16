@@ -585,7 +585,9 @@ async function startBackground({ dev, noOpen, rebuild = false, foreground = fals
     const record = readPidRecord();
     const pidDetail = record?.instanceId === health.instanceId && record?.pid ? ` (PID ${record.pid})` : '';
     console.log(`ALOAPI is already running at ${config.dashboardUrl}${pidDetail} (database: ${health.database ?? 'unknown'}).`);
-    console.log(`Reusing the existing service; not opening a duplicate browser tab. Run \`aloapi open\` to open the dashboard.`);
+    if (!noOpen) {
+      openBrowser(config.dashboardUrl);
+    }
     return { alreadyRunning: true, url: config.dashboardUrl };
   }
 
