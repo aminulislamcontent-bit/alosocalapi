@@ -29,6 +29,14 @@ function isPidAlive(pid) {
   }
 }
 
+async function waitForBrowserCalls(browserLog, count) {
+  const deadline = Date.now() + 2000;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(browserLog) && fs.readFileSync(browserLog, 'utf8').trim().split('\n').length >= count) return;
+    await new Promise(resolve => setTimeout(resolve, 25));
+  }
+}
+
 function createFixtureProject(t, port) {
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'aloapi-launcher-test-'));
   const repoDir = path.join(tmpBase, 'repo');
@@ -224,7 +232,7 @@ test('runtimeConfig rejects non-loopback host unless ALOAPI_ALLOW_PUBLIC_BIND=tr
   }
 });
 
-test('installer + outside-repo launcher handles start, already-running single-tab, logs, status, doctor, restart, stop', async t => {
+test('installer + outside-repo launcher opens dashboard on each start and supports no-open, logs, status, doctor, restart, stop', async t => {
   const port = await getFreePort();
   const fx = createFixtureProject(t, port);
 
@@ -267,14 +275,19 @@ test('installer + outside-repo launcher handles start, already-running single-ta
   assert.equal(firstBrowserCalls.length, 1);
   assert.match(firstBrowserCalls[0], new RegExp(`http://localhost:${port}`));
 
-  // 3. Running `aloapi` again while already running reuses service and does NOT open a second tab
-  const secondRes = spawnSync('aloapi', ['start'], { cwd: outsideCwd, env, encoding: 'utf8', timeout: 10_000 });
+  // 3. Running `aloapi` again reuses the service and opens the dashboard as requested
+  const secondRes = spawnSync('aloapi', [], { cwd: outsideCwd, env, encoding: 'utf8', timeout: 10_000 });
   assert.equal(secondRes.status, 0, secondRes.stderr);
   assert.match(secondRes.stdout, /already running/i);
   const secondPidRecord = JSON.parse(fs.readFileSync(path.join(fx.stateDir, 'service.json'), 'utf8'));
   assert.equal(secondPidRecord.pid, pidRecord.pid);
-  const afterSecondBrowserCalls = fs.readFileSync(fx.browserLog, 'utf8').trim().split('\n');
-  assert.equal(afterSecondBrowserCalls.length, 1);
+  await waitForBrowserCalls(fx.browserLog, 2);
+  assert.equal(fs.readFileSync(fx.browserLog, 'utf8').trim().split('\n').length, 2);
+
+  // Explicitly suppress browser opening when desired.
+  const noOpenRes = spawnSync('aloapi', ['start', '--no-open'], { cwd: outsideCwd, env, encoding: 'utf8', timeout: 10_000 });
+  assert.equal(noOpenRes.status, 0, noOpenRes.stderr);
+  assert.equal(fs.readFileSync(fx.browserLog, 'utf8').trim().split('\n').length, 2);
 
   // 4. `aloapi status --json`
   const statusRes = spawnSync('aloapi', ['status', '--json'], { cwd: outsideCwd, env, encoding: 'utf8' });
@@ -303,7 +316,7 @@ test('installer + outside-repo launcher handles start, already-running single-ta
   assert.notEqual(restartedRecord.pid, pidRecord.pid);
   assert.equal(isPidAlive(pidRecord.pid), false);
   assert.equal(isPidAlive(restartedRecord.pid), true);
-  assert.equal(fs.readFileSync(fx.browserLog, 'utf8').trim().split('\n').length, 1);
+  assert.equal(fs.readFileSync(fx.browserLog, 'utf8').trim().split('\n').length, 2);
 
   // 7. `aloapi stop` stops only the managed ALOAPI process
   const stopRes = spawnSync('aloapi', ['stop'], { cwd: outsideCwd, env, encoding: 'utf8', timeout: 15_000 });

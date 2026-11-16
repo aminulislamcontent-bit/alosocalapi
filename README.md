@@ -23,7 +23,7 @@ Then from any directory, run:
 aloapi
 ```
 
-`aloapi` (or `aloapi start`) creates `.env` on first launch if missing, applies reviewed SQLite migrations, generates Prisma Client, safely encrypts any legacy plaintext credential rows, builds the standalone app when needed, starts the managed local service on `127.0.0.1:47831`, waits for `/api/health`, and opens `http://localhost:47831` in your default browser (reusing the running instance without opening duplicate tabs on subsequent runs).
+`aloapi` (or `aloapi start`) creates `.env` on first launch if missing, applies reviewed SQLite migrations, generates Prisma Client, safely encrypts any legacy plaintext credential rows, builds the standalone app when needed, starts the managed local service on `127.0.0.1:47831`, waits for `/api/health`, and opens `http://localhost:47831` in your default browser. If the service is already running, `aloapi` reuses it and still opens the dashboard.
 
 Available lifecycle commands:
 
