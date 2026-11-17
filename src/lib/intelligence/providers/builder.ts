@@ -62,7 +62,9 @@ export interface ProviderInput {
   accountPrerequisites?: string[];
   businessVerificationRequirements?: string;
   pricingPlanLimitations?: string;
+  licensingAndAccessNotes?: string;
   regionalAvailability?: string;
+  implementationEvidence?: string;
   endpoints: string[];
   apiSpecs?: ApiEndpointSpec[];
   webhooks: string;
@@ -180,7 +182,13 @@ export function defineProvider(input: ProviderInput): IntegrationProviderRecord 
     accountPrerequisites: input.accountPrerequisites ?? [input.accountRequirements],
     businessVerificationRequirements: input.businessVerificationRequirements ?? input.developerApproval,
     pricingPlanLimitations: input.pricingPlanLimitations ?? input.rateLimitsAndPricing,
+    licensingAndAccessNotes:
+      input.licensingAndAccessNotes ??
+      `${input.developerApproval}. Commercial & API terms apply at ${input.officialWebsite}; never redistribute without tenant authorization.`,
     regionalAvailability: input.regionalAvailability ?? 'Check regional eligibility and compliance requirements in official provider documentation.',
+    implementationEvidence:
+      input.implementationEvidence ??
+      `Static documentation and adapter spec verified in ALOAPI catalog at ${CATALOG_COLLECTED_AT}; live tenant authorization required for runtime verification.`,
     endpoints: input.endpoints,
     apiSpecs,
     webhooks: input.webhooks,

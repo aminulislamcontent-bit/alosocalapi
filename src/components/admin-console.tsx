@@ -30,6 +30,7 @@ import AutomationsTab from '@/components/crm/automations-tab';
 import SetupBotAdminTab from '@/components/setupbot/setupbot-admin';
 import EngineTab from '@/components/engine/engine-tab';
 import OnboardingHub from '@/components/onboarding/onboarding-hub';
+import CommandCenter from '@/components/factory/command-center';
 import { BUSINESS } from '@/lib/business';
 import IntegrationIntelligenceTab from '@/components/integrations/integration-intelligence-tab';
 import AdminSecurityTab from '@/components/admin/admin-security-tab';
@@ -40,7 +41,7 @@ import PlannerTab from '@/components/planner-tab';
 import { usePersistentState } from '@/lib/usePersistentState';
 import { CHANNELS, LAUNCH_PHASES, type CompanyProfile, type ChannelStatusMap } from '@/lib/channels-data';
 
-type TabId = 'onboarding' | 'access' | 'crm' | 'tasks' | 'automation' | 'setupbot' | 'engine' | 'integrations' | 'security' | 'dashboard' | 'channels' | 'planner' | 'wizard' | 'credentials' | 'otp' | 'rotation' | 'env';
+type TabId = 'factory' | 'onboarding' | 'access' | 'crm' | 'tasks' | 'automation' | 'setupbot' | 'engine' | 'integrations' | 'security' | 'dashboard' | 'channels' | 'planner' | 'wizard' | 'credentials' | 'otp' | 'rotation' | 'env';
 
 export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
   // Navigation
@@ -163,6 +164,19 @@ export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
 
         {/* Tab Navigation */}
         <div className="max-w-7xl mx-auto mt-4 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs font-medium border-t border-slate-800/60 pt-3">
+          <button
+            onClick={() => setActiveTab('factory')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all whitespace-nowrap relative font-semibold ${
+              activeTab === 'factory'
+                ? 'bg-slate-800 text-cyan-400 border border-cyan-500/30 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            Platform Factory (20)
+            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-mono">V3</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('onboarding')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all whitespace-nowrap relative font-semibold ${
@@ -385,6 +399,8 @@ export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
 
       {/* Main Content Viewport */}
       <main className="max-w-7xl mx-auto px-4 lg:px-8 pt-6">
+
+        {activeTab === 'factory' && <CommandCenter onToast={showToast} />}
 
         {activeTab === 'onboarding' && <OnboardingHub onToast={showToast} />}
 

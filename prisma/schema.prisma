@@ -884,3 +884,487 @@ model ApiDiscoverySnapshot {
 
   @@index([providerKey, checkedAt])
 }
+
+// ─────────────────────────────────────────────────────────────
+// ALOAPI First-Party AI Marketing & Automation Platform Factory
+// ─────────────────────────────────────────────────────────────
+
+model FactoryWorkspace {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  planTier        String   @default("growth")
+  status          String   @default("active")
+  ownerUsername   String
+  timezone        String   @default("Asia/Dhaka")
+  defaultLanguage String   @default("en")
+  settings        String   @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  members             FactoryWorkspaceMember[]
+  providerConnections FactoryProviderConnection[]
+  jobs                FactoryJob[]
+  usageEvents         FactoryUsageEvent[]
+  moduleConfigs       FactoryModuleConfig[]
+  moduleRecords       FactoryModuleRecord[]
+  emailDomains        EmailSendingDomain[]
+  emailContacts       EmailContact[]
+  emailTemplates      EmailTemplate[]
+  emailCampaigns      EmailCampaign[]
+  voicePolicy         VoiceCompliancePolicy?
+  voiceConsents       VoiceConsentRecord[]
+  voiceAgents         VoiceAgentProfile[]
+  voiceCalls          VoiceCallSession[]
+  workflows           FactoryAutomationWorkflow[]
+  workflowRuns        FactoryAutomationRun[]
+  crmOrgs             FactoryCrmOrganization[]
+  crmContacts         FactoryCrmContact[]
+  crmOpportunities    FactoryCrmOpportunity[]
+  crmActivities       FactoryCrmActivity[]
+
+  @@index([ownerUsername])
+}
+
+model FactoryWorkspaceMember {
+  id          String           @id @default(cuid())
+  workspaceId String
+  workspace   FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  username    String
+  role        String           @default("operator")
+  permissions String           @default("[]")
+  status      String           @default("active")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([workspaceId, username])
+  @@index([username, status])
+}
+
+model FactoryProviderConnection {
+  id             String           @id @default(cuid())
+  workspaceId    String
+  workspace      FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  moduleKey      String
+  providerKey    String
+  status         String           @default("pending_authorization")
+  scopes         String           @default("[]")
+  configMeta     String           @default("{}")
+  approvedBy     String?
+  approvedAt     DateTime?
+  lastVerifiedAt DateTime?
+  lastError      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([workspaceId, moduleKey, providerKey])
+  @@index([workspaceId, status])
+}
+
+model FactoryJob {
+  id             String           @id @default(cuid())
+  workspaceId    String
+  workspace      FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  moduleKey      String
+  jobType        String
+  idempotencyKey String           @unique
+  payload        String           @default("{}")
+  status         String           @default("queued")
+  attempts       Int              @default(0)
+  maxAttempts    Int              @default(3)
+  scheduledFor   DateTime         @default(now())
+  nextRetryAt    DateTime?
+  lastError      String?
+  result         String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([workspaceId, moduleKey, status])
+  @@index([status, scheduledFor])
+}
+
+model FactoryUsageEvent {
+  id           String           @id @default(cuid())
+  workspaceId  String
+  workspace    FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  moduleKey    String
+  metric       String
+  quantity     Float            @default(1)
+  unitCostUsd  Float            @default(0)
+  totalCostUsd Float            @default(0)
+  adapter      String           @default("local")
+  metadata     String           @default("{}")
+  createdAt    DateTime         @default(now())
+
+  @@index([workspaceId, moduleKey, createdAt])
+}
+
+model FactoryModuleConfig {
+  id                String           @id @default(cuid())
+  workspaceId       String
+  workspace         FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  moduleKey         String
+  enabled           Boolean          @default(true)
+  adapterMode       String           @default("local")
+  config            String           @default("{}")
+  operationalStatus String           @default("READY")
+  updatedBy         String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([workspaceId, moduleKey])
+  @@index([moduleKey, operationalStatus])
+}
+
+model FactoryModuleRecord {
+  id           String           @id @default(cuid())
+  workspaceId  String
+  workspace    FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  moduleKey    String
+  recordType   String
+  title        String
+  status       String           @default("draft")
+  data         String           @default("{}")
+  tags         String           @default("[]")
+  scheduledFor DateTime?
+  createdBy    String           @default("admin")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([workspaceId, moduleKey, status])
+  @@index([moduleKey, recordType])
+}
+
+model EmailSendingDomain {
+  id                    String           @id @default(cuid())
+  workspaceId           String
+  workspace             FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  domain                String
+  dkimSelector          String           @default("aloapi1")
+  spfStatus             String           @default("unverified")
+  dkimStatus            String           @default("unverified")
+  dmarcStatus           String           @default("unverified")
+  spfRecord             String           @default("v=spf1 ~all")
+  dkimPublicKeyHint     String?
+  dmarcPolicy           String           @default("v=DMARC1; p=quarantine;")
+  reputationScore       Float            @default(100)
+  sentCount             Int              @default(0)
+  bounceCount           Int              @default(0)
+  complaintCount        Int              @default(0)
+  verifiedForProduction Boolean          @default(false)
+  lastCheckedAt         DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  campaigns             EmailCampaign[]
+
+  @@unique([workspaceId, domain])
+  @@index([workspaceId, verifiedForProduction])
+}
+
+model EmailContact {
+  id                String           @id @default(cuid())
+  workspaceId       String
+  workspace         FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email             String
+  fullName          String?
+  segment           String           @default("general")
+  tags              String           @default("[]")
+  consentStatus     String           @default("pending")
+  consentSource     String           @default("manual")
+  consentAt         DateTime?
+  suppressedAt      DateTime?
+  suppressionReason String?
+  unsubscribeToken  String           @unique
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId, consentStatus, segment])
+}
+
+model EmailTemplate {
+  id          String           @id @default(cuid())
+  workspaceId String
+  workspace   FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  subject     String
+  preheader   String?
+  htmlBody    String
+  textBody    String
+  language    String           @default("en")
+  variables   String           @default("[]")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  campaigns   EmailCampaign[]
+
+  @@unique([workspaceId, name])
+}
+
+model EmailCampaign {
+  id             String               @id @default(cuid())
+  workspaceId    String
+  workspace      FactoryWorkspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  domainId       String?
+  domain         EmailSendingDomain?  @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  templateId     String?
+  template       EmailTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  segment        String               @default("general")
+  status         String               @default("draft")
+  adapterType    String               @default("smtp_custom")
+  providerKey    String?
+  approvalStatus String               @default("pending")
+  approvedBy     String?
+  scheduledFor   DateTime?
+  sentAt         DateTime?
+  stats          String               @default("{}")
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  deliveryEvents EmailDeliveryEvent[]
+
+  @@index([workspaceId, status])
+}
+
+model EmailDeliveryEvent {
+  id          String        @id @default(cuid())
+  workspaceId String
+  campaignId  String
+  campaign    EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contactId   String?
+  email       String
+  messageId   String
+  status      String
+  adapterUsed String
+  bounceType  String?
+  detail      String?
+  createdAt   DateTime      @default(now())
+
+  @@index([workspaceId, campaignId, status])
+  @@index([email])
+}
+
+model VoiceCompliancePolicy {
+  id                         String           @id @default(cuid())
+  workspaceId                String           @unique
+  workspace                  FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  timezone                   String           @default("Asia/Dhaka")
+  allowedStartHour           Int              @default(9)
+  allowedEndHour             Int              @default(20)
+  requireExplicitConsent     Boolean          @default(true)
+  requireRecordingDisclosure Boolean          @default(true)
+  defaultLanguage            String           @default("bn")
+  disclosureScripts          String           @default("{}")
+  sipDomain                  String?
+  sipTransport               String           @default("TLS")
+  maxDurationSeconds         Int              @default(600)
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+}
+
+model VoiceConsentRecord {
+  id                String           @id @default(cuid())
+  workspaceId       String
+  workspace         FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  phoneE164         String
+  consentStatus     String           @default("pending")
+  preferredLanguage String           @default("bn")
+  consentProof      String?
+  optedOutAt        DateTime?
+  optOutReason      String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([workspaceId, phoneE164])
+  @@index([workspaceId, consentStatus])
+}
+
+model VoiceAgentProfile {
+  id            String             @id @default(cuid())
+  workspaceId   String
+  workspace     FactoryWorkspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name          String
+  language      String             @default("bn")
+  greeting      String
+  systemPrompt  String
+  sttAdapter    String             @default("local_deterministic")
+  ttsAdapter    String             @default("local_deterministic")
+  llmAdapter    String             @default("local_deterministic")
+  providerKey   String?
+  handoffTarget String?
+  active        Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  calls         VoiceCallSession[]
+
+  @@unique([workspaceId, name])
+}
+
+model VoiceCallSession {
+  id                   String             @id @default(cuid())
+  workspaceId          String
+  workspace            FactoryWorkspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agentId              String?
+  agent                VoiceAgentProfile? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  direction            String             @default("outbound")
+  phoneE164            String
+  language             String             @default("bn")
+  status               String             @default("queued")
+  telephonyAdapter     String             @default("sip_trunk")
+  providerKey          String?
+  consentVerified      Boolean            @default(false)
+  callingHoursVerified Boolean            @default(false)
+  recordingEnabled     Boolean            @default(true)
+  recordingDisclosed   Boolean            @default(false)
+  disclosurePlayedAt   DateTime?
+  durationSeconds      Int                @default(0)
+  turnsJson            String             @default("[]")
+  summary              String?
+  sentiment            String?
+  outcome              String?
+  handoffReason        String?
+  blockedReason        String?
+  costUsd              Float              @default(0)
+  startedAt            DateTime           @default(now())
+  endedAt              DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([workspaceId, status])
+  @@index([phoneE164])
+}
+
+model FactoryAutomationWorkflow {
+  id               String                 @id @default(cuid())
+  workspaceId      String
+  workspace        FactoryWorkspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name             String
+  triggerType      String                 @default("manual")
+  status           String                 @default("draft")
+  version          Int                    @default(1)
+  nodesJson        String                 @default("[]")
+  edgesJson        String                 @default("[]")
+  retryPolicyJson  String                 @default("{}")
+  requiresApproval Boolean                @default(true)
+  createdBy        String                 @default("admin")
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  runs             FactoryAutomationRun[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, status])
+}
+
+model FactoryAutomationRun {
+  id                  String                    @id @default(cuid())
+  workspaceId         String
+  workspace           FactoryWorkspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workflowId          String
+  workflow            FactoryAutomationWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  idempotencyKey      String                    @unique
+  status              String                    @default("running")
+  currentNodeId       String?
+  contextJson         String                    @default("{}")
+  stepLogsJson        String                    @default("[]")
+  pendingApprovalNode String?
+  approvedBy          String?
+  approvedAt          DateTime?
+  attempts            Int                       @default(0)
+  maxAttempts         Int                       @default(3)
+  nextRetryAt         DateTime?
+  lastError           String?
+  startedAt           DateTime                  @default(now())
+  finishedAt          DateTime?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+
+  @@index([workspaceId, workflowId, status])
+}
+
+model FactoryCrmOrganization {
+  id            String                  @id @default(cuid())
+  workspaceId   String
+  workspace     FactoryWorkspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name          String
+  domain        String?
+  industry      String?
+  countryCode   String?
+  sizeBand      String?
+  ownerUsername String?
+  notes         String?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  contacts      FactoryCrmContact[]
+  opportunities FactoryCrmOpportunity[]
+
+  @@unique([workspaceId, name])
+}
+
+model FactoryCrmContact {
+  id             String                  @id @default(cuid())
+  workspaceId    String
+  workspace      FactoryWorkspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   FactoryCrmOrganization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  fullName       String
+  email          String?
+  phone          String?
+  jobTitle       String?
+  source         String                  @default("direct")
+  consentStatus  String                  @default("not_collected")
+  assignedTo     String?
+  tags           String                  @default("[]")
+  nextFollowUpAt DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  opportunities  FactoryCrmOpportunity[]
+  activities     FactoryCrmActivity[]
+
+  @@index([workspaceId, assignedTo])
+  @@index([email])
+}
+
+model FactoryCrmOpportunity {
+  id              String                  @id @default(cuid())
+  workspaceId     String
+  workspace       FactoryWorkspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  organizationId  String?
+  organization    FactoryCrmOrganization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  contactId       String?
+  contact         FactoryCrmContact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  title           String
+  pipeline        String                  @default("default")
+  stage           String                  @default("qualified")
+  valueUsd        Float                   @default(0)
+  probability     Int                     @default(25)
+  status          String                  @default("open")
+  assignedTo      String?
+  expectedCloseAt DateTime?
+  nextFollowUpAt  DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  activities      FactoryCrmActivity[]
+
+  @@index([workspaceId, pipeline, stage])
+  @@index([workspaceId, status])
+}
+
+model FactoryCrmActivity {
+  id            String                 @id @default(cuid())
+  workspaceId   String
+  workspace     FactoryWorkspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contactId     String?
+  contact       FactoryCrmContact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  opportunityId String?
+  opportunity   FactoryCrmOpportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  activityType  String                 @default("note")
+  subject       String
+  body          String
+  actor         String
+  dueAt         DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime               @default(now())
+
+  @@index([workspaceId, createdAt])
+}

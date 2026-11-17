@@ -26,10 +26,11 @@ import { CAT7_ANALYTICS_PROVIDERS } from './providers/cat7-analytics';
 import { CAT8_ECOMMERCE_PROVIDERS } from './providers/cat8-ecommerce';
 import { CAT9_AUTOMATION_PROVIDERS } from './providers/cat9-automation';
 import { CAT10_FORMS_PROVIDERS } from './providers/cat10-forms';
+import { CAT11_TELEPHONY_PROVIDERS } from './providers/cat11-telephony';
 import type { CanonicalCategory, IntegrationProviderRecord } from './types';
 import { CANONICAL_CATEGORIES } from './types';
 
-export const CATALOG_VERSION = '2026-11-16';
+export const CATALOG_VERSION = '2026-11-17';
 
 export const SOCIAL_AND_BUSINESS_PLATFORMS: IntegrationProviderRecord[] = [
   ...CAT1_SOCIAL_PROVIDERS,
@@ -41,6 +42,7 @@ export const SOCIAL_AND_BUSINESS_PLATFORMS: IntegrationProviderRecord[] = [
   ...CAT7_ANALYTICS_PROVIDERS,
   ...CAT8_ECOMMERCE_PROVIDERS,
   ...CAT10_FORMS_PROVIDERS,
+  ...CAT11_TELEPHONY_PROVIDERS,
 ];
 
 export const AUTOMATION_AND_INFRA_PROVIDERS: IntegrationProviderRecord[] = [
@@ -62,6 +64,7 @@ export const ALL_INTEGRATION_CATALOG: IntegrationProviderRecord[] = [
   ...CAT8_ECOMMERCE_PROVIDERS,
   ...CAT9_AUTOMATION_PROVIDERS,
   ...CAT10_FORMS_PROVIDERS,
+  ...CAT11_TELEPHONY_PROVIDERS,
 ];
 
 const PROVIDER_INDEX = new Map(ALL_INTEGRATION_CATALOG.map(item => [item.key, item]));

@@ -63,9 +63,9 @@ test('canonical platform catalog covers >=100 marketing platforms across all 10 
   const summary = catalog.summarizeCatalog();
   const audit = catalog.auditCatalogDocumentation();
 
-  assert.equal(catalog.CANONICAL_CATEGORIES.length, 10);
+  assert.equal(catalog.CANONICAL_CATEGORIES.length, 11);
   assert.ok(summary.marketingPlatformCount >= 100, `Expected >=100 marketing platforms, got ${summary.marketingPlatformCount}`);
-  assert.equal(catalog.ALL_INTEGRATION_CATALOG.length, 121);
+  assert.equal(catalog.ALL_INTEGRATION_CATALOG.length, 131);
   const seenKeys = new Set();
   const seenIds = new Set();
 
@@ -80,6 +80,9 @@ test('canonical platform catalog covers >=100 marketing platforms across all 10 
     seenIds.add(p.id);
     assert.equal(Object.keys(p.capabilityMatrix).length, 15, `Incomplete matrix for ${p.key}`);
     assert.ok(p.implementationLevel >= 0 && p.implementationLevel <= 3, `Static catalog ${p.key} must not pre-claim live runtime level >=4`);
+    assert.ok(p.licensingAndAccessNotes && p.licensingAndAccessNotes.length > 5, `Missing licensing notes for ${p.key}`);
+    assert.ok(p.regionalAvailability && p.regionalAvailability.length > 5, `Missing regional availability for ${p.key}`);
+    assert.ok(p.implementationEvidence && p.implementationEvidence.length > 5, `Missing implementation evidence for ${p.key}`);
     assert.ok(Array.isArray(p.setupChecklist));
     if (p.oauthSupport) {
       assert.ok(p.oauthConfig && p.oauthConfig.authUrl.startsWith('https://'), `Expected HTTPS OAuth URL for ${p.key}`);

@@ -53,7 +53,7 @@ export async function runPostLoginInitialization(adminUsername: string) {
     step: 3,
     key: 'platform_catalog',
     title: 'Canonical Platform Catalog Registry',
-    status: summary.marketingPlatformCount >= 100 && CANONICAL_CATEGORIES.length === 10 ? 'PASS' : 'WARN',
+    status: summary.marketingPlatformCount >= 100 && CANONICAL_CATEGORIES.length >= 10 ? 'PASS' : 'WARN',
     detail: `${summary.total} total records (${summary.marketingPlatformCount} marketing/API platforms across ${CANONICAL_CATEGORIES.length} categories).`,
   });
 

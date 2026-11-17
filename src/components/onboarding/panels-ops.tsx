@@ -837,7 +837,7 @@ export function OnboardingExecutionViews({
             CSV (.csv)
           </a>
           <a href={`/api/onboarding/export?format=zip`} className="inline-flex items-center gap-1.5 rounded border border-cyan-500/40 px-3 py-2 text-xs text-cyan-300">
-            Full 121-Provider Catalog (.zip)
+            Full {providers.length}-Provider Catalog (.zip)
           </a>
           <a href={`/api/onboarding/export?format=csv`} className="inline-flex items-center gap-1.5 rounded border border-cyan-500/40 px-3 py-2 text-xs text-cyan-300">
             Full Catalog (.csv)

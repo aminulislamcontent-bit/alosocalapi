@@ -18,7 +18,8 @@ export type CanonicalCategory =
   | 'Analytics and Customer Data'
   | 'Ecommerce and Marketplace'
   | 'Workflow Automation'
-  | 'Forms, Landing Pages and Scheduling';
+  | 'Forms, Landing Pages and Scheduling'
+  | 'Telephony and Voice Infrastructure';
 
 export const CANONICAL_CATEGORIES: readonly CanonicalCategory[] = [
   'Social Media and Publishing',
@@ -31,6 +32,7 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategory[] = [
   'Ecommerce and Marketplace',
   'Workflow Automation',
   'Forms, Landing Pages and Scheduling',
+  'Telephony and Voice Infrastructure',
 ] as const;
 
 export type ImplementationLevelCode =
@@ -182,6 +184,7 @@ export interface IntegrationProviderRecord {
   developerAccountRequirements: string;
   businessVerificationRequirements: string;
   pricingPlanLimitations: string;
+  licensingAndAccessNotes: string;
   regionalAvailability: string;
   setupChecklist: string[];
   supportedOperations: string[];
@@ -190,6 +193,7 @@ export interface IntegrationProviderRecord {
   adapterImplementationStatus: AdapterImplementationStatus;
   runtimeVerificationStatus: ImplementationLevelCode;
   implementationLevel: number;
+  implementationEvidence: string;
   capabilityMatrix: CapabilityMatrix;
   apiSpecs: ApiEndpointSpec[];
   platformTrack:
@@ -200,6 +204,7 @@ export interface IntegrationProviderRecord {
     | 'email'
     | 'crm'
     | 'messaging'
+    | 'telephony'
     | 'ecommerce'
     | 'analytics'
     | 'seo'
