@@ -8,10 +8,12 @@ const BASELINE_NAME = '20261115000000_baseline';
 const ADDITIVE_NAME = '20261115000100_security_integrations';
 const ADDITIVE_V2_NAME = '20261116000200_autonomous_onboarding_intelligence';
 const ADDITIVE_V3_NAME = '20261117000300_first_party_platform_factory';
+const ADDITIVE_V4_NAME = '20261117000400_integration_engineering_handover';
 const BASELINE_SQL = path.join(ROOT, 'prisma', 'migrations', BASELINE_NAME, 'migration.sql');
 const ADDITIVE_SQL = path.join(ROOT, 'prisma', 'migrations', ADDITIVE_NAME, 'migration.sql');
 const ADDITIVE_V2_SQL = path.join(ROOT, 'prisma', 'migrations', ADDITIVE_V2_NAME, 'migration.sql');
 const ADDITIVE_V3_SQL = path.join(ROOT, 'prisma', 'migrations', ADDITIVE_V3_NAME, 'migration.sql');
+const ADDITIVE_V4_SQL = path.join(ROOT, 'prisma', 'migrations', ADDITIVE_V4_NAME, 'migration.sql');
 const PRISMA_MIGRATION_COLUMNS = ['id', 'checksum', 'finished_at', 'migration_name', 'logs', 'rolled_back_at', 'started_at', 'applied_steps_count'];
 
 function quoteIdentifier(value) {
@@ -146,11 +148,12 @@ export function inspectMigrationReadiness(databasePath) {
     }
 
     const names = history.map(row => row.migration_name);
-    const knownNames = names.length <= 4
+    const knownNames = names.length <= 5
       && names[0] === BASELINE_NAME
       && (names.length < 2 || names[1] === ADDITIVE_NAME)
       && (names.length < 3 || names[2] === ADDITIVE_V2_NAME)
-      && (names.length < 4 || names[3] === ADDITIVE_V3_NAME);
+      && (names.length < 4 || names[3] === ADDITIVE_V3_NAME)
+      && (names.length < 5 || names[4] === ADDITIVE_V4_NAME);
     if (!knownNames || history.some(row => !row.finished_at || row.rolled_back_at)) {
       return { ok: false, kind: 'unmanaged', reason: 'Prisma migration history contains an unknown, incomplete, or rolled-back migration; review it manually before startup' };
     }
@@ -158,7 +161,8 @@ export function inspectMigrationReadiness(databasePath) {
     const expectedSql = readFileSync(BASELINE_SQL, 'utf8')
       + (names.includes(ADDITIVE_NAME) ? `\n${readFileSync(ADDITIVE_SQL, 'utf8')}` : '')
       + (names.includes(ADDITIVE_V2_NAME) ? `\n${readFileSync(ADDITIVE_V2_SQL, 'utf8')}` : '')
-      + (names.includes(ADDITIVE_V3_NAME) ? `\n${readFileSync(ADDITIVE_V3_SQL, 'utf8')}` : '');
+      + (names.includes(ADDITIVE_V3_NAME) ? `\n${readFileSync(ADDITIVE_V3_SQL, 'utf8')}` : '')
+      + (names.includes(ADDITIVE_V4_NAME) ? `\n${readFileSync(ADDITIVE_V4_SQL, 'utf8')}` : '');
     const schema = inspectExistingDatabase(databasePath, expectedSql, { allowMigrationHistory: true });
     if (!schema.ok) {
       return { ok: false, kind: 'unmanaged', reason: `database schema does not match its last completed migration (${schema.reason})` };

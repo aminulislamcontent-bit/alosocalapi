@@ -1368,3 +1368,162 @@ model FactoryCrmActivity {
 
   @@index([workspaceId, createdAt])
 }
+
+// ─────────────────────────────────────────────────────────────
+// ALOAPI Universal Autonomous Integration Engineering & Client Handover
+// ─────────────────────────────────────────────────────────────
+
+// Isolated pre-provisioning workspace per client project (untouched production CRM)
+model IntegrationProject {
+  id                       String   @id @default(cuid())
+  clientId                 String   @default("default-workspace")
+  name                     String
+  websiteUrl               String
+  domain                   String
+  businessProfileJson      String   @default("{}")
+  missingFieldsJson        String   @default("[]")
+  recommendedProvidersJson String   @default("[]")
+  selectedProvidersJson    String   @default("[]")
+  status                   String   @default("discovery") // discovery | setup_prepared | awaiting_verification | verified | handed_over
+  defaultHandoverMode      String   @default("CLIENT_ACCOUNT_REISSUANCE")
+  createdBy                String
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  discoveries   WebsiteDiscoveryReport[]
+  credentials   CredentialPreparationRecord[]
+  oauthApps     OAuthAppRegistryEntry[]
+  checkpoints   VerificationCheckpoint[]
+  handovers     ClientHandoverPackage[]
+
+  @@index([clientId, status])
+  @@index([domain])
+}
+
+// Structured business & marketing asset discovery extracted from client website URL
+model WebsiteDiscoveryReport {
+  id                 String             @id @default(cuid())
+  projectId          String
+  project            IntegrationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  targetUrl          String
+  fetchStatus        String // fetched | snapshot_provided | error
+  httpStatus         Int?
+  businessName       String?
+  logoUrl            String?
+  domainsJson        String             @default("[]")
+  emailsJson         String             @default("[]")
+  phonesJson         String             @default("[]")
+  description        String?
+  productsJson       String             @default("[]")
+  targetAudience     String?
+  geographicMarkets  String             @default("[]")
+  socialProfilesJson String             @default("[]")
+  detectedTechJson   String             @default("[]")
+  privacyPolicyUrl   String?
+  termsUrl           String?
+  missingFieldsJson  String             @default("[]")
+  contentHash        String
+  rawEvidenceJson    String             @default("{}")
+  createdAt          DateTime           @default(now())
+
+  @@index([projectId, createdAt])
+}
+
+// Universal credential engineering ledger with 4-tier origin & ownership classification
+model CredentialPreparationRecord {
+  id                      String             @id @default(cuid())
+  projectId               String
+  project                 IntegrationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  providerKey             String
+  credentialType          String // oauth_client_id | oauth_client_secret | api_key | webhook_signing_secret | app_secret | access_token | refresh_token | service_account | key_pair | jwt_signing_key | config_value
+  applicationId           String?
+  origin                  String // ALOAPI-GENERATED | PROVIDER-ISSUED | CLIENT-OWNED | PREPARED-CONFIGURATION
+  owner                   String // aloapi_platform | client_owner | shared_delegated
+  associatedAccount       String?
+  vaultCredentialId       String?
+  envVarName              String
+  expiresAt               DateTime?
+  requiredPermissionsJson String             @default("[]")
+  transferable            Boolean            @default(false)
+  handoverMode            String // DIRECT_TRANSFER | CLIENT_ACCOUNT_REISSUANCE | AUTHORIZED_DELEGATION | CONFIGURATION_ONLY
+  activationStatus        String             @default("CLIENT_ACTIVATION_REQUIRED") // READY | CONFIGURED | TESTED | VERIFIED | CLIENT_ACTIVATION_REQUIRED | PROVIDER_APPROVAL_REQUIRED | NOT_SUPPORTED
+  handoverRequirements    String
+  preparedMetadataJson    String             @default("{}") // non-secret metadata only
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  @@unique([projectId, providerKey, credentialType, envVarName])
+  @@index([projectId, providerKey])
+  @@index([origin, activationStatus])
+}
+
+// Provider OAuth Application, Webhook, Callback & Domain DNS Configuration Registry
+model OAuthAppRegistryEntry {
+  id                        String             @id @default(cuid())
+  projectId                 String
+  project                   IntegrationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  providerKey               String
+  appName                   String
+  externalAppId             String?
+  developerPortalUrl        String
+  executionMode             String // FULLY_AUTOMATED | OFFICIAL_API_AUTOMATION | AUTHORIZED_BROWSER_AUTOMATION | SUPERVISED_PORTAL_HANDOFF | OWNER_ACTION_REQUIRED | CONFIGURATION_ONLY | UNSUPPORTED
+  redirectUrisJson          String             @default("[]")
+  callbackUrlsJson          String             @default("[]")
+  webhookUrl                String?
+  webhookEventsJson         String             @default("[]")
+  webhookSignatureAlgorithm String             @default("hmac_sha256")
+  apiVersion                String
+  scopesJson                String             @default("[]")
+  dnsRecordsJson            String             @default("[]")
+  verificationStatus        String             @default("CONFIGURED") // READY | CONFIGURED | TESTED | VERIFIED | CLIENT_ACTIVATION_REQUIRED | PROVIDER_APPROVAL_REQUIRED | NOT_SUPPORTED
+  approvalChecklistJson     String             @default("[]")
+  configProfileJson         String             @default("{}")
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+
+  @@unique([projectId, providerKey])
+  @@index([projectId, executionMode])
+}
+
+// Human Input & Official Verification Checkpoint Coordinator
+model VerificationCheckpoint {
+  id                   String             @id @default(cuid())
+  projectId            String
+  project              IntegrationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  providerKey          String
+  checkpointType       String // email_verification | otp | mfa | captcha | identity_verification | business_verification | domain_ownership | payment_authorization | app_review | permission_approval | legal_terms
+  status               String             @default("pending") // pending | completed | skipped | blocked
+  officialPortalUrl    String
+  instructions         String
+  ownerInputMetaJson   String             @default("{}") // never stores passwords/OTPs/recovery codes
+  resumedWorkflowState String?
+  completedBy          String?
+  completedAt          DateTime?
+  createdAt            DateTime           @default(now())
+
+  @@index([projectId, status])
+  @@index([providerKey, status])
+}
+
+// Complete 17-section Client Handover & Portability Package
+model ClientHandoverPackage {
+  id                        String             @id @default(cuid())
+  projectId                 String
+  project                   IntegrationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  packageVersion            String             @default("1.0")
+  handoverMode              String
+  packageStatus             String // READY | CONFIGURED | TESTED | VERIFIED | CLIENT_ACTIVATION_REQUIRED | PROVIDER_APPROVAL_REQUIRED | NOT_SUPPORTED
+  secretsIncluded           Boolean            @default(false)
+  encryptedTransferApproved Boolean            @default(false)
+  sha256                    String
+  manifestJson              String             @default("{}")
+  portabilityReportJson     String             @default("{}")
+  ownershipReportJson       String             @default("{}")
+  checklistJson             String             @default("[]")
+  clientImportManifestJson  String             @default("{}")
+  createdBy                 String
+  exportedAt                DateTime           @default(now())
+
+  @@index([projectId, exportedAt])
+}
+

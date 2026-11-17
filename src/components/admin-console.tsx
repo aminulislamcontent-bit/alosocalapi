@@ -21,7 +21,8 @@ import {
   GraduationCap,
   ListTodo,
   Bot,
-  LogOut
+  LogOut,
+  Zap,
 } from 'lucide-react';
 import ClientAccessTab from '@/components/portal/client-access-tab';
 import CrmTab from '@/components/crm/crm-tab';
@@ -31,6 +32,7 @@ import SetupBotAdminTab from '@/components/setupbot/setupbot-admin';
 import EngineTab from '@/components/engine/engine-tab';
 import OnboardingHub from '@/components/onboarding/onboarding-hub';
 import CommandCenter from '@/components/factory/command-center';
+import EngineeringHub from '@/components/engineering/engineering-hub';
 import { BUSINESS } from '@/lib/business';
 import IntegrationIntelligenceTab from '@/components/integrations/integration-intelligence-tab';
 import AdminSecurityTab from '@/components/admin/admin-security-tab';
@@ -41,7 +43,7 @@ import PlannerTab from '@/components/planner-tab';
 import { usePersistentState } from '@/lib/usePersistentState';
 import { CHANNELS, LAUNCH_PHASES, type CompanyProfile, type ChannelStatusMap } from '@/lib/channels-data';
 
-type TabId = 'factory' | 'onboarding' | 'access' | 'crm' | 'tasks' | 'automation' | 'setupbot' | 'engine' | 'integrations' | 'security' | 'dashboard' | 'channels' | 'planner' | 'wizard' | 'credentials' | 'otp' | 'rotation' | 'env';
+type TabId = 'engineering' | 'factory' | 'onboarding' | 'access' | 'crm' | 'tasks' | 'automation' | 'setupbot' | 'engine' | 'integrations' | 'security' | 'dashboard' | 'channels' | 'planner' | 'wizard' | 'credentials' | 'otp' | 'rotation' | 'env';
 
 export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
   // Navigation
@@ -164,6 +166,19 @@ export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
 
         {/* Tab Navigation */}
         <div className="max-w-7xl mx-auto mt-4 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs font-medium border-t border-slate-800/60 pt-3">
+          <button
+            onClick={() => setActiveTab('engineering')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all whitespace-nowrap relative font-semibold ${
+              activeTab === 'engineering'
+                ? 'bg-slate-800 text-cyan-400 border border-cyan-500/30 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+          >
+            <Zap className="w-4 h-4" />
+            Integration Engineering
+            <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[9px] font-mono">HANDOVER</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('factory')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all whitespace-nowrap relative font-semibold ${
@@ -399,6 +414,8 @@ export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
 
       {/* Main Content Viewport */}
       <main className="max-w-7xl mx-auto px-4 lg:px-8 pt-6">
+
+        {activeTab === 'engineering' && <EngineeringHub onToast={showToast} />}
 
         {activeTab === 'factory' && <CommandCenter onToast={showToast} />}
 

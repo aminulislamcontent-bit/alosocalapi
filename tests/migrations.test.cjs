@@ -10,10 +10,12 @@ const baselinePath = path.resolve(__dirname, '../prisma/migrations/2026111500000
 const additivePath = path.resolve(__dirname, '../prisma/migrations/20261115000100_security_integrations/migration.sql');
 const additiveV2Path = path.resolve(__dirname, '../prisma/migrations/20261116000200_autonomous_onboarding_intelligence/migration.sql');
 const additiveV3Path = path.resolve(__dirname, '../prisma/migrations/20261117000300_first_party_platform_factory/migration.sql');
+const additiveV4Path = path.resolve(__dirname, '../prisma/migrations/20261117000400_integration_engineering_handover/migration.sql');
 const baselineSql = fs.readFileSync(baselinePath, 'utf8');
 const additiveSql = fs.readFileSync(additivePath, 'utf8');
 const additiveV2Sql = fs.readFileSync(additiveV2Path, 'utf8');
 const additiveV3Sql = fs.readFileSync(additiveV3Path, 'utf8');
+const additiveV4Sql = fs.readFileSync(additiveV4Path, 'utf8');
 
 function temporaryDatabase(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aloapi-migrations-'));
@@ -201,6 +203,8 @@ test('startup preflight allows only known, completed migration histories with ma
   recordMigration(current, '20261116000200_autonomous_onboarding_intelligence');
   current.exec(additiveV3Sql);
   recordMigration(current, '20261117000300_first_party_platform_factory');
+  current.exec(additiveV4Sql);
+  recordMigration(current, '20261117000400_integration_engineering_handover');
   current.close();
   assert.equal(inspectMigrationReadiness(currentPath).ok, true);
 
@@ -217,16 +221,17 @@ test('startup preflight allows only known, completed migration histories with ma
 });
 
 test('checked-in migration SQL contains no destructive table or row operation', () => {
+  assert.doesNotMatch(additiveV4Sql, /\b(?:DROP\s+TABLE|DROP\s+COLUMN|DELETE\s+FROM|TRUNCATE)\b/i);
   assert.doesNotMatch(additiveV3Sql, /\b(?:DROP\s+TABLE|DROP\s+COLUMN|DELETE\s+FROM|TRUNCATE)\b/i);
   assert.doesNotMatch(additiveV2Sql, /\b(?:DROP\s+TABLE|DROP\s+COLUMN|DELETE\s+FROM|TRUNCATE)\b/i);
   assert.doesNotMatch(additiveSql, /\b(?:DROP\s+TABLE|DROP\s+COLUMN|DELETE\s+FROM|TRUNCATE)\b/i);
   assert.doesNotMatch(baselineSql, /\b(?:DROP\s+TABLE|DROP\s+COLUMN|DELETE\s+FROM|TRUNCATE)\b/i);
 });
 
-test('prisma schema defines all 69 models including 10 onboarding and 22 factory models matching migrations and lockfile dependencies', () => {
+test('prisma schema defines all 75 models including 10 onboarding, 22 factory, and 6 engineering models matching migrations and lockfile dependencies', () => {
   const schemaText = fs.readFileSync(path.resolve(__dirname, '../prisma/schema.prisma'), 'utf8');
   const modelNames = [...schemaText.matchAll(/^model\s+(\w+)\s+\{/gm)].map(m => m[1]);
-  assert.equal(modelNames.length, 69, `Expected 69 Prisma models, got ${modelNames.length}`);
+  assert.equal(modelNames.length, 75, `Expected 75 Prisma models, got ${modelNames.length}`);
 
   const expectedOnboardingModels = [
     'OnboardingWorkflow',
@@ -272,6 +277,19 @@ test('prisma schema defines all 69 models including 10 onboarding and 22 factory
   for (const model of expectedFactoryModels) {
     assert.ok(modelNames.includes(model), `Missing model ${model} in prisma/schema.prisma`);
     assert.match(additiveV3Sql, new RegExp(`CREATE TABLE "${model}"`), `Missing CREATE TABLE "${model}" in v3 migration`);
+  }
+
+  const expectedEngineeringModels = [
+    'IntegrationProject',
+    'WebsiteDiscoveryReport',
+    'CredentialPreparationRecord',
+    'OAuthAppRegistryEntry',
+    'VerificationCheckpoint',
+    'ClientHandoverPackage',
+  ];
+  for (const model of expectedEngineeringModels) {
+    assert.ok(modelNames.includes(model), `Missing model ${model} in prisma/schema.prisma`);
+    assert.match(additiveV4Sql, new RegExp(`CREATE TABLE "${model}"`), `Missing CREATE TABLE "${model}" in v4 migration`);
   }
 
   const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));

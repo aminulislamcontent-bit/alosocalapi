@@ -116,10 +116,10 @@ test('AES-256-GCM vault rejects wrong keys and tampered auth tags', () => {
   process.env.ALOAPI_VAULT_KEY = keyB;
   assert.throws(() => vc.decryptVaultValue(cipher));
 
-  // Tampered auth tag / ciphertext rejected under original key
+  // Tampered auth tag / ciphertext rejected under original key (modify first byte so trailing base64url padding bits never alias)
   process.env.ALOAPI_VAULT_KEY = keyA;
   const parts = cipher.split('.');
-  parts[2] = parts[2].slice(0, -2) + (parts[2].endsWith('aa') ? 'bb' : 'aa');
+  parts[1] = (parts[1].startsWith('A') ? 'B' : 'A') + parts[1].slice(1);
   assert.throws(() => vc.decryptVaultValue(parts.join('.')));
   delete process.env.ALOAPI_VAULT_KEY;
 });
