@@ -1,9 +1,9 @@
 // ALO Education BD — optional local staging seed (idempotent for built-in records).
 // It is never run by installation/startup. Pass --apply to create demo CRM data.
-import { PrismaClient } from '@prisma/client';
 import { randomBytes, scryptSync } from 'crypto';
+import { createPrismaClient } from './prisma-client.mjs';
 
-const db = new PrismaClient();
+const db = createPrismaClient();
 
 const hash = (pw) => {
   const salt = randomBytes(16).toString('hex');

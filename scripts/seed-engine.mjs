@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import { readFileSync } from 'fs';
+import { createPrismaClient } from './prisma-client.mjs';
 
-const db = new PrismaClient();
+const db = createPrismaClient();
 
 // ─── Dynamic industry taxonomy seed (§2) — bilingual, admin-extensible ──
 

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { gzipSync } from 'node:zlib';
+import * as zlib from 'node:zlib';
+import type { IntegrationProviderRecord } from './types';
 
 export interface ExportVariable { name: string; secret: boolean; required: boolean; purpose: string }
 export interface ExportDoc { label: string; url: string }
@@ -310,6 +311,257 @@ export function createIntegrationPackage(providers: ExportProvider[], generatedA
   }, null, 2)}\n`;
   files['SHA256SUMS'] = Object.entries(files).sort(([a], [b]) => a.localeCompare(b)).map(([path, content]) => `${sha256(content)}  ${path}`).join('\n') + '\n';
 
-  const archive = gzipSync(createTar(files, Math.floor(new Date(generatedAt).getTime() / 1000)), { level: 9 });
+  const archive = zlib.gzipSync(createTar(files, Math.floor(new Date(generatedAt).getTime() / 1000)), { level: 9 });
   return { archive, sha256: sha256(archive), files };
+}
+
+function crc32Buffer(buf: Buffer): number {
+  const fn = (zlib as unknown as { crc32?: (data: Buffer) => number }).crc32;
+  if (typeof fn === 'function') return fn(buf) >>> 0;
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    crc ^= buf[i];
+    for (let j = 0; j < 8; j++) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+/**
+ * Pure Node.js ZIP builder (STORE + deflate) producing standard PKZIP archives with zero native dependencies.
+ */
+export function createZipArchive(files: Record<string, string>): Buffer {
+  const entries = Object.entries(files).sort(([a], [b]) => a.localeCompare(b));
+  const localParts: Buffer[] = [];
+  const centralParts: Buffer[] = [];
+  let offset = 0;
+
+  for (const [name, text] of entries) {
+    const cleanName = name.replace(/^\/+/, '');
+    if (cleanName.includes('..')) throw new Error('Invalid ZIP entry path.');
+    const nameBuf = Buffer.from(cleanName, 'utf8');
+    const raw = Buffer.from(text, 'utf8');
+    const compressed = zlib.deflateRawSync(raw);
+    const crc = crc32Buffer(raw);
+
+    const local = Buffer.alloc(30 + nameBuf.length);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0x0800, 6); // UTF-8 filename flag
+    local.writeUInt16LE(8, 8); // Deflate
+    local.writeUInt16LE(0, 10);
+    local.writeUInt16LE(0, 12);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(compressed.length, 18);
+    local.writeUInt32LE(raw.length, 22);
+    local.writeUInt16LE(nameBuf.length, 26);
+    local.writeUInt16LE(0, 28);
+    nameBuf.copy(local, 30);
+
+    const central = Buffer.alloc(46 + nameBuf.length);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0x0800, 8);
+    central.writeUInt16LE(8, 10);
+    central.writeUInt16LE(0, 12);
+    central.writeUInt16LE(0, 14);
+    central.writeUInt32LE(crc, 16);
+    central.writeUInt32LE(compressed.length, 20);
+    central.writeUInt32LE(raw.length, 24);
+    central.writeUInt16LE(nameBuf.length, 28);
+    central.writeUInt16LE(0, 30);
+    central.writeUInt16LE(0, 32);
+    central.writeUInt16LE(0, 34);
+    central.writeUInt16LE(0, 36);
+    central.writeUInt32LE(0, 38);
+    central.writeUInt32LE(offset, 42);
+    nameBuf.copy(central, 46);
+
+    localParts.push(local, compressed);
+    centralParts.push(central);
+    offset += local.length + compressed.length;
+  }
+
+  const centralDir = Buffer.concat(centralParts);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(entries.length, 8);
+  eocd.writeUInt16LE(entries.length, 10);
+  eocd.writeUInt32LE(centralDir.length, 12);
+  eocd.writeUInt32LE(offset, 16);
+  eocd.writeUInt16LE(0, 20);
+
+  return Buffer.concat([...localParts, centralDir, eocd]);
+}
+
+/**
+ * Generates the complete per-platform multi-file export bundle (Master Spec Section 16).
+ * Strictly secret-free: never includes tokens, passwords, raw keys, or PII.
+ */
+export function buildProviderBundleFiles(
+  provider: IntegrationProviderRecord,
+  context?: {
+    tenantId?: string;
+    workflowState?: string;
+    liveVerified?: boolean;
+    lastVerifiedAt?: string | null;
+    generatedAt?: string;
+  },
+): Record<string, string> {
+  const generatedAt = context?.generatedAt ?? new Date().toISOString();
+  const baseFolder = `${provider.key}`;
+
+  const envLines = [
+    `# ${provider.displayName} environment template (placeholders only — NO SECRETS)`,
+    ...provider.environmentVariables.flatMap(v => [
+      `# ${v.purpose} (${v.secret ? 'SECRET — keep in encrypted Vault' : 'Config'}, ${v.required ? 'REQUIRED' : 'OPTIONAL'})`,
+      `${v.name}=""`,
+    ]),
+  ];
+
+  const files: Record<string, string> = {
+    [`${baseFolder}/provider.json`]: `${JSON.stringify({
+      id: provider.id,
+      displayName: provider.displayName,
+      canonicalCategory: provider.canonicalCategory,
+      apiVersion: provider.apiVersion,
+      authenticationType: provider.authenticationType,
+      oauthSupport: provider.oauthSupport,
+      implementationLevel: provider.implementationLevel,
+      runtimeVerificationStatus: provider.runtimeVerificationStatus,
+      capabilityMatrix: provider.capabilityMatrix,
+      supportedOperations: provider.supportedOperations,
+      knownLimitations: provider.knownLimitations,
+      regionalAvailability: provider.regionalAvailability,
+      pricingPlanLimitations: provider.pricingPlanLimitations,
+    }, null, 2)}\n`,
+    [`${baseFolder}/account-setup.md`]: [
+      `# ${provider.displayName} — Account & Portal Setup Guide`,
+      '',
+      `- **Official Website:** ${provider.officialWebsite}`,
+      `- **Developer Portal:** ${provider.officialDeveloperPortal}`,
+      `- **Workflow State:** ${context?.workflowState ?? 'NOT_STARTED'}`,
+      '',
+      '## Prerequisites',
+      ...provider.accountPrerequisites.map(p => `- ${p}`),
+      '',
+      '## Developer & Business Verification Requirements',
+      `- ${provider.developerAccountRequirements}`,
+      `- ${provider.businessVerificationRequirements}`,
+      '',
+      '## Step-by-Step Setup Checklist',
+      ...provider.setupChecklist.map((step, i) => `${i + 1}. ${step}`),
+      '',
+      '## Restrictions & Ownership Guardrails',
+      ...provider.restrictions.map(r => `- ${r}`),
+      '- Never create accounts using fabricated identities or bypass CAPTCHA/MFA checks.',
+      '',
+    ].join('\n'),
+    [`${baseFolder}/api-documentation.md`]: [
+      `# ${provider.displayName} — API Documentation Summary`,
+      '',
+      `- **API Version:** ${provider.apiVersion}`,
+      `- **Base URLs:** ${provider.apiBaseUrls.join(', ') || 'None'}`,
+      `- **Rate Limits & Pricing:** ${provider.rateLimitsAndPricing}`,
+      '',
+      '## Documented Endpoints',
+      ...(provider.apiSpecs.length
+        ? provider.apiSpecs.map(s => `- \`${s.method} ${s.path}\` — ${s.summary}`)
+        : ['- No REST endpoints documented for this provider.']),
+      '',
+      '## Official References',
+      ...provider.officialDocs.map(d => `- [${d.label}](${d.url})`),
+      '',
+    ].join('\n'),
+    [`${baseFolder}/authentication.md`]: [
+      `# ${provider.displayName} — Authentication & OAuth Specification`,
+      '',
+      `- **Authentication Type:** \`${provider.authenticationType}\``,
+      `- **OAuth Supported:** ${provider.oauthSupport ? 'Yes' : 'No'}`,
+      ...(provider.oauthConfig ? [
+        `- **Authorization URL:** \`${provider.oauthConfig.authUrl}\``,
+        `- **Token URL:** \`${provider.oauthConfig.tokenUrl}\``,
+        `- **PKCE S256 Supported:** ${provider.oauthConfig.pkceSupported ? 'Yes' : 'No'}`,
+      ] : []),
+      '',
+      '## Required Scopes',
+      ...(provider.requiredScopes.length ? provider.requiredScopes.map(s => `- \`${s}\``) : ['- No OAuth scopes listed.']),
+      '',
+      '## Notes',
+      ...provider.authentication.map(a => `- ${a}`),
+      '',
+    ].join('\n'),
+    [`${baseFolder}/permissions.json`]: `${JSON.stringify({
+      providerKey: provider.key,
+      requiredScopes: provider.requiredScopes,
+      leastPrivilegePolicy: 'Request only scopes strictly required by enabled capabilities.',
+      capabilityMatrix: provider.capabilityMatrix,
+    }, null, 2)}\n`,
+    [`${baseFolder}/environment.example`]: `${envLines.join('\n')}\n`,
+    [`${baseFolder}/webhook-configuration.json`]: `${JSON.stringify(provider.webhookSupport, null, 2)}\n`,
+    [`${baseFolder}/integration-config.json`]: `${JSON.stringify({
+      providerKey: provider.key,
+      canonicalCategory: provider.canonicalCategory,
+      apiVersion: provider.apiVersion,
+      baseUrls: provider.apiBaseUrls,
+      authenticationType: provider.authenticationType,
+      manualCrmImportNotice: 'ALOAPI never connects to your external marketing CRM automatically. Import verified config manually.',
+    }, null, 2)}\n`,
+    [`${baseFolder}/api-schemas.json`]: `${JSON.stringify({
+      providerKey: provider.key,
+      apiVersion: provider.apiVersion,
+      endpoints: provider.apiSpecs,
+    }, null, 2)}\n`,
+    [`${baseFolder}/example-requests.json`]: `${JSON.stringify({
+      providerKey: provider.key,
+      note: 'Authorization headers use placeholder tokens only.',
+      examples: provider.apiSpecs.slice(0, 5).map(spec => ({
+        method: spec.method,
+        url: `${provider.apiBaseUrls[0] ?? 'https://api.example.com'}${spec.path}`,
+        headers: {
+          Authorization: 'Bearer <REPLACE_FROM_ENCRYPTED_VAULT>',
+          Accept: 'application/json',
+        },
+        readOnlyProbe: Boolean(spec.readOnlyProbe),
+      })),
+    }, null, 2)}\n`,
+    [`${baseFolder}/validation-report.json`]: `${JSON.stringify({
+      providerKey: provider.key,
+      generatedAt,
+      tenantId: context?.tenantId ?? 'workspace',
+      workflowState: context?.workflowState ?? 'NOT_STARTED',
+      implementationLevel: provider.implementationLevel,
+      runtimeVerificationStatus: provider.runtimeVerificationStatus,
+      liveVerified: Boolean(context?.liveVerified),
+      lastVerifiedAt: context?.lastVerifiedAt ?? null,
+      secretsIncluded: false,
+    }, null, 2)}\n`,
+    [`${baseFolder}/source-references.json`]: `${JSON.stringify({
+      officialWebsite: provider.officialWebsite,
+      officialDeveloperPortal: provider.officialDeveloperPortal,
+      officialApiDocumentation: provider.officialApiDocumentation,
+      officialDocs: provider.officialDocs,
+      documentationVerificationTimestamp: provider.documentationVerificationTimestamp,
+    }, null, 2)}\n`,
+    [`${baseFolder}/version-metadata.json`]: `${JSON.stringify({
+      bundleSchemaVersion: '2.0.0',
+      catalogVersion: '2026-11-16',
+      providerKey: provider.key,
+      apiVersion: provider.apiVersion,
+      generatedAt,
+      exportFormatPolicy: 'Secret-free manual import bundle',
+    }, null, 2)}\n`,
+  };
+
+  files[`${baseFolder}/SHA256SUMS`] =
+    Object.entries(files)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([p, content]) => `${sha256(content)}  ${p}`)
+      .join('\n') + '\n';
+
+  return files;
 }

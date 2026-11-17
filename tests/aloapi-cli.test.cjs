@@ -426,3 +426,78 @@ test('WSL2 environment triggers Windows browser integration and resolveProjectRo
   });
   assert.equal(stopRes.status, 0, stopRes.stderr);
 });
+
+test('CLI diagnostics, import-validate, and help expose all operational commands cleanly', () => {
+  const realRoot = path.resolve(__dirname, '..');
+  const cliScript = path.join(realRoot, 'scripts', 'aloapi.mjs');
+
+  const helpRes = spawnSync(process.execPath, [cliScript, '--help'], { cwd: realRoot, encoding: 'utf8' });
+  assert.equal(helpRes.status, 0);
+  for (const cmd of ['provider:doctor', 'oauth:doctor', 'vault:doctor', 'webhook:doctor', 'backup', 'restore', 'import-validate']) {
+    assert.match(helpRes.stdout, new RegExp(cmd));
+  }
+
+  const provRes = spawnSync(process.execPath, [cliScript, 'provider:doctor', '--json'], { cwd: realRoot, encoding: 'utf8' });
+  assert.equal(provRes.status, 0, provRes.stderr);
+  assert.equal(JSON.parse(provRes.stdout).categoryFiles, 11);
+
+  const oauthRes = spawnSync(process.execPath, [cliScript, 'oauth:doctor', '--json'], { cwd: realRoot, encoding: 'utf8' });
+  assert.equal(oauthRes.status, 0, oauthRes.stderr);
+  assert.equal(JSON.parse(oauthRes.stdout).ok, true);
+
+  const whRes = spawnSync(process.execPath, [cliScript, 'webhook:doctor', '--json'], { cwd: realRoot, encoding: 'utf8' });
+  assert.equal(whRes.status, 0, whRes.stderr);
+  assert.equal(JSON.parse(whRes.stdout).ok, true);
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aloapi-cli-imp-'));
+  try {
+    const validFile = path.join(tmpDir, 'valid-import.json');
+    fs.writeFileSync(validFile, JSON.stringify({ schema: 'aloapi-client-import-v1', secretsIncluded: false, providers: [{ providerKey: 'sendgrid_api' }] }));
+    const impOk = spawnSync(process.execPath, [cliScript, 'import-validate', validFile, '--json'], { cwd: realRoot, encoding: 'utf8' });
+    assert.equal(impOk.status, 0, impOk.stderr);
+    assert.equal(JSON.parse(impOk.stdout).ok, true);
+
+    const badFile = path.join(tmpDir, 'bad-import.json');
+    fs.writeFileSync(badFile, JSON.stringify({ schema: 'aloapi-client-import-v1', secretsIncluded: true, secret: 'whsec_aloapi_leak' }));
+    const impBad = spawnSync(process.execPath, [cliScript, 'import-validate', badFile, '--json'], { cwd: realRoot, encoding: 'utf8' });
+    assert.equal(impBad.status, 1);
+    assert.equal(JSON.parse(impBad.stdout).ok, false);
+
+    // Real SQLite backup & restore round-trip
+    const dbDir = path.join(tmpDir, 'db');
+    fs.mkdirSync(dbDir, { recursive: true });
+    const dbPath = path.join(dbDir, 'aloapi.db');
+    const { DatabaseSync } = require('node:sqlite');
+    const sdb = new DatabaseSync(dbPath);
+    sdb.exec("CREATE TABLE t (id TEXT PRIMARY KEY, val TEXT); INSERT INTO t VALUES ('row1', 'preserved');");
+    sdb.close();
+
+    const backupOut = path.join(tmpDir, 'backup.db');
+    const bkpRes = spawnSync(process.execPath, [cliScript, 'backup', backupOut, '--json'], {
+      cwd: realRoot,
+      env: { ...process.env, DATABASE_URL: `file:${dbPath}` },
+      encoding: 'utf8',
+    });
+    assert.equal(bkpRes.status, 0, bkpRes.stderr);
+    assert.equal(JSON.parse(bkpRes.stdout).ok, true);
+    assert.ok(fs.existsSync(backupOut));
+
+    // Mutate DB then restore from backup
+    const sdb2 = new DatabaseSync(dbPath);
+    sdb2.exec('DELETE FROM t;');
+    sdb2.close();
+    const rstRes = spawnSync(process.execPath, [cliScript, 'restore', backupOut, '--yes', '--json'], {
+      cwd: realRoot,
+      env: { ...process.env, DATABASE_URL: `file:${dbPath}` },
+      encoding: 'utf8',
+    });
+    assert.equal(rstRes.status, 0, rstRes.stderr);
+    assert.equal(JSON.parse(rstRes.stdout).ok, true);
+    const sdb3 = new DatabaseSync(dbPath);
+    const restoredRow = sdb3.prepare('SELECT val FROM t WHERE id = ?').get('row1');
+    sdb3.close();
+    assert.equal(restoredRow.val, 'preserved');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

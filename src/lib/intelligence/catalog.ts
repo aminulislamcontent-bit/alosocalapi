@@ -1,799 +1,166 @@
-export type ProviderStatus =
-  | 'DISCOVERED'
-  | 'DOCUMENTED'
-  | 'CONFIGURED'
-  | 'AUTHORIZED'
-  | 'VERIFIED'
-  | 'PARTIALLY_VERIFIED'
-  | 'BLOCKED'
-  | 'REQUIRES_USER_ACTION';
+export type {
+  AdapterImplementationStatus,
+  ApiEndpointSpec,
+  AuthenticationType,
+  CanonicalCategory,
+  CapabilityKey,
+  CapabilityMatrix,
+  CapabilitySupportStatus,
+  EnvRequirement,
+  ImplementationLevelCode,
+  IntegrationProviderRecord,
+  OAuthEndpointSpec,
+  ProviderStatus,
+  WebhookSupportSpec,
+} from './types';
 
-export interface EnvRequirement {
-  name: string;
-  secret: boolean;
-  required: boolean;
-  purpose: string;
+export { CANONICAL_CATEGORIES, CAPABILITY_KEYS, IMPLEMENTATION_LEVELS } from './types';
+
+import { CAT1_SOCIAL_PROVIDERS } from './providers/cat1-social';
+import { CAT2_MESSAGING_PROVIDERS } from './providers/cat2-messaging';
+import { CAT3_ADVERTISING_PROVIDERS } from './providers/cat3-advertising';
+import { CAT4_EMAIL_PROVIDERS } from './providers/cat4-email';
+import { CAT5_CRM_PROVIDERS } from './providers/cat5-crm';
+import { CAT6_SEO_PROVIDERS } from './providers/cat6-seo';
+import { CAT7_ANALYTICS_PROVIDERS } from './providers/cat7-analytics';
+import { CAT8_ECOMMERCE_PROVIDERS } from './providers/cat8-ecommerce';
+import { CAT9_AUTOMATION_PROVIDERS } from './providers/cat9-automation';
+import { CAT10_FORMS_PROVIDERS } from './providers/cat10-forms';
+import { CAT11_TELEPHONY_PROVIDERS } from './providers/cat11-telephony';
+import type { CanonicalCategory, IntegrationProviderRecord } from './types';
+import { CANONICAL_CATEGORIES } from './types';
+
+export const CATALOG_VERSION = '2026-11-17';
+
+export const SOCIAL_AND_BUSINESS_PLATFORMS: IntegrationProviderRecord[] = [
+  ...CAT1_SOCIAL_PROVIDERS,
+  ...CAT2_MESSAGING_PROVIDERS,
+  ...CAT3_ADVERTISING_PROVIDERS,
+  ...CAT4_EMAIL_PROVIDERS,
+  ...CAT5_CRM_PROVIDERS,
+  ...CAT6_SEO_PROVIDERS,
+  ...CAT7_ANALYTICS_PROVIDERS,
+  ...CAT8_ECOMMERCE_PROVIDERS,
+  ...CAT10_FORMS_PROVIDERS,
+  ...CAT11_TELEPHONY_PROVIDERS,
+];
+
+export const AUTOMATION_AND_INFRA_PROVIDERS: IntegrationProviderRecord[] = [
+  ...CAT9_AUTOMATION_PROVIDERS,
+];
+
+// Preserved backward-compatible aliases for existing API routes.
+export const SOCIAL_API_CATALOG = SOCIAL_AND_BUSINESS_PLATFORMS;
+export const AUTOMATION_CATALOG = AUTOMATION_AND_INFRA_PROVIDERS;
+
+export const ALL_INTEGRATION_CATALOG: IntegrationProviderRecord[] = [
+  ...CAT1_SOCIAL_PROVIDERS,
+  ...CAT2_MESSAGING_PROVIDERS,
+  ...CAT3_ADVERTISING_PROVIDERS,
+  ...CAT4_EMAIL_PROVIDERS,
+  ...CAT5_CRM_PROVIDERS,
+  ...CAT6_SEO_PROVIDERS,
+  ...CAT7_ANALYTICS_PROVIDERS,
+  ...CAT8_ECOMMERCE_PROVIDERS,
+  ...CAT9_AUTOMATION_PROVIDERS,
+  ...CAT10_FORMS_PROVIDERS,
+  ...CAT11_TELEPHONY_PROVIDERS,
+];
+
+const PROVIDER_INDEX = new Map(ALL_INTEGRATION_CATALOG.map(item => [item.key, item]));
+
+export function getProviderByKey(key: string): IntegrationProviderRecord | undefined {
+  return PROVIDER_INDEX.get(key);
 }
 
-export interface IntegrationProviderRecord {
-  key: string;
-  name: string;
-  category: 'social' | 'marketing' | 'business' | 'automation' | 'agent-library' | 'infrastructure' | 'research';
-  verificationStatus: ProviderStatus;
-  collectedAt: string;
-  officialDocs: { label: string; url: string }[];
-  apiBaseUrls: string[];
-  authentication: string[];
-  oauthScopes: string[];
-  applicationRequirements: string;
-  accountRequirements: string;
-  endpoints: string[];
-  webhooks: string;
-  rateLimitsAndPricing: string;
-  developerApproval: string;
-  environmentVariables: EnvRequirement[];
-  automationCapabilities: string[];
-  restrictions: string[];
-  productionNotes: string;
+export function getCatalogByCanonicalCategory(category: CanonicalCategory): IntegrationProviderRecord[] {
+  return ALL_INTEGRATION_CATALOG.filter(item => item.canonicalCategory === category);
 }
 
-const COLLECTED_AT = '2026-11-15T00:00:00.000Z';
+export function summarizeCatalog() {
+  const byCategory: Record<string, number> = {};
+  const byCanonicalCategory: Record<string, number> = {};
+  const byStatus: Record<string, number> = {};
+  const byImplementationLevel: Record<number, number> = {};
+  let oauthSupportedCount = 0;
+  let webhookSupportedCount = 0;
+  let marketingPlatformCount = 0;
 
-function env(name: string, secret: boolean, required: boolean, purpose: string): EnvRequirement {
-  return { name, secret, required, purpose };
-}
+  for (const cat of CANONICAL_CATEGORIES) byCanonicalCategory[cat] = 0;
 
-function provider(
-  input: Omit<IntegrationProviderRecord, 'collectedAt' | 'verificationStatus'> & {
-    verificationStatus?: ProviderStatus;
-  },
-): IntegrationProviderRecord {
+  for (const item of ALL_INTEGRATION_CATALOG) {
+    byCategory[item.category] = (byCategory[item.category] ?? 0) + 1;
+    byCanonicalCategory[item.canonicalCategory] = (byCanonicalCategory[item.canonicalCategory] ?? 0) + 1;
+    byStatus[item.verificationStatus] = (byStatus[item.verificationStatus] ?? 0) + 1;
+    byImplementationLevel[item.implementationLevel] = (byImplementationLevel[item.implementationLevel] ?? 0) + 1;
+    if (item.oauthSupport) oauthSupportedCount += 1;
+    if (item.webhookSupport.supported) webhookSupportedCount += 1;
+    if (item.category !== 'agent-library' && item.category !== 'research' && item.category !== 'infrastructure') {
+      marketingPlatformCount += 1;
+    }
+  }
+
   return {
-    ...input,
-    collectedAt: COLLECTED_AT,
-    verificationStatus: input.verificationStatus ?? 'DOCUMENTED',
+    version: CATALOG_VERSION,
+    total: ALL_INTEGRATION_CATALOG.length,
+    marketingPlatformCount,
+    oauthSupportedCount,
+    webhookSupportedCount,
+    byCategory,
+    byCanonicalCategory,
+    byStatus,
+    byImplementationLevel,
   };
 }
 
-// Metadata is a documentation map, not proof of an account connection. Scope names,
-// limits and endpoint versions are product/version-specific; re-check the linked docs
-// and the provider console before asking for access or enabling an action.
-export const SOCIAL_API_CATALOG: IntegrationProviderRecord[] = [
-  provider({
-    key: 'meta_facebook_pages', name: 'Facebook Pages API', category: 'social',
-    officialDocs: [
-      { label: 'Pages API', url: 'https://developers.facebook.com/docs/pages-api/' },
-      { label: 'Permissions reference', url: 'https://developers.facebook.com/docs/permissions' },
-      { label: 'Graph API rate limits', url: 'https://developers.facebook.com/docs/graph-api/overview/rate-limiting/' },
-    ],
-    apiBaseUrls: ['https://graph.facebook.com/{supported-version}/'],
-    authentication: ['Meta OAuth 2.0 / Facebook Login for Business', 'Page access token for Page-scoped operations'],
-    oauthScopes: ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'pages_manage_metadata (only for applicable webhook subscriptions)'],
-    applicationRequirements: 'Create a Meta developer app, select the applicable products, configure valid OAuth redirect URIs, and use the App Dashboard. Advanced Access / App Review and business verification can be required before serving people outside app roles.',
-    accountRequirements: 'The authorizing person must have the Page task/role needed for the requested operation. An app does not discover every Page without an authorized grant.',
-    endpoints: ['GET /me/accounts (authorized Pages)', 'GET /{page-id}', 'GET /{page-id}/feed', 'POST /{page-id}/feed (publishing; explicit user approval required)'],
-    webhooks: 'Page Webhooks are available for subscribed fields/products. Configure callback verification and subscribed fields in the Meta App Dashboard; signatures must be checked. This app does not subscribe an account automatically.',
-    rateLimitsAndPricing: 'No general API call fee is specified here. Graph API and Pages use platform/business-use-case limits; inspect response usage headers and current App Dashboard. Ad spend is separate.',
-    developerApproval: 'App Review / Advanced Access and business verification depend on permissions and app role. Never use a user password, session cookie, or bypass review.',
-    environmentVariables: [
-      env('META_APP_ID', false, true, 'Meta developer application identifier'),
-      env('META_APP_SECRET', true, true, 'Meta developer application secret'),
-      env('META_GRAPH_API_VERSION', false, true, 'Explicit Graph API version supported by the app'),
-      env('META_PAGE_ACCESS_TOKEN', true, false, 'Page token obtained through an authorized provider flow'),
-    ],
-    automationCapabilities: ['Read/manage authorized Page data permitted by granted scopes', 'Publish Page content only after separate human approval', 'Receive subscribed Page webhook events'],
-    restrictions: ['Request least-privilege scopes', 'No scraping or personal-account credential collection', 'Page role and app-review requirements apply'],
-    productionNotes: 'Documentation record only. No Meta app, Page, OAuth grant, token, or webhook has been connected or verified in this workspace.',
-  }),
-  provider({
-    key: 'meta_marketing_api', name: 'Meta Marketing API', category: 'marketing',
-    officialDocs: [
-      { label: 'Marketing API', url: 'https://developers.facebook.com/docs/marketing-apis/' },
-      { label: 'Ads API rate limits', url: 'https://developers.facebook.com/docs/graph-api/overview/rate-limiting/' },
-    ],
-    apiBaseUrls: ['https://graph.facebook.com/{supported-version}/act_{ad-account-id}/'],
-    authentication: ['Meta OAuth 2.0 user or system-user token, depending on approved use case'],
-    oauthScopes: ['ads_read', 'ads_management', 'business_management (only for endpoints that require it)'],
-    applicationRequirements: 'Meta developer app, Marketing API product, registered redirect URI, asset assignment and appropriate access tier.',
-    accountRequirements: 'A Meta Business Portfolio and authorized ad account. The authorizing user/system user must have the relevant account role and asset assignment.',
-    endpoints: ['GET /act_{ad-account-id}/campaigns', 'GET /act_{ad-account-id}/insights', 'POST /act_{ad-account-id}/campaigns (writes create real ads and are never automated here)'],
-    webhooks: 'Marketing API status and account events vary by product; do not assume a webhook exists for each object. Use official event subscriptions or polling only where documented.',
-    rateLimitsAndPricing: 'Business Use Case limits vary by API use case and app access tier; usage headers / App Dashboard are authoritative. API access and advertising spend are separate.',
-    developerApproval: 'Marketing API access level and App Review / business verification may be required; higher access requires an application through Meta.',
-    environmentVariables: [env('META_APP_ID', false, true, 'Meta developer application ID'), env('META_APP_SECRET', true, true, 'Meta app secret'), env('META_MARKETING_ACCESS_TOKEN', true, false, 'Authorized Marketing API token'), env('META_AD_ACCOUNT_ID', false, false, 'Authorized ad account ID')],
-    automationCapabilities: ['Read authorized campaign and reporting data', 'Create/update advertising objects only with explicit approval and cost controls'],
-    restrictions: ['Paid spend is externally consequential and must remain behind explicit approval', 'Do not infer user-level identity from aggregate ad reporting'],
-    productionNotes: 'No ad account, developer token, access grant, permission review, or live API call has been verified.',
-  }),
-  provider({
-    key: 'instagram_graph_api', name: 'Instagram Graph API (Professional accounts)', category: 'social',
-    officialDocs: [
-      { label: 'Instagram Platform', url: 'https://developers.facebook.com/docs/instagram-platform/' },
-      { label: 'Content publishing', url: 'https://developers.facebook.com/docs/instagram-platform/content-publishing/' },
-      { label: 'Permissions reference', url: 'https://developers.facebook.com/docs/permissions' },
-    ],
-    apiBaseUrls: ['https://graph.facebook.com/{supported-version}/', 'https://graph.instagram.com/{supported-version}/ (Instagram Login product paths)'],
-    authentication: ['OAuth 2.0 via Instagram Login / Business Login for Instagram or Facebook Login for Business; token type differs by login path'],
-    oauthScopes: ['Instagram Login examples: instagram_business_basic, instagram_business_content_publish', 'Facebook Login examples: instagram_basic, instagram_content_publish, pages_read_engagement; exact scopes depend on endpoint and login configuration'],
-    applicationRequirements: 'Meta app with the Instagram product/login path configured, redirect URIs and required App Review/Advanced Access for applicable permissions.',
-    accountRequirements: 'Instagram professional account (Business or Creator); some Facebook Login flows additionally require a connected Facebook Page.',
-    endpoints: ['GET /{ig-user-id}', 'GET /{ig-user-id}/media', 'POST /{ig-user-id}/media then POST /{ig-user-id}/media_publish (creates public content)'],
-    webhooks: 'Instagram Webhooks support selected subscribed fields, including messaging/comment-related products. Configure app callback and subscriptions in Meta; verify signatures.',
-    rateLimitsAndPricing: 'The official docs describe endpoint/product-specific limits; publishing is limited to 100 API-published posts in a rolling 24-hour period per professional account (current linked publishing docs). No general API call fee stated.',
-    developerApproval: 'App Review/Advanced Access and business verification can apply. Public publishing permissions are not guaranteed for an unreviewed app.',
-    environmentVariables: [env('META_APP_ID', false, true, 'Meta app ID'), env('META_APP_SECRET', true, true, 'Meta app secret'), env('INSTAGRAM_BUSINESS_ACCOUNT_ID', false, false, 'Professional Instagram account ID'), env('INSTAGRAM_ACCESS_TOKEN', true, false, 'Authorized Instagram user/Page token')],
-    automationCapabilities: ['Read authorized account/media insights and media', 'Draft/publish only with relevant scopes and explicit user approval', 'Handle selected subscribed webhook events'],
-    restrictions: ['Personal consumer accounts are not interchangeable with professional accounts', 'Do not automate login or bypass App Review'],
-    productionNotes: 'Docs checked; no account, OAuth grant, publish permission, or webhook verified.',
-  }),
-  provider({
-    key: 'instagram_messaging', name: 'Instagram Messaging API', category: 'social',
-    officialDocs: [
-      { label: 'Instagram Messaging', url: 'https://developers.facebook.com/docs/messenger-platform/instagram/' },
-      { label: 'Messaging permissions', url: 'https://developers.facebook.com/docs/permissions' },
-    ],
-    apiBaseUrls: ['https://graph.facebook.com/{supported-version}/'],
-    authentication: ['Meta OAuth 2.0 and a Page access token with permitted messaging tasks'],
-    oauthScopes: ['instagram_business_basic or instagram_basic (login path-dependent)', 'instagram_business_manage_messages or instagram_manage_messages (product/login path-dependent)', 'pages_messaging', 'pages_manage_metadata'],
-    applicationRequirements: 'Meta app with Messenger/Instagram messaging product, configured webhook, App Review and advanced permissions where required.',
-    accountRequirements: 'Instagram Professional account and supported linked Page/account configuration; the authorizing user must have messaging tasks.',
-    endpoints: ['GET /{ig-user-id}/conversations', 'GET /{conversation-id}/messages', 'POST /{ig-user-id}/messages (send; policy window and user initiation rules apply)'],
-    webhooks: 'Messaging webhook events are supported after callback verification, field subscription, app subscription and account/page subscription. Payload signatures must be validated.',
-    rateLimitsAndPricing: 'Per-account and endpoint-specific limits apply; the official Meta rate-limit page describes messaging request rates and separate business-use-case limits. Follow response headers and messaging policy.',
-    developerApproval: 'App Review and advanced permission approval required for production access to people who are not app roles.',
-    environmentVariables: [env('META_APP_ID', false, true, 'Meta app ID'), env('META_APP_SECRET', true, true, 'Meta app secret'), env('INSTAGRAM_BUSINESS_ACCOUNT_ID', false, true, 'Instagram professional account ID'), env('INSTAGRAM_ACCESS_TOKEN', true, true, 'Authorized token')],
-    automationCapabilities: ['Receive authorized inbound message events', 'Send permitted replies only within provider rules and after customer authorization'],
-    restrictions: ['No unsolicited bulk messaging', 'Enforce platform messaging windows, opt-out and user consent rules'],
-    productionNotes: 'No Instagram messaging account or webhook has been authorized or tested.',
-  }),
-  provider({
-    key: 'messenger_platform', name: 'Messenger Platform', category: 'social',
-    officialDocs: [
-      { label: 'Messenger Platform', url: 'https://developers.facebook.com/docs/messenger-platform/' },
-      { label: 'Messenger Webhooks', url: 'https://developers.facebook.com/docs/messenger-platform/webhooks/' },
-    ],
-    apiBaseUrls: ['https://graph.facebook.com/{supported-version}/'],
-    authentication: ['Meta OAuth 2.0; Page access token for Page messaging'],
-    oauthScopes: ['pages_messaging', 'pages_show_list', 'pages_manage_metadata (where needed to subscribe)'],
-    applicationRequirements: 'Meta app with Messenger product, Page and callback subscriptions, verified HTTPS webhook, App Review/Advanced Access for production.',
-    accountRequirements: 'Facebook Page and authorized person with required Page messaging tasks.',
-    endpoints: ['POST /{page-id}/messages', 'GET /{page-id}/conversations', 'GET /{page-id}/subscribed_apps'],
-    webhooks: 'Supported message, delivery, read and account events are delivered to subscribed HTTPS callbacks; verify X-Hub-Signature-256 and return success promptly.',
-    rateLimitsAndPricing: 'Business Use Case and endpoint limits apply; exact request and messaging limits depend on app/account status and are shown in Meta usage headers.',
-    developerApproval: 'Messenger permissions require review/advanced access for non-role users; Page/app configuration is manual in Meta surfaces.',
-    environmentVariables: [env('META_APP_ID', false, true, 'Meta app ID'), env('META_APP_SECRET', true, true, 'Meta app secret'), env('META_PAGE_ID', false, true, 'Authorized Page ID'), env('META_PAGE_ACCESS_TOKEN', true, true, 'Authorized Page token')],
-    automationCapabilities: ['Inbound event webhooks', 'Policy-compliant reply automation after explicit authorization'],
-    restrictions: ['Message only within Meta policy and permitted windows', 'No unsolicited outreach or fake authorization'],
-    productionNotes: 'Documentation only; no Page token or webhook subscription verified.',
-  }),
-  provider({
-    key: 'whatsapp_cloud_api', name: 'WhatsApp Business Platform / Cloud API', category: 'social',
-    officialDocs: [
-      { label: 'Cloud API overview', url: 'https://developers.facebook.com/docs/whatsapp/cloud-api/overview/' },
-      { label: 'WhatsApp webhooks', url: 'https://developers.facebook.com/docs/whatsapp/cloud-api/guides/set-up-webhooks/' },
-      { label: 'Business Management API', url: 'https://developers.facebook.com/docs/whatsapp/business-management-api/using-the-api' },
-      { label: 'Meta permissions reference', url: 'https://developers.facebook.com/docs/permissions' },
-    ],
-    apiBaseUrls: ['https://graph.facebook.com/{supported-version}/'],
-    authentication: ['Meta OAuth 2.0 / system-user access token; send as Authorization: Bearer, never in URL or browser storage'],
-    oauthScopes: ['whatsapp_business_messaging', 'whatsapp_business_management', 'business_management for applicable Business Portfolio operations'],
-    applicationRequirements: 'Meta developer app with WhatsApp product, business portfolio, callback URL, webhook verification token, app secret and required app/Business verification. Meta Embedded Signup or official Business Manager flow may be used by authorized providers.',
-    accountRequirements: 'Meta Business Portfolio, WhatsApp Business Account (WABA), registered WhatsApp phone number and a user/system user with appropriate asset permissions. A phone number alone does not reveal WABA/Phone Number IDs or tokens.',
-    endpoints: ['POST /{phone-number-id}/messages', 'GET /{waba-id}/phone_numbers', 'GET /{waba-id}/message_templates', 'GET /{phone-number-id}?fields=display_phone_number,verified_name (read-only probe, version and permission dependent)'],
-    webhooks: 'Cloud API uses HTTPS webhooks. GET callback verification echoes hub.challenge only for the stored verify token. POST payloads are signed with X-Hub-Signature-256 using the app secret. Fields include messages, statuses, account/phone/template updates; subscriptions and field availability vary.',
-    rateLimitsAndPricing: 'Meta documents API request and messaging limits separately. Messaging throughput, conversation/user limits, template rules and price are market/category/recipient-country and policy dependent; check current WhatsApp Manager and pricing pages. Never send messages as a test.',
-    developerApproval: 'Business verification, phone registration, app review, permission advanced access and templates may be required. The business must accept the applicable WhatsApp terms and policies.',
-    environmentVariables: [
-      env('META_APP_ID', false, true, 'Meta developer application ID'),
-      env('META_APP_SECRET', true, true, 'Meta developer application secret'),
-      env('WHATSAPP_BUSINESS_ACCOUNT_ID', false, true, 'WABA ID obtained from an authorized Meta surface'),
-      env('WHATSAPP_PHONE_NUMBER_ID', false, true, 'Phone Number ID from WhatsApp Manager/API'),
-      env('WHATSAPP_ACCESS_TOKEN', true, true, 'Authorized system-user or OAuth access token'),
-      env('WHATSAPP_WEBHOOK_VERIFY_TOKEN', true, true, 'User-generated callback verification secret'),
-      env('WHATSAPP_APP_SECRET', true, true, 'Meta app secret used to verify webhook signatures'),
-      env('META_GRAPH_API_VERSION', false, true, 'Graph API version chosen from supported Meta versions'),
-    ],
-    automationCapabilities: ['Discover configured assets only after OAuth/asset authorization', 'Read account/phone/template metadata and receive subscribed webhooks', 'Send templated/session messages only after explicit approval and applicable consent'],
-    restrictions: ['Never infer identifiers or tokens from a phone number', 'Use official Meta login and business verification', 'Do not bypass OTP, CAPTCHA, quality limits, templates or messaging policies', 'No message sending or billing action from this project without explicit approval'],
-    productionNotes: 'This deployment does not collect a WhatsApp phone number, WABA/Phone Number ID, or access token because it has no official Meta OAuth/Embedded Signup flow. Admins may separately store only webhook-signature settings after manual Meta app setup; those settings do not authorize an account.'
-  }),
-  provider({
-    key: 'threads_api', name: 'Threads API', category: 'social',
-    officialDocs: [
-      { label: 'Threads API', url: 'https://developers.facebook.com/docs/threads/' },
-      { label: 'Meta permissions reference', url: 'https://developers.facebook.com/docs/permissions' },
-      { label: 'Graph API rate limits', url: 'https://developers.facebook.com/docs/graph-api/overview/rate-limiting/' },
-    ],
-    apiBaseUrls: ['https://graph.threads.net/{supported-version}/'],
-    authentication: ['Threads OAuth 2.0 / Threads Login; token lifecycle is provider-controlled'],
-    oauthScopes: ['threads_basic', 'threads_content_publish', 'threads_manage_replies', 'threads_read_replies (only for relevant feature)'],
-    applicationRequirements: 'Meta developer app with Threads product, OAuth redirect and App Review for advanced permissions/production use.',
-    accountRequirements: 'A Threads profile authorized by its owner; business/consumer permissions are constrained to specific documented use cases.',
-    endpoints: ['GET /me', 'GET /me/threads', 'POST /{threads-user-id}/threads', 'POST /{threads-user-id}/threads_publish'],
-    webhooks: 'Do not assume a general Threads webhook subscription; confirm current supported fields and use only documented endpoint-specific notifications or polling.',
-    rateLimitsAndPricing: 'App/user and impression-based rate limits are documented by Meta and can change; inspect current limits and response headers.',
-    developerApproval: 'Some permissions require App Review and a screencast of the actual user consent and product flow.',
-    environmentVariables: [env('THREADS_APP_ID', false, false, 'Threads/Meta app ID'), env('THREADS_APP_SECRET', true, false, 'App secret'), env('THREADS_ACCESS_TOKEN', true, false, 'Authorized Threads token')],
-    automationCapabilities: ['Read own authorized Threads profile/posts', 'Create/publish content and manage replies only with granted scopes and user approval'],
-    restrictions: ['Permission use is purpose-limited; public-profile discovery has explicit use limits', 'Do not reuse Threads content outside allowed purposes'],
-    productionNotes: 'No Threads account or permission is connected.',
-  }),
-  provider({
-    key: 'tiktok_content_api', name: 'TikTok for Developers / Content Posting API', category: 'social',
-    officialDocs: [
-      { label: 'TikTok API scopes', url: 'https://developers.tiktok.com/doc/tiktok-api-scopes' },
-      { label: 'Direct Post', url: 'https://developers.tiktok.com/doc/content-posting-api-reference-direct-post' },
-      { label: 'OAuth token management', url: 'https://developers.tiktok.com/doc/oauth-user-access-token-management' },
-      { label: 'TikTok API rate limits', url: 'https://developers.tiktok.com/doc/tiktok-api-v2-rate-limit' },
-    ],
-    apiBaseUrls: ['https://open.tiktokapis.com/v2/'],
-    authentication: ['TikTok OAuth 2.0 authorization-code user tokens; client secret stays server-side; refresh/revoke per official lifecycle'],
-    oauthScopes: ['user.info.basic', 'user.info.profile', 'user.info.stats', 'video.list', 'video.upload', 'video.publish (only the scopes approved for the exact product)'],
-    applicationRequirements: 'Register a TikTok developer app, configure redirect URI, request individual products/scopes, submit for review and complete any content-posting audit.',
-    accountRequirements: 'TikTok user authorizes the app in the official TikTok consent UI. Some posting capabilities are restricted to audited apps or approved use cases.',
-    endpoints: ['POST /oauth/token/ (token endpoint is documented separately)', 'GET /user/info/', 'GET /video/list/', 'POST /post/publish/video/init/ (explicit user-approved post only)'],
-    webhooks: 'TikTok documents webhooks for selected products/events; each product has separate registration and signature/verification requirements. Do not assume all user/video events are available.',
-    rateLimitsAndPricing: 'Endpoint/app-specific rate limits and quota are published per API. Direct Post has per-user request limits; token response includes expiration; use returned values rather than hard-coded lifetimes.',
-    developerApproval: 'Content Posting API requires scope access; public direct-post access/audit may be required. App review decides the product permissions.',
-    environmentVariables: [env('TIKTOK_CLIENT_KEY', false, true, 'TikTok app client key'), env('TIKTOK_CLIENT_SECRET', true, true, 'TikTok app secret'), env('TIKTOK_ACCESS_TOKEN', true, false, 'OAuth token from user consent'), env('TIKTOK_REFRESH_TOKEN', true, false, 'Refresh token, when granted')],
-    automationCapabilities: ['Read authorized profile/video data', 'Upload as draft or direct-publish depending on scope and audit; require explicit approval'],
-    restrictions: ['Never automate account login or scrape private data', 'Content must comply with TikTok posting policies and visibility/consent requirements'],
-    productionNotes: 'No TikTok app, account grant, posting audit or webhook has been verified.',
-  }),
-  provider({
-    key: 'tiktok_business_api', name: 'TikTok for Business / Marketing API', category: 'marketing',
-    officialDocs: [
-      { label: 'Business API reference', url: 'https://business-api.tiktok.com/portal/docs/api-reference/v1.3' },
-      { label: 'Permission scopes', url: 'https://business-api.tiktok.com/portal/docs/permission-scope/v1.3' },
-      { label: 'Rate limits', url: 'https://business-api.tiktok.com/portal/docs/rate-limits/v1.3' },
-      { label: 'Webhooks', url: 'https://business-api.tiktok.com/portal/docs?id=1740854676575233' },
-    ],
-    apiBaseUrls: ['https://business-api.tiktok.com/open_api/v1.3/ (version-specific)'],
-    authentication: ['TikTok Business API OAuth/access token; app credentials and advertiser authorization'],
-    oauthScopes: ['App-level permission IDs cover advertiser/account, campaign, reporting, pixel, catalog and related products; select the exact approved scope IDs from the TikTok for Business developer portal.'],
-    applicationRequirements: 'Register developer app, request specific Business API products/permissions, obtain advertiser authorization, configure callback/webhook and any required business review.',
-    accountRequirements: 'Advertiser account ID and user/Business Center access; advertiser must authorize the app.',
-    endpoints: ['POST /oauth2/access_token/', 'GET /oauth2/advertiser/get/', 'POST /report/integrated/get/', 'GET /campaign/get/ (endpoint availability depends on approved permissions)'],
-    webhooks: 'Official Business API reference includes webhook configuration/list/delete endpoints for supported account events. Event types and access depend on the app/product; verify signatures per current guide.',
-    rateLimitsAndPricing: 'Developer app and endpoint-level QPS/QPM/QPD levels vary by authorization tier; the official rate-limit pages publish current ceilings. Ad spend is separate from API calls.',
-    developerApproval: 'Products and permission levels require portal approval; increases to rate tiers require application. Business Center/advertiser authorization is mandatory.',
-    environmentVariables: [env('TIKTOK_BUSINESS_APP_ID', false, true, 'Business API app ID'), env('TIKTOK_BUSINESS_APP_SECRET', true, true, 'Business API app secret'), env('TIKTOK_BUSINESS_ACCESS_TOKEN', true, false, 'Authorized business token'), env('TIKTOK_ADVERTISER_ID', false, false, 'Authorized advertiser ID')],
-    automationCapabilities: ['Read campaign/reporting data for authorized advertisers', 'Create or modify ads only behind cost and human-approval controls', 'Selected webhook events'],
-    restrictions: ['Never create, pause or spend on campaigns without explicit authorization', 'Respect API product, advertiser and regional restrictions'],
-    productionNotes: 'No TikTok Business application or advertiser account has been authorized or tested.',
-  }),
-  provider({
-    key: 'linkedin_platform', name: 'LinkedIn Platform / Pages and Posts APIs', category: 'social',
-    officialDocs: [
-      { label: 'OAuth 2.0 overview', url: 'https://learn.microsoft.com/en-us/linkedin/shared/authentication/authentication' },
-      { label: 'Posts API permissions', url: 'https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api' },
-      { label: 'Getting access', url: 'https://learn.microsoft.com/en-us/linkedin/shared/api-guide/concepts' },
-    ],
-    apiBaseUrls: ['https://api.linkedin.com/rest/ (versioned REST APIs)', 'https://api.linkedin.com/v2/ (legacy/product-specific APIs)'],
-    authentication: ['OAuth 2.0 3-legged member authorization; some non-member APIs support 2-legged auth, but Marketing APIs require member auth'],
-    oauthScopes: ['openid', 'profile', 'email', 'w_member_social', 'r_organization_social', 'w_organization_social (scopes depend on approved product)'],
-    applicationRequirements: 'Create a LinkedIn developer app, configure OAuth redirect URI, request Products in Developer Portal and use only scopes provisioned to that application.',
-    accountRequirements: 'Member consent is required; organization APIs also require the member to hold a permitted LinkedIn Page role.',
-    endpoints: ['GET /rest/posts?q=author&author=urn:li:organization:{id}', 'POST /rest/posts (write permission and version header required)', 'GET /rest/organizationAcls (product/permission dependent)'],
-    webhooks: 'No generic all-purpose account webhook is implied. Specific products such as Lead Gen may support event subscriptions; verify product approval and webhook validation docs.',
-    rateLimitsAndPricing: 'Limits are application/product-specific and published in the Developer Portal/Marketing API documentation; monitor 429s and response headers. API access itself is not a published universal price.',
-    developerApproval: 'Products and Marketing API access require approval; several scopes are restricted or unavailable to new apps. Request only currently provisioned scopes.',
-    environmentVariables: [env('LINKEDIN_CLIENT_ID', false, true, 'LinkedIn app client ID'), env('LINKEDIN_CLIENT_SECRET', true, true, 'LinkedIn app secret'), env('LINKEDIN_ACCESS_TOKEN', true, false, 'Member-authorized access token'), env('LINKEDIN_ORGANIZATION_ID', false, false, 'Organization ID, only if authorized')],
-    automationCapabilities: ['Publish to an authorized member/Page', 'Read approved organization or campaign information', 'Subscribe to explicitly supported product events'],
-    restrictions: ['Do not request closed scopes as if available', 'Use least privilege and approved Page role', 'No scraping or account password use'],
-    productionNotes: 'No LinkedIn app, product approval, OAuth grant or organization role has been verified.',
-  }),
-  provider({
-    key: 'linkedin_marketing_api', name: 'LinkedIn Marketing API', category: 'marketing',
-    officialDocs: [
-      { label: 'Marketing API overview', url: 'https://learn.microsoft.com/en-us/linkedin/marketing/' },
-      { label: 'OAuth overview', url: 'https://learn.microsoft.com/en-us/linkedin/shared/authentication/authentication' },
-      { label: 'Marketing API FAQ', url: 'https://learn.microsoft.com/en-us/linkedin/marketing/lms-faq' },
-    ],
-    apiBaseUrls: ['https://api.linkedin.com/rest/ (versioned Marketing APIs)'],
-    authentication: ['Member-authorized OAuth 2.0 3-legged token; LinkedIn states 2-legged OAuth is not available for Marketing APIs'],
-    oauthScopes: ['r_ads', 'rw_ads', 'r_ads_reporting', 'rw_conversions and product-specific scopes, only if provisioned to the app'],
-    applicationRequirements: 'LinkedIn Marketing Developer Platform application and approved Marketing API product; version headers and developer access tier apply.',
-    accountRequirements: 'Member must have a role on the relevant ad account (role varies per operation); advertiser must authorize the app/member.',
-    endpoints: ['GET /rest/adAccounts', 'GET /rest/adAnalytics', 'GET /rest/campaigns', 'POST /rest/campaigns (creates paid campaign objects; do not execute without approval)'],
-    webhooks: 'Marketing APIs have product-specific notifications/Lead Gen event integrations; no blanket webhook support is assumed.',
-    rateLimitsAndPricing: 'Use Developer Portal product-specific limits and versioned API responses; ad spend and account billing are distinct from API quota.',
-    developerApproval: 'Marketing API is a restricted partner program; app/product approval and user/account role requirements apply.',
-    environmentVariables: [env('LINKEDIN_CLIENT_ID', false, true, 'Developer app ID'), env('LINKEDIN_CLIENT_SECRET', true, true, 'Developer app secret'), env('LINKEDIN_ACCESS_TOKEN', true, false, 'Member-authorized token'), env('LINKEDIN_AD_ACCOUNT_ID', false, false, 'Authorized advertising account ID')],
-    automationCapabilities: ['Read approved ad account/campaign reports', 'Create/update campaign objects only with human cost approval'],
-    restrictions: ['No paid action without explicit cost approval', 'Marketing scopes are not equivalent to open sign-in scopes'],
-    productionNotes: 'Not an approved LinkedIn Marketing Partner; no account grant or API call verified.',
-  }),
-  provider({
-    key: 'youtube_data_api', name: 'YouTube Data API v3', category: 'social',
-    officialDocs: [
-      { label: 'Data API overview', url: 'https://developers.google.com/youtube/v3/getting-started' },
-      { label: 'API reference', url: 'https://developers.google.com/youtube/v3/docs' },
-      { label: 'Quota and revision history', url: 'https://developers.google.com/youtube/v3/revision_history' },
-    ],
-    apiBaseUrls: ['https://www.googleapis.com/youtube/v3/'],
-    authentication: ['API key for public data; Google OAuth 2.0 for private/user-owned data and all writes'],
-    oauthScopes: ['https://www.googleapis.com/auth/youtube.readonly', 'https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube (broad; avoid unless required)'],
-    applicationRequirements: 'Google Cloud project, enable YouTube Data API v3, configure OAuth consent/app verification if applicable and monitor API Console quota.',
-    accountRequirements: 'Google user authorizes access to their channel; owner/content-owner roles are required for private/channel management operations.',
-    endpoints: ['GET /channels?part=snippet,statistics&id={channelId}', 'GET /videos', 'GET /search (quota-costly)', 'POST /videos (upload; only after explicit human confirmation)'],
-    webhooks: 'WebSub (formerly PubSubHubbub) push notifications are available for selected channel/video upload updates; subscription renewal and feed rules apply. Not a general webhook for all metrics.',
-    rateLimitsAndPricing: 'Quota units are method-specific and can change. Current docs describe default daily quota and separate search/upload buckets; check Google Cloud Console and quota revision history.',
-    developerApproval: 'API Services compliance audit and quota extension may be required above default allocation; OAuth verification may apply for sensitive scopes.',
-    environmentVariables: [env('YOUTUBE_CLIENT_ID', false, true, 'Google OAuth client ID'), env('YOUTUBE_CLIENT_SECRET', true, true, 'Google OAuth client secret'), env('YOUTUBE_API_KEY', true, false, 'Server-side API key for public-data calls'), env('YOUTUBE_ACCESS_TOKEN', true, false, 'Authorized user token')],
-    automationCapabilities: ['Read public channel/video data', 'Read private channel data and upload only with OAuth scopes and explicit confirmation', 'Subscribe to supported WebSub channel feeds'],
-    restrictions: ['Use authorized first-party data only for private metrics', 'Observe YouTube API Services terms and quota', 'Publishing/uploading content is an external action'],
-    productionNotes: 'No Google Cloud project, YouTube channel grant, quota review or live verification exists here.',
-  }),
-  provider({
-    key: 'youtube_analytics_api', name: 'YouTube Analytics API', category: 'business',
-    officialDocs: [
-      { label: 'Analytics API', url: 'https://developers.google.com/youtube/analytics' },
-      { label: 'OAuth scopes', url: 'https://developers.google.com/identity/protocols/oauth2/scopes' },
-    ],
-    apiBaseUrls: ['https://youtubeanalytics.googleapis.com/v2/'],
-    authentication: ['Google OAuth 2.0 on behalf of an authorized channel/content owner'],
-    oauthScopes: ['https://www.googleapis.com/auth/yt-analytics.readonly', 'https://www.googleapis.com/auth/yt-analytics-monetary.readonly (sensitive financial reporting)'],
-    applicationRequirements: 'Google Cloud project with YouTube Analytics API enabled; OAuth consent and verification may apply.',
-    accountRequirements: 'User must own or be authorized for the channel/content owner; reports return first-party analytics only.',
-    endpoints: ['GET /reports?ids=channel==MINE&startDate=...&endDate=...&metrics=...'],
-    webhooks: 'No general Analytics report webhook; schedule permitted report queries and respect quota.',
-    rateLimitsAndPricing: 'Quota-based API; exact quota and method limits are shown in project Console and current docs; API data is first-party, not identities of all viewers.',
-    developerApproval: 'OAuth verification may be required for sensitive/restricted scopes; no access exists until an owner grants consent.',
-    environmentVariables: [env('YOUTUBE_CLIENT_ID', false, true, 'Google OAuth client ID'), env('YOUTUBE_CLIENT_SECRET', true, true, 'OAuth client secret'), env('YOUTUBE_REFRESH_TOKEN', true, false, 'Authorized refresh token')],
-    automationCapabilities: ['Read reports about authorized own channel/content owner'],
-    restrictions: ['Do not infer viewer identity from aggregate analytics', 'Keep reports within YouTube API Services policy'],
-    productionNotes: 'No authorized YouTube Analytics grant or report call verified.',
-  }),
-  provider({
-    key: 'x_api', name: 'X API v2', category: 'social',
-    officialDocs: [
-      { label: 'X API getting started', url: 'https://docs.x.com/x-api/getting-started/about-x-api' },
-      { label: 'Rate limits', url: 'https://docs.x.com/x-api/fundamentals/rate-limits' },
-      { label: 'Pricing', url: 'https://docs.x.com/x-api/getting-started/pricing' },
-      { label: 'Authentication', url: 'https://docs.x.com/fundamentals/authentication/overview' },
-    ],
-    apiBaseUrls: ['https://api.x.com/2/'],
-    authentication: ['OAuth 2.0 Authorization Code with PKCE for user context; OAuth 1.0a user context; app-only bearer for permitted read endpoints'],
-    oauthScopes: ['tweet.read', 'users.read', 'tweet.write', 'offline.access', 'like.read and endpoint-specific scopes'],
-    applicationRequirements: 'Developer account, Project and App, configured OAuth callback and permissions; current pricing/access product applies.',
-    accountRequirements: 'User authorization for writes and private/user-scoped data; App-only tokens only access allowed public endpoints.',
-    endpoints: ['GET /2/tweets/search/recent', 'GET /2/users/me', 'POST /2/tweets (creates a public post)'],
-    webhooks: 'The X API documents Webhook and Activity Subscription endpoints for selected products/access levels; some activity products are Enterprise/contract-gated. Confirm the app tier.',
-    rateLimitsAndPricing: 'Endpoint-specific rate limits and usage billing are separate. X publishes pricing and response headers; live price/access can change, so re-check before any call that may incur cost.',
-    developerApproval: 'Self-serve Developer Portal access is required; some endpoints/webhooks/search products are contract or Enterprise gated.',
-    environmentVariables: [env('X_CLIENT_ID', false, true, 'X OAuth client ID'), env('X_CLIENT_SECRET', true, true, 'X OAuth client secret'), env('X_ACCESS_TOKEN', true, false, 'User access token'), env('X_ACCESS_TOKEN_SECRET', true, false, 'OAuth 1.0a token secret, if used')],
-    automationCapabilities: ['Read permitted posts and account data', 'Create/delete posts only with user scope, explicit approval and a spend check', 'Selected product-specific event subscriptions'],
-    restrictions: ['Calls may incur pay-per-use cost', 'Respect endpoint windows and developer policy; no scraping or account password use'],
-    productionNotes: 'No X Developer App, user grant, paid balance, price check or webhook tested.',
-  }),
-  provider({
-    key: 'pinterest_api', name: 'Pinterest API v5', category: 'social',
-    officialDocs: [
-      { label: 'Getting started / OAuth', url: 'https://developers.pinterest.com/docs/getting-started/set-up-authentication-and-authorization/' },
-      { label: 'API reference', url: 'https://developers.pinterest.com/docs/api/v5/' },
-      { label: 'Rate limits', url: 'https://developers.pinterest.com/docs/reference/rate-limits/' },
-    ],
-    apiBaseUrls: ['https://api.pinterest.com/v5/'],
-    authentication: ['Pinterest OAuth 2.0 authorization-code; client-credentials flow is supported only for documented app-level operations'],
-    oauthScopes: ['boards:read', 'boards:write', 'pins:read', 'pins:write', 'user_accounts:read', 'ads:read / ads:write where needed'],
-    applicationRequirements: 'Pinterest developer app, callback URI, OAuth scopes and app access level. Trial and Standard API access differ.',
-    accountRequirements: 'Authorized Pinterest account; business features require the relevant business/ad account and asset roles.',
-    endpoints: ['GET /user_account', 'GET /boards', 'GET /boards/{board-id}/pins', 'POST /pins (publishes a Pin)'],
-    webhooks: 'No generic outbound webhook for all Pins/account changes is assumed; use supported API subscriptions only if documented for the requested product, otherwise poll.',
-    rateLimitsAndPricing: 'Official reference states global Trial and Standard limits plus category-specific limits; Standard access requires approval. Re-read current response headers and table.',
-    developerApproval: 'Pinterest app review / Standard access requires a review; Trial sandbox behavior is not equivalent to public publishing access.',
-    environmentVariables: [env('PINTEREST_APP_ID', false, true, 'Pinterest app ID'), env('PINTEREST_APP_SECRET', true, true, 'Pinterest app secret'), env('PINTEREST_ACCESS_TOKEN', true, false, 'Authorized account token')],
-    automationCapabilities: ['Read authorized boards/Pins and analytics', 'Create Pins only after user approval and access-level check'],
-    restrictions: ['Honor trial/sandbox visibility and asset access boundaries', 'Do not publish or alter boards without explicit approval'],
-    productionNotes: 'No Pinterest developer app or OAuth user grant verified.',
-  }),
-  provider({
-    key: 'snapchat_marketing_api', name: 'Snapchat Marketing API', category: 'marketing',
-    officialDocs: [
-      { label: 'Marketing API docs home', url: 'https://developers.snap.com/marketing-api/Ads-API/introduction' },
-      { label: 'Authentication scopes', url: 'https://marketingapi.snapchat.com/docs/profile.html' },
-      { label: 'Conversions API', url: 'https://marketingapi.snapchat.com/docs/conversion.html' },
-    ],
-    apiBaseUrls: ['https://adsapi.snapchat.com/v1/', 'https://tr.snapchat.com/v2/conversion (Conversions API endpoint family)'],
-    authentication: ['Snap OAuth 2.0 user authorization; some first-party advertiser workflows support long-lived Business Manager tokens'],
-    oauthScopes: ['snapchat-marketing-api', 'snapchat-offline-conversions-api', 'snapchat-profile-api as product/use case requires'],
-    applicationRequirements: 'Snap developer app, OAuth redirect URI and the appropriate Marketing/Conversions API permissions.',
-    accountRequirements: 'Snap Business account, advertiser and applicable Business Manager account access.',
-    endpoints: ['GET /v1/me/organizations', 'GET /v1/adaccounts/{id}/campaigns', 'POST /v1/conversion (sends conversion data; explicit approval required)'],
-    webhooks: 'Product-specific events and Webhooks must be checked in the current Snap developer documentation; no general ads-management callback is assumed.',
-    rateLimitsAndPricing: 'Standard API and Conversions API request limits differ by auth method; token and account access tiers govern. Ad spend is separately billable.',
-    developerApproval: 'Snap app/API access and Business Manager asset permissions may require product approval; check current portal.',
-    environmentVariables: [env('SNAPCHAT_CLIENT_ID', false, true, 'Snap developer client ID'), env('SNAPCHAT_CLIENT_SECRET', true, true, 'Snap client secret'), env('SNAPCHAT_ACCESS_TOKEN', true, false, 'Authorized token'), env('SNAPCHAT_AD_ACCOUNT_ID', false, false, 'Authorized advertiser account')],
-    automationCapabilities: ['Read authorized campaigns and reporting', 'Conversions API writes only with consent/legal basis and explicit approval'],
-    restrictions: ['Do not upload personal data without permitted basis and provider terms', 'Do not create or alter campaigns without cost approval'],
-    productionNotes: 'No Snap application, advertiser access, or API token tested.',
-  }),
-  provider({
-    key: 'reddit_data_api', name: 'Reddit Data API', category: 'social',
-    officialDocs: [
-      { label: 'Data API terms', url: 'https://redditinc.com/policies/data-api-terms' },
-      { label: 'Developer terms', url: 'https://redditinc.com/policies/developer-terms' },
-      { label: 'Developer API reference', url: 'https://www.reddit.com/dev/api/' },
-    ],
-    apiBaseUrls: ['https://oauth.reddit.com/', 'https://www.reddit.com/api/v1/ (OAuth/token endpoints)'],
-    authentication: ['OAuth 2.0; registered app, descriptive User-Agent and per-user scopes; no account-password automation'],
-    oauthScopes: ['identity', 'read', 'submit, comment, mod* (only if the intended action and app are approved)'],
-    applicationRequirements: 'Register a Reddit Developer Platform app, obtain permitted access and comply with Developer/Data API Terms; app review may be required at Reddit discretion.',
-    accountRequirements: 'Reddit account and app authorization; commercial, research-above-threshold and broader use may require a separate agreement.',
-    endpoints: ['GET /r/{subreddit}/new', 'GET /api/v1/me', 'POST /api/submit (publishes content; no automatic publishing here)'],
-    webhooks: 'No general Data API webhook subscription for posts is documented in the referenced API; use permitted polling if approved.',
-    rateLimitsAndPricing: "Reddit may set limits at its discretion. Reddit's published statement lists 100 QPM per OAuth client (10 QPM unauthenticated at the cited terms) and a paid/higher-usage path; commercial terms must be confirmed directly.",
-    developerApproval: 'Prior authorization/app review may be required. Commercial use or usage outside the published permitted threshold requires a separate agreement.',
-    environmentVariables: [env('REDDIT_CLIENT_ID', false, true, 'Reddit OAuth app ID'), env('REDDIT_CLIENT_SECRET', true, true, 'Reddit app secret'), env('REDDIT_ACCESS_TOKEN', true, false, 'Authorized token'), env('REDDIT_USER_AGENT', false, true, 'Descriptive application/version/contact User-Agent')],
-    automationCapabilities: ['Read permitted content at conservative rates', 'Submit/comment only for an approved app and explicit user-directed action'],
-    restrictions: ['Honor Data API terms, data retention, deletion and commercial-use requirements', 'Do not scrape, mask identity, train models on content without permission, or circumvent limits'],
-    productionNotes: 'Earlier legacy engine adapter returned 403 without OAuth in this environment; no current authorized Reddit application is connected.',
-  }),
-  provider({
-    key: 'telegram_bot_api', name: 'Telegram Bot API', category: 'social',
-    officialDocs: [
-      { label: 'Bot API', url: 'https://core.telegram.org/bots/api' },
-      { label: 'Bot introduction', url: 'https://core.telegram.org/bots' },
-    ],
-    apiBaseUrls: ['https://api.telegram.org/bot{token}/'],
-    authentication: ['Bot token issued by BotFather; no OAuth user-login flow for standard bot calls'],
-    oauthScopes: [],
-    applicationRequirements: 'Create a bot using the official BotFather interface, keep its token secret and configure only the intended bot features.',
-    accountRequirements: 'The bot must be added to a target group/channel and granted the specific administrative rights required (e.g., post messages).',
-    endpoints: ['POST /getMe', 'POST /setWebhook', 'POST /sendMessage', 'POST /sendPhoto'],
-    webhooks: 'HTTPS setWebhook pushes JSON Updates; supported secret_token is delivered in X-Telegram-Bot-Api-Secret-Token. Delivery retries after unsuccessful responses; getUpdates and webhook modes are mutually exclusive.',
-    rateLimitsAndPricing: 'Telegram documents default broadcast throughput and optional paid broadcasts. Per-chat/platform flood controls apply; check current Bot API docs before sending. Bot API itself is not a per-call billable product.',
-    developerApproval: 'No general app review, but BotFather creation, target chat permissions and Telegram platform rules are required.',
-    environmentVariables: [env('TELEGRAM_BOT_TOKEN', true, true, 'BotFather-issued bot token'), env('TELEGRAM_WEBHOOK_SECRET', true, false, 'Webhook secret_token'), env('TELEGRAM_CHAT_ID', false, false, 'Authorized target chat/channel ID')],
-    automationCapabilities: ['Receive update events via webhook or polling', 'Send user-requested messages to chats where bot has permission'],
-    restrictions: ['No unsolicited bulk messages', 'Respect user opt-outs, rate limits and bot permissions'],
-    productionNotes: 'No bot token, webhook or channel access configured.',
-  }),
-  provider({
-    key: 'discord_api', name: 'Discord Developer Platform API', category: 'social',
-    officialDocs: [
-      { label: 'Developer docs', url: 'https://discord.com/developers/docs/intro' },
-      { label: 'OAuth2 scopes', url: 'https://discord.com/developers/docs/topics/oauth2' },
-      { label: 'Rate limits', url: 'https://discord.com/developers/docs/topics/rate-limits' },
-      { label: 'Interactions', url: 'https://discord.com/developers/docs/interactions/receiving-and-responding' },
-    ],
-    apiBaseUrls: ['https://discord.com/api/v10/', 'wss://gateway.discord.gg/'],
-    authentication: ['Bot token for bot operations; OAuth 2.0 bearer token for user-consented scopes; signed interaction webhooks'],
-    oauthScopes: ['bot', 'applications.commands', 'identify', 'guilds (only as needed); privileged intents require separate approval/configuration'],
-    applicationRequirements: 'Create a Discord developer application, configure OAuth redirects/interactions endpoint and bot permissions; verified status may be required at scale.',
-    accountRequirements: 'Guild owner/admin must install the bot and grant least-privilege permissions; user OAuth requires consent.',
-    endpoints: ['GET /users/@me', 'POST /applications/{application.id}/commands', 'POST /channels/{channel.id}/messages'],
-    webhooks: 'Interactions can be delivered via Gateway or an HTTPS interactions endpoint (mutually exclusive per app). Incoming channel webhooks are separate resources and expose a secret token.',
-    rateLimitsAndPricing: 'Per-route and global limits are dynamic; use X-RateLimit headers and Retry-After. The docs specify 429 handling and token-specific restrictions; no generic API usage fee asserted.',
-    developerApproval: 'App/bot verification and privileged gateway intent approval apply in certain scale/use cases; review current developer portal requirements.',
-    environmentVariables: [env('DISCORD_APPLICATION_ID', false, true, 'Developer application ID'), env('DISCORD_CLIENT_SECRET', true, true, 'OAuth client secret'), env('DISCORD_BOT_TOKEN', true, false, 'Bot token'), env('DISCORD_PUBLIC_KEY', false, true, 'Public key used to validate interaction signatures')],
-    automationCapabilities: ['Receive bot Gateway events or signed interactions', 'Execute slash-command responses and permitted messages'],
-    restrictions: ['Request minimum bot permissions/intents', 'Respect Discord rate limits and developer policies; avoid collection of unnecessary member data'],
-    productionNotes: 'No Discord application, bot installation or interaction endpoint verified.',
-  }),
-  provider({
-    key: 'google_business_profile', name: 'Google Business Profile APIs', category: 'business',
-    officialDocs: [
-      { label: 'Business Profile API access', url: 'https://developers.google.com/my-business/content/implement-oauth' },
-      { label: 'Business Profile API reference', url: 'https://developers.google.com/my-business/reference/rest' },
-      { label: 'OAuth scopes', url: 'https://developers.google.com/identity/protocols/oauth2/scopes' },
-    ],
-    apiBaseUrls: ['https://mybusinessaccountmanagement.googleapis.com/v1/', 'https://mybusinessbusinessinformation.googleapis.com/v1/', 'https://businessprofileperformance.googleapis.com/v1/'],
-    authentication: ['Google OAuth 2.0; each API request carries an authorized bearer token; offline access tokens must be protected'],
-    oauthScopes: ['https://www.googleapis.com/auth/business.manage'],
-    applicationRequirements: 'Google Cloud project, enable applicable Business Profile APIs, implement OAuth consent and apply for API access when required by Google.',
-    accountRequirements: 'A verified Business Profile owner/manager and account/location permissions. API access is not inferred from a phone number or public listing.',
-    endpoints: ['GET /v1/accounts', 'GET /v1/accounts/{accountId}/locations', 'GET /v1/locations/{locationId}/reviews', 'GET /v1/locations/{locationId}/searchkeywords/impressions/monthly'],
-    webhooks: 'Google Business Profile notifications are available for selected events through the documented notification/Cloud Pub/Sub configuration; not all changes emit events.',
-    rateLimitsAndPricing: 'Quota is project/API-specific; monitor Google Cloud Console. No universal per-call fee asserted; account/product quotas apply.',
-    developerApproval: 'Access approval/eligibility and OAuth verification can be required. Google may limit API access to approved projects.',
-    environmentVariables: [env('GOOGLE_CLIENT_ID', false, true, 'Google OAuth client ID'), env('GOOGLE_CLIENT_SECRET', true, true, 'Google OAuth client secret'), env('GOOGLE_REFRESH_TOKEN', true, false, 'Owner-authorized refresh token'), env('GOOGLE_BUSINESS_ACCOUNT_ID', false, false, 'Authorized Business Profile account ID')],
-    automationCapabilities: ['Read/write own authorized locations and insights where allowed', 'Subscribe to supported change notifications'],
-    restrictions: ['Only first-party/authorized listings', 'Use the least-privilege business.manage scope and follow GBP content policies'],
-    productionNotes: 'No Business Profile API access approval, owner grant or location verified.',
-  }),
-  provider({
-    key: 'google_analytics4', name: 'Google Analytics 4 Data API', category: 'business',
-    officialDocs: [
-      { label: 'Data API overview', url: 'https://developers.google.com/analytics/devguides/reporting/data/v1' },
-      { label: 'OAuth scopes', url: 'https://developers.google.com/identity/protocols/oauth2/scopes' },
-    ],
-    apiBaseUrls: ['https://analyticsdata.googleapis.com/v1beta/properties/{property-id}:runReport'],
-    authentication: ['Google OAuth 2.0 user consent or eligible Google service account with property access'],
-    oauthScopes: ['https://www.googleapis.com/auth/analytics.readonly', 'https://www.googleapis.com/auth/analytics'],
-    applicationRequirements: 'Google Cloud project, Analytics Data API enabled and OAuth consent screen; service-account access must be explicitly granted at the property.',
-    accountRequirements: 'GA4 property ID and authorized user/service account access. Reports describe connected property only.',
-    endpoints: ['POST /v1beta/properties/{property-id}:runReport', 'POST /v1beta/properties/{property-id}:batchRunReports'],
-    webhooks: 'No general report-result webhook. Use scheduled API requests within quota; Google Analytics measurement events are a separate inbound product.',
-    rateLimitsAndPricing: 'Quota tokens and concurrent request limits are per property/project and returned by API; current quotas are documented by Google. Analytics reports are not a user identity lookup service.',
-    developerApproval: 'OAuth verification applies to sensitive scopes for external users; Cloud project and property authorization are needed.',
-    environmentVariables: [env('GOOGLE_CLIENT_ID', false, true, 'Google OAuth client ID'), env('GOOGLE_CLIENT_SECRET', true, true, 'Google OAuth client secret'), env('GOOGLE_REFRESH_TOKEN', true, false, 'Authorized refresh token'), env('GA4_PROPERTY_ID', false, true, 'GA4 property ID')],
-    automationCapabilities: ['Read authorized first-party sessions, events, conversions and traffic reports'],
-    restrictions: ['Do not infer identities of anonymous visitors', 'Honor Google API data use/retention requirements'],
-    productionNotes: 'No GA4 property or OAuth/service-account authorization verified.',
-  }),
-  provider({
-    key: 'google_search_console', name: 'Google Search Console API', category: 'business',
-    officialDocs: [
-      { label: 'Search Console API', url: 'https://developers.google.com/webmaster-tools' },
-      { label: 'OAuth scopes', url: 'https://developers.google.com/identity/protocols/oauth2/scopes' },
-    ],
-    apiBaseUrls: ['https://searchconsole.googleapis.com/webmasters/v3/'],
-    authentication: ['Google OAuth 2.0 with user consent for a verified Search Console property'],
-    oauthScopes: ['https://www.googleapis.com/auth/webmasters.readonly', 'https://www.googleapis.com/auth/webmasters'],
-    applicationRequirements: 'Google Cloud project, Search Console API enabled and OAuth consent/verification where applicable.',
-    accountRequirements: 'The authorizing account must have access to the verified site/property; API output is aggregate first-party search performance.',
-    endpoints: ['GET /sites', 'POST /sites/{siteUrl}/searchAnalytics/query', 'GET /sites/{siteUrl}/sitemaps'],
-    webhooks: 'No general Search Console API webhook; scheduled queries or sitemap/status checks are used.',
-    rateLimitsAndPricing: 'Per-project/user quotas apply and are subject to change; observe API quota errors and Search Console data freshness.',
-    developerApproval: 'OAuth app verification may apply. Site ownership/verified property access is required.',
-    environmentVariables: [env('GOOGLE_CLIENT_ID', false, true, 'Google OAuth client ID'), env('GOOGLE_CLIENT_SECRET', true, true, 'Google OAuth client secret'), env('GOOGLE_REFRESH_TOKEN', true, false, 'Authorized refresh token'), env('GSC_SITE_URL', false, true, 'Verified Search Console property URL/prefix')],
-    automationCapabilities: ['Read query, impression, click and position metrics for own verified properties'],
-    restrictions: ['Does not reveal identities/contact details of searchers', 'Keep property data within Search Console API terms'],
-    productionNotes: 'No verified site or owner OAuth grant connected.',
-  }),
-  provider({
-    key: 'google_ads_api', name: 'Google Ads API', category: 'marketing',
-    officialDocs: [
-      { label: 'Getting started', url: 'https://developers.google.com/google-ads/api/docs/get-started/introduction' },
-      { label: 'Authorization and headers', url: 'https://developers.google.com/google-ads/api/rest/auth' },
-      { label: 'OAuth internals', url: 'https://developers.google.com/google-ads/api/docs/oauth/internals' },
-    ],
-    apiBaseUrls: ['https://googleads.googleapis.com/v{supported-version}/'],
-    authentication: ['Google OAuth 2.0 user authorization and developer token; manager requests also require login-customer-id'],
-    oauthScopes: ['https://www.googleapis.com/auth/adwords'],
-    applicationRequirements: 'Google Cloud project/OAuth client, Google Ads API enabled, developer token from API Center, and a granted access level.',
-    accountRequirements: 'Google Ads customer ID, account access and optional manager account/customer ID.',
-    endpoints: ['POST /customers/{customer-id}/googleAds:searchStream', 'GET /customers/{customer-id}/campaigns (Google Ads Query Language via search)', 'mutating campaign endpoints exist and are never called by discovery'],
-    webhooks: 'No general account webhooks; reports and change notifications are retrieved via API workflows/polling where supported.',
-    rateLimitsAndPricing: 'API calls are quota/operation governed; advertising spend is separate and can incur real financial charges. Each mutating action requires explicit approval.',
-    developerApproval: 'Developer token has test/basic/standard access levels; production access is reviewed by Google. OAuth verification may apply.',
-    environmentVariables: [env('GOOGLE_ADS_CLIENT_ID', false, true, 'Google Ads OAuth client ID'), env('GOOGLE_ADS_CLIENT_SECRET', true, true, 'OAuth client secret'), env('GOOGLE_ADS_REFRESH_TOKEN', true, false, 'Authorized refresh token'), env('GOOGLE_ADS_DEVELOPER_TOKEN', true, true, 'Google Ads developer token'), env('GOOGLE_ADS_CUSTOMER_ID', false, true, 'Customer ID'), env('GOOGLE_ADS_LOGIN_CUSTOMER_ID', false, false, 'Manager customer ID when applicable')],
-    automationCapabilities: ['Read campaign/reporting data', 'Create/modify campaigns only after human review, exact budget confirmation and separate approval'],
-    restrictions: ['No spend, bid or status changes by default', 'Do not send user data to Ads without lawful basis and platform consent'],
-    productionNotes: 'No developer token, access level, Ads customer or OAuth grant verified.',
-  }),
-  provider({
-    key: 'google_merchant_api', name: 'Google Merchant API', category: 'business',
-    officialDocs: [
-      { label: 'Merchant API overview', url: 'https://developers.google.com/merchant/api/overview' },
-      { label: 'Authorize account access', url: 'https://developers.google.com/merchant/api/guides/authorization/access-client-accounts' },
-      { label: 'OAuth scopes', url: 'https://developers.google.com/identity/protocols/oauth2/scopes' },
-    ],
-    apiBaseUrls: ['https://merchantapi.googleapis.com/{supported-version}/'],
-    authentication: ['Google OAuth 2.0 or supported service account with account access'],
-    oauthScopes: ['https://www.googleapis.com/auth/content'],
-    applicationRequirements: 'Google Cloud project, Merchant API enablement, OAuth client/verification. Google states third-party apps may need verification before use limits are lifted.',
-    accountRequirements: 'Merchant Center account and owner/manager permission; Merchant API uses account resource names.',
-    endpoints: ['GET /accounts/{account-id}', 'GET /products/{product-resource-name}', 'POST /accounts/{account-id}/products (changes a merchant catalog)'],
-    webhooks: 'Merchant API supports real-time notifications for selected product/account resources using Google Cloud Pub/Sub configuration; confirm exact subscription resources in current docs.',
-    rateLimitsAndPricing: 'Google Cloud/merchant account quota and API-specific limits apply; no general API usage fee asserted. Product feeds/ads may separately affect business spend.',
-    developerApproval: 'Google OAuth verification and third-party app verification can be required. Merchant account owner must approve the app and scopes.',
-    environmentVariables: [env('GOOGLE_MERCHANT_CLIENT_ID', false, true, 'OAuth client ID'), env('GOOGLE_MERCHANT_CLIENT_SECRET', true, true, 'OAuth client secret'), env('GOOGLE_MERCHANT_REFRESH_TOKEN', true, false, 'Authorized refresh token'), env('GOOGLE_MERCHANT_ACCOUNT_ID', false, true, 'Merchant account ID')],
-    automationCapabilities: ['Read authorized account/product/status data', 'Write product data only under merchant authorization and explicit approval', 'Subscribe to supported Cloud Pub/Sub notifications'],
-    restrictions: ['No unauthorized account discovery', 'Catalog modifications and shopping ads have external consequences'],
-    productionNotes: 'No Merchant Center account, OAuth approval or notification topic connected.',
-  }),
-  provider({
-    key: 'microsoft_advertising_api', name: 'Microsoft Advertising API', category: 'marketing',
-    officialDocs: [
-      { label: 'Microsoft Advertising API', url: 'https://learn.microsoft.com/en-us/advertising/guides/' },
-      { label: 'OAuth authentication', url: 'https://learn.microsoft.com/en-us/advertising/guides/authentication-oauth' },
-      { label: 'API service reference', url: 'https://learn.microsoft.com/en-us/advertising/guides/web-service-addresses' },
-    ],
-    apiBaseUrls: ['https://{endpoint}/Api/Advertiser/{Service}/v13 (service-specific SOAP endpoints; use current official address table)'],
-    authentication: ['Microsoft identity platform OAuth 2.0 refresh/access tokens plus Microsoft Advertising developer token'],
-    oauthScopes: ['https://ads.microsoft.com/msads.manage'],
-    applicationRequirements: 'Microsoft Entra app registration, redirect URI, Advertising developer token and supported API access.',
-    accountRequirements: 'Microsoft Advertising customer/account IDs and appropriate user role; account must authorize the app.',
-    endpoints: ['CampaignManagement service (campaigns/ad groups/ads)', 'Reporting service (asynchronous report submit/poll/download)', 'CustomerManagement service (account metadata)'],
-    webhooks: 'No general resource-change webhook is assumed. Reporting is asynchronous and is commonly polled; use only current documented event services if available.',
-    rateLimitsAndPricing: 'Service-specific quotas/limits and throttling apply; actual advertising spend is separate and must be approved.',
-    developerApproval: 'Developer token application/access level and OAuth app setup may require Microsoft review/approval.',
-    environmentVariables: [env('MICROSOFT_ADS_CLIENT_ID', false, true, 'Entra app client ID'), env('MICROSOFT_ADS_CLIENT_SECRET', true, true, 'Entra app secret'), env('MICROSOFT_ADS_REFRESH_TOKEN', true, false, 'Authorized refresh token'), env('MICROSOFT_ADS_DEVELOPER_TOKEN', true, true, 'Advertising developer token'), env('MICROSOFT_ADS_CUSTOMER_ID', false, true, 'Customer ID'), env('MICROSOFT_ADS_ACCOUNT_ID', false, false, 'Authorized account ID')],
-    automationCapabilities: ['Read authorized advertising reports', 'Create/update campaigns only after a human confirms spend and scope'],
-    restrictions: ['No campaign mutations or spend without explicit approval', 'Do not store OAuth refresh tokens outside the encrypted vault'],
-    productionNotes: 'No Microsoft Advertising developer token, account or OAuth grant verified.',
-  }),
-];
+export interface DocumentationRefreshAudit {
+  version: string;
+  auditedAt: string;
+  totalProviders: number;
+  validUrlProviders: number;
+  unverifiedCount: number;
+  issues: { providerKey: string; issue: string }[];
+}
 
-const automation = (
-  input: Omit<IntegrationProviderRecord, 'collectedAt' | 'category' | 'verificationStatus'> & {
-    category?: IntegrationProviderRecord['category'];
-    verificationStatus?: ProviderStatus;
-  },
-): IntegrationProviderRecord => provider({ ...input, category: input.category ?? 'automation' });
+/**
+ * Validates catalog documentation pointers and timestamps safely without executing any external content.
+ */
+export function auditCatalogDocumentation(nowIso = new Date().toISOString()): DocumentationRefreshAudit {
+  const issues: { providerKey: string; issue: string }[] = [];
+  let validUrlProviders = 0;
+  let unverifiedCount = 0;
 
-export const AUTOMATION_CATALOG: IntegrationProviderRecord[] = [
-  automation({
-    key: 'n8n', name: 'n8n',
-    officialDocs: [{ label: 'n8n documentation', url: 'https://docs.n8n.io/' }, { label: 'Public API', url: 'https://docs.n8n.io/api/' }, { label: 'License', url: 'https://github.com/n8n-io/n8n/blob/master/LICENSE.md' }],
-    apiBaseUrls: ['https://{instance}/api/v1/ (self-hosted or Cloud instance path; confirm deployment base)'],
-    authentication: ['API key in X-N8N-API-KEY for public API; user/session auth for UI depending on deployment'], oauthScopes: [],
-    applicationRequirements: 'Self-hosted Node.js/Docker deployment; production scaling generally requires PostgreSQL and queue/worker configuration. Cloud is optional.',
-    accountRequirements: 'Instance owner creates users/projects/credentials. No external provider account is automatically discovered.',
-    endpoints: ['GET /api/v1/workflows', 'POST /api/v1/workflows/{id}/activate', 'GET /api/v1/executions'],
-    webhooks: 'Webhook Trigger nodes create inbound workflow URLs. General outbound REST API event notifications are not assumed; use a workflow/error trigger or poll executions.',
-    rateLimitsAndPricing: 'Self-hosted resource limits are operational; hosted feature/plan limits and pricing are plan-dependent. Public REST API rate ceilings are not consistently published; obey 429s.',
-    developerApproval: 'No external API developer approval; third-party provider nodes still require provider OAuth/apps and permissions.',
-    environmentVariables: [env('N8N_BASE_URL', false, false, 'Private n8n instance URL'), env('N8N_API_KEY', true, false, 'Scoped API key, if exposed by an authorized instance')],
-    automationCapabilities: ['Visual trigger/action workflows', 'Webhook triggers, schedules, retries/error workflows, integrations and worker queue mode'],
-    restrictions: ['Sustainable Use License is source-available, not OSI open source; internal business use is distinct from offering n8n as a hosted product', 'Review licensing before embedding/reselling'],
-    productionNotes: 'Evaluation only; not installed or activated by ALOAPI.',
-  }),
-  automation({
-    key: 'activepieces', name: 'Activepieces',
-    officialDocs: [{ label: 'Activepieces docs', url: 'https://www.activepieces.com/docs' }, { label: 'API reference', url: 'https://www.activepieces.com/docs/api/v1' }, { label: 'Source/license', url: 'https://github.com/activepieces/activepieces' }],
-    apiBaseUrls: ['https://{instance}/api/v1/'], authentication: ['API key / platform authentication as configured by deployment; verify current API docs'], oauthScopes: [],
-    applicationRequirements: 'Self-hosted install uses a server, PostgreSQL and Redis in supported production topology; official Docker/Helm options are documented.', accountRequirements: 'Instance admin and connected provider pieces; users grant provider OAuth through official flows.',
-    endpoints: ['Flows and pieces API (see current versioned API reference)', 'Trigger flows through documented endpoints where enabled'], webhooks: 'Webhook triggers are available for supported flow triggers; endpoint URL depends on frontend URL and deployment.',
-    rateLimitsAndPricing: 'Self-host core and hosted plans/features differ; concurrency/credits and enterprise controls are plan/version dependent. Check official pricing and API docs.',
-    developerApproval: 'Third-party API approvals depend on each connected provider; enterprise edition may gate governance features.',
-    environmentVariables: [env('ACTIVEPIECES_BASE_URL', false, false, 'Private instance URL'), env('ACTIVEPIECES_API_KEY', true, false, 'Authorized instance API key')],
-    automationCapabilities: ['Visual event/action flows', 'Triggers, webhooks, scheduled runs, workers, retry/error handling and integrations'],
-    restrictions: ['Core and enterprise components have different licensing; inspect the exact shipped module/license before redistribution'],
-    productionNotes: 'Evaluation only; no service provisioned.',
-  }),
-  automation({
-    key: 'node_red', name: 'Node-RED',
-    officialDocs: [{ label: 'Node-RED docs', url: 'https://nodered.org/docs/' }, { label: 'Admin API', url: 'https://nodered.org/docs/api/admin/methods/' }, { label: 'License', url: 'https://github.com/node-red/node-red/blob/master/LICENSE' }],
-    apiBaseUrls: ['http://{private-instance}:1880/'], authentication: ['Admin API bearer token when configured; enable HTTPS/auth and secure editor endpoints'], oauthScopes: [],
-    applicationRequirements: 'Node.js runtime; persistent userDir; production adminAuth and HTTPS reverse proxy are required.', accountRequirements: 'Instance administrator; external nodes may have their own accounts.',
-    endpoints: ['GET /flows', 'POST /flows', 'POST /inject/{id} (admin API and version dependent)'], webhooks: 'HTTP In/HTTP Response nodes expose inbound webhook endpoints; configure authentication and network access explicitly.',
-    rateLimitsAndPricing: 'Open-source runtime; no universal API call price/limit. Hardware/runtime, nodes and external API quotas apply.',
-    developerApproval: 'No central API review; third-party nodes may require provider app approval.',
-    environmentVariables: [env('NODE_RED_BASE_URL', false, false, 'Private Node-RED URL'), env('NODE_RED_ADMIN_TOKEN', true, false, 'Configured Node-RED admin token')],
-    automationCapabilities: ['Event-driven visual flows, timers, HTTP endpoints, custom JavaScript/function nodes'],
-    restrictions: ['Apache-2.0 project license; individual nodes may have distinct licenses', 'Editor must never be exposed unauthenticated publicly'],
-    productionNotes: 'Evaluation only; not installed.',
-  }),
-  automation({
-    key: 'huginn', name: 'Huginn',
-    officialDocs: [{ label: 'Huginn repository and docs', url: 'https://github.com/huginn/huginn' }, { label: 'API docs', url: 'https://github.com/huginn/huginn/wiki/RESTful-API' }, { label: 'License', url: 'https://github.com/huginn/huginn/blob/master/LICENSE' }],
-    apiBaseUrls: ['https://{private-instance}/api/v1/'], authentication: ['Per-user API key configured in Huginn; protect with TLS and app authentication'], oauthScopes: [],
-    applicationRequirements: 'Ruby/Rails application, database, background job worker and scheduler; use upstream Docker/deployment instructions.', accountRequirements: 'Huginn user account; agents often need service-specific credentials.',
-    endpoints: ['GET /api/v1/agents', 'POST /api/v1/agents', 'GET /api/v1/events'], webhooks: 'WebhookAgent can receive external events; polling/scheduler and agent chains are built in.',
-    rateLimitsAndPricing: 'Self-hosted software; no provider API charge. Background jobs and external API limits remain applicable.',
-    developerApproval: 'No central approval; external providers separately control OAuth/API access.',
-    environmentVariables: [env('HUGINN_BASE_URL', false, false, 'Private Huginn URL'), env('HUGINN_API_KEY', true, false, 'Huginn API key')],
-    automationCapabilities: ['Agent-based event transformations, schedules, polling, webhooks and notifications'],
-    restrictions: ['MIT project license; integrations and data sources retain their own policies', 'Avoid indiscriminate web scraping; use authorized sources'],
-    productionNotes: 'Evaluation only; not installed.',
-  }),
-  automation({
-    key: 'windmill', name: 'Windmill',
-    officialDocs: [{ label: 'Windmill documentation', url: 'https://www.windmill.dev/docs' }, { label: 'API documentation', url: 'https://www.windmill.dev/docs/api' }, { label: 'License', url: 'https://github.com/windmill-labs/windmill/blob/main/LICENSE' }],
-    apiBaseUrls: ['https://{private-instance}/api/'], authentication: ['Workspace token or user token; use the least-privilege documented token type'], oauthScopes: [],
-    applicationRequirements: 'Production self-hosting uses server, workers and PostgreSQL; additional components depend on scaling and feature selection.', accountRequirements: 'Workspace and user/worker access; credentials are stored as Windmill resources.',
-    endpoints: ['Workspace/script/flow endpoints under /api/w/{workspace}/...', 'Run script/flow endpoints vary by current API version'], webhooks: 'Webhook triggers, schedules and flow triggers are documented; secure workspace routes and webhook signatures where supported.',
-    rateLimitsAndPricing: 'Self-host community edition and hosted/enterprise quotas differ; resource limits and worker configuration determine throughput.',
-    developerApproval: 'Third-party API permissions remain provider-controlled.',
-    environmentVariables: [env('WINDMILL_BASE_URL', false, false, 'Private Windmill URL'), env('WINDMILL_TOKEN', true, false, 'Workspace/user token')],
-    automationCapabilities: ['Code-first scripts and workflows, schedules, webhooks, approvals, worker queues and retries'],
-    restrictions: ['AGPLv3 core with commercial/enterprise components; review licenses of image/features and obligations before product use'],
-    productionNotes: 'Evaluation only; not installed.',
-  }),
-  automation({
-    key: 'temporal', name: 'Temporal',
-    officialDocs: [{ label: 'Temporal documentation', url: 'https://docs.temporal.io/' }, { label: 'Self-hosting', url: 'https://docs.temporal.io/self-hosted-guide' }, { label: 'License', url: 'https://github.com/temporalio/temporal/blob/main/LICENSE' }],
-    apiBaseUrls: ['Temporal gRPC frontend (deployment-specific address); use supported SDKs/client APIs'], authentication: ['Temporal Cloud API keys/mTLS or self-hosted namespace auth/TLS configured by operator'], oauthScopes: [],
-    applicationRequirements: 'Temporal service (Cloud or self-hosted), persistence database and worker processes running application code.', accountRequirements: 'Namespace and service credentials; workflows/tasks require registered workers.',
-    endpoints: ['Workflow start/signal/query through SDKs; service gRPC API is versioned and not a generic public REST API'], webhooks: 'No generic inbound webhook product; application workers can expose an authenticated HTTP endpoint that starts/signals a workflow.',
-    rateLimitsAndPricing: 'Self-host infrastructure cost or Temporal Cloud usage pricing; capacity depends on persistence and worker throughput.',
-    developerApproval: 'No API marketplace approval; app-level external providers retain their own approvals.',
-    environmentVariables: [env('TEMPORAL_ADDRESS', false, false, 'Private Temporal frontend address'), env('TEMPORAL_NAMESPACE', false, false, 'Temporal namespace'), env('TEMPORAL_API_KEY', true, false, 'Cloud API key, if applicable')],
-    automationCapabilities: ['Durable, long-running code workflows, timers, retries, signals and recovery/replay'],
-    restrictions: ['MIT server and SDK licensing; operationally heavier than a small webhook worker', 'Do not store secrets in workflow history or logs'],
-    productionNotes: 'Evaluation only; not deployed.',
-  }),
-  automation({
-    key: 'apache_airflow', name: 'Apache Airflow',
-    officialDocs: [{ label: 'Airflow documentation', url: 'https://airflow.apache.org/docs/' }, { label: 'Stable REST API', url: 'https://airflow.apache.org/docs/apache-airflow/stable/stable-rest-api-ref.html' }, { label: 'License', url: 'https://github.com/apache/airflow/blob/main/LICENSE' }],
-    apiBaseUrls: ['https://{private-instance}/api/v2/'], authentication: ['Airflow API auth manager/backend (Basic, OAuth, or deployment-specific auth)'], oauthScopes: [],
-    applicationRequirements: 'Python runtime, metadata database, scheduler, webserver/API server and executor/worker infrastructure; production needs a supported executor and database.', accountRequirements: 'Airflow user/RBAC and DAG code; integrations need external provider connection entries.',
-    endpoints: ['GET /api/v2/dags', 'POST /api/v2/dags/{dag_id}/dagRuns', 'GET /api/v2/dags/{dag_id}/dagRuns/{dag_run_id}'], webhooks: 'REST API can trigger DAG runs; webhooks can be implemented in DAG/operator/API integration. Not a general event bus.',
-    rateLimitsAndPricing: 'Apache-2.0 self-hosted software; no API usage fee. Scheduler/executor capacity, database and managed-service plans determine cost.',
-    developerApproval: 'No central approval; external API/provider policies apply.',
-    environmentVariables: [env('AIRFLOW_BASE_URL', false, false, 'Private Airflow API URL'), env('AIRFLOW_API_USERNAME', false, false, 'Dedicated Airflow service account'), env('AIRFLOW_API_PASSWORD', true, false, 'Airflow API credential')],
-    automationCapabilities: ['Scheduled/batch DAGs, task dependencies, retries, sensors and REST-triggered runs'],
-    restrictions: ['Apache-2.0 license', 'Designed for batch/data orchestration, not a lightweight general social posting gateway'],
-    productionNotes: 'Evaluation only; not installed.',
-  }),
-  automation({
-    key: 'mautic', name: 'Mautic',
-    officialDocs: [{ label: 'Mautic developer docs', url: 'https://devdocs.mautic.org/' }, { label: 'REST API', url: 'https://devdocs.mautic.org/en/5.x/rest_api.html' }, { label: 'License', url: 'https://github.com/mautic/mautic/blob/5.x/LICENSE' }],
-    apiBaseUrls: ['https://{private-instance}/api/'], authentication: ['OAuth 2.0 authorization or supported Basic auth on secured installations; prefer OAuth/TLS'], oauthScopes: [],
-    applicationRequirements: 'PHP/Mautic application, relational database, cron jobs and mail transport; production sender configuration and deliverability controls required.', accountRequirements: 'Mautic admin account, legally sourced contact list and configured sender domain.',
-    endpoints: ['GET /contacts', 'POST /contacts/new', 'GET /campaigns'], webhooks: 'Mautic supports configured webhooks for selected events; endpoint, signature and retry behavior depend on Mautic version/config.',
-    rateLimitsAndPricing: 'Self-hosted software has hosting/email delivery costs; cloud hosting and email services may be paid. API limits depend on instance and provider.',
-    developerApproval: 'No Mautic platform review; SMTP/sending domain and third-party API approvals are separate.',
-    environmentVariables: [env('MAUTIC_BASE_URL', false, false, 'Private Mautic URL'), env('MAUTIC_CLIENT_ID', false, false, 'OAuth client ID'), env('MAUTIC_CLIENT_SECRET', true, false, 'OAuth client secret')],
-    automationCapabilities: ['Marketing campaigns, segments, forms, events, APIs and webhook integrations'],
-    restrictions: ['GPL-3.0 license (verify exact release); email marketing requires consent, deliverability controls, lawful basis and opt-out handling', 'Do not import leads from ALOAPI automatically'],
-    productionNotes: 'Evaluation only; not installed or linked to any CRM.',
-  }),
-  automation({
-    key: 'listmonk', name: 'listmonk',
-    officialDocs: [{ label: 'listmonk documentation', url: 'https://listmonk.app/docs/' }, { label: 'API docs', url: 'https://listmonk.app/docs/apis/' }, { label: 'License', url: 'https://github.com/knadh/listmonk/blob/master/LICENSE' }],
-    apiBaseUrls: ['https://{private-instance}/api/'], authentication: ['HTTP Basic authentication using dedicated app credentials; use TLS and least privilege'], oauthScopes: [],
-    applicationRequirements: 'listmonk binary/container and PostgreSQL; configure SMTP/transactional mail provider, backups and unsubscribe workflows.', accountRequirements: 'Instance admin, authorized subscribers, compliant sending domain and approved SMTP credentials.',
-    endpoints: ['GET /api/subscribers', 'POST /api/subscribers', 'POST /api/campaigns'], webhooks: 'API can manage campaigns/subscribers. No general outbound event webhook is assumed; use built-in integrations/plugins only if supported by release docs.',
-    rateLimitsAndPricing: 'Self-hosted software is free under its project license; email delivery provider and infrastructure may be paid. Limits are per instance/provider.',
-    developerApproval: 'No central app review; SMTP provider, sender identity and consent rules apply.',
-    environmentVariables: [env('LISTMONK_BASE_URL', false, false, 'Private listmonk URL'), env('LISTMONK_API_USERNAME', false, false, 'Dedicated API user'), env('LISTMONK_API_PASSWORD', true, false, 'API password')],
-    automationCapabilities: ['Subscriber/list/campaign API, scheduled campaigns and supported transactional/event tooling'],
-    restrictions: ['Verify exact AGPL license for release; email sending requires consent, unsubscribe and suppression management', 'No bulk campaign can be sent from ALOAPI'],
-    productionNotes: 'Evaluation only; not installed.',
-  }),
-  automation({
-    key: 'agency_orchestrator', name: 'agency-orchestrator (pinned provider submodule)', category: 'automation',
-    verificationStatus: 'DISCOVERED',
-    officialDocs: [{ label: 'Pinned GitHub repository', url: 'https://github.com/jnMetaCode/agency-orchestrator' }],
-    apiBaseUrls: ['Not established from the current checkout; inspect the pinned README/OpenAPI/compose files after an explicit submodule fetch.'],
-    authentication: ['Unknown for the pinned version until source/docs are inspected; do not assume a public API or anonymous access'], oauthScopes: [],
-    applicationRequirements: 'providers.json describes a TypeScript/Node and Docker Compose service; exact ports, service dependencies and runtime must be checked at the pinned source commit.',
-    accountRequirements: 'Likely requires a configured LLM provider or local model; exact support is unverified from this uninitialized submodule.',
-    endpoints: ['Not verified; do not configure AUTOMATION_ORCHESTRATOR_URL until its pinned API contract is inspected.'],
-    webhooks: 'Unknown for pinned source; verify source and run isolated tests before enabling.',
-    rateLimitsAndPricing: 'Depends on external LLM/provider account, model and deployment. Costs and quotas must be confirmed at runtime.',
-    developerApproval: 'Depends on each model/provider; source-level permission boundary not reviewed.',
-    environmentVariables: [env('AUTOMATION_ORCHESTRATOR_URL', false, false, 'Private service URL, if pinned API is confirmed'), env('AUTOMATION_ORCHESTRATOR_TOKEN', true, false, 'Only if supported by the pinned version')],
-    automationCapabilities: ['Project manifest describes workflow/orchestration and agent personas; capabilities are not verified without fetching the pinned source.'],
-    restrictions: ['Do not run downloaded compose files without review', 'Preserve pinned commit and submodule URL; license noted as Apache-2.0 in existing manifest, not re-validated here'],
-    productionNotes: 'Gitlink is pinned but provider worktree is uninitialized. It has not been built, run, security reviewed or connected.',
-  }),
-  automation({
-    key: 'agency_agents_en', name: 'agency-agents (English definitions)', category: 'agent-library', verificationStatus: 'DISCOVERED',
-    officialDocs: [{ label: 'Pinned GitHub repository', url: 'https://github.com/msitarzewski/agency-agents' }],
-    apiBaseUrls: ['None documented in the existing provider manifest; Markdown/shell definitions are not a service API.'], authentication: ['No service authentication; tool-specific configuration may be required'], oauthScopes: [],
-    applicationRequirements: 'Provider manifest describes Markdown/Shell personas; integration requires an external orchestrator and review of any agent instructions.',
-    accountRequirements: 'No external account discovery; each agent/tool requires its own authorized credentials.', endpoints: ['No API endpoint claimed.'], webhooks: 'No webhook server claimed.',
-    rateLimitsAndPricing: 'License is listed as MIT in providers.json; agent/model costs are charged by whichever runtime is selected.', developerApproval: 'LLM and tool providers control access and policy.',
-    environmentVariables: [], automationCapabilities: ['Agent prompt/persona definitions for orchestration; no standalone execution engine evidenced.'], restrictions: ['Uninitialized at pinned commit; inspect instructions for unsafe capabilities before use', 'Do not expose production credentials to an agent without least-privilege controls'], productionNotes: 'Not fetched or executed; inventory-only status.',
-  }),
-  automation({
-    key: 'agency_agents_zh', name: 'agency-agents-zh (Chinese definitions)', category: 'agent-library', verificationStatus: 'DISCOVERED',
-    officialDocs: [{ label: 'Pinned GitHub repository', url: 'https://github.com/jnMetaCode/agency-agents-zh' }],
-    apiBaseUrls: ['No server API claimed in the existing manifest.'], authentication: ['No standalone service authentication'], oauthScopes: [],
-    applicationRequirements: 'Existing manifest describes Markdown/Shell agent definitions; requires a separately reviewed orchestrator/runtime.', accountRequirements: 'No account discovery; provider credentials remain separate.', endpoints: ['No API endpoint claimed.'], webhooks: 'No webhook server claimed.', rateLimitsAndPricing: 'License is listed as MIT in providers.json; external model/runtime cost is separate.', developerApproval: 'External model providers determine approval and limits.', environmentVariables: [], automationCapabilities: ['Agent definitions only; capabilities are not validated because the pinned source is not initialized.'], restrictions: ['Review prompt instructions and language suitability before activation', 'No credentials or provider interactions are supplied by this submodule'], productionNotes: 'Not fetched or executed; inventory-only status.',
-  }),
-  automation({
-    key: 'ai_agency_agents', name: 'ai-agency-agents workforce library', category: 'agent-library', verificationStatus: 'DISCOVERED',
-    officialDocs: [{ label: 'Pinned GitHub repository', url: 'https://github.com/Anas-Khan93/ai-agency-agents' }],
-    apiBaseUrls: ['No server API claimed in the existing manifest.'], authentication: ['No standalone service authentication'], oauthScopes: [],
-    applicationRequirements: 'Existing manifest describes agent definitions; runtime and tool requirements must be reviewed from pinned source.', accountRequirements: 'No accounts are discovered by this library.', endpoints: ['No API endpoint claimed.'], webhooks: 'No webhook server claimed.',
-    rateLimitsAndPricing: 'License is listed as MIT in providers.json; model inference costs are external.', developerApproval: 'Model and tools determine approval/quotas.', environmentVariables: [],
-    automationCapabilities: ['Specialized prompt/workflow definitions only until an orchestrator and model are deliberately configured.'], restrictions: ['Pinned source is not initialized; no source-level security or licensing verification has been performed'], productionNotes: 'Not fetched or executed; inventory-only status.',
-  }),
-  automation({
-    key: 'ybt_army_135m', name: 'YBT-Army-135M local model', category: 'agent-library', verificationStatus: 'DISCOVERED',
-    officialDocs: [{ label: 'Pinned GitHub repository', url: 'https://github.com/YouBTech01/YBT-Army-135M' }],
-    apiBaseUrls: ['No HTTP API/base URL verified at the pinned source.'], authentication: ['Unknown until the pinned server implementation is inspected'], oauthScopes: [],
-    applicationRequirements: 'Existing providers.json describes a Python model and a local UI; runtime/dependencies/API must be checked at the pinned commit.', accountRequirements: 'No social account access inherent; local model must not receive secrets or personal data by default.', endpoints: ['No endpoint claimed; YBT_ARMY_URL is only a manifest hint, not proof of a running API.'], webhooks: 'None known.',
-    rateLimitsAndPricing: 'Local compute/resource cost; no license or production support is asserted.', developerApproval: 'No platform approval, but model/data licensing remains unclear.', environmentVariables: [env('YBT_ARMY_URL', false, false, 'Local model URL only if a documented API is confirmed')],
-    automationCapabilities: ['Optional local inference candidate; capabilities and API are not verified in current checkout.'], restrictions: ['providers.json records NOASSERTION for license; do not redistribute or use commercially without upstream license clarification', 'Do not load untrusted model assets'], productionNotes: 'Submodule uninitialized; not installed or executed.',
-  }),
-  automation({
-    key: 'obs_studio', name: 'OBS Studio / obs-websocket', category: 'infrastructure', verificationStatus: 'DISCOVERED',
-    officialDocs: [{ label: 'OBS Studio', url: 'https://obsproject.com/wiki/' }, { label: 'obs-websocket protocol', url: 'https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md' }, { label: 'Pinned source', url: 'https://github.com/obsproject/obs-studio' }],
-    apiBaseUrls: ['ws://127.0.0.1:4455/ by default for a separate local OBS process; configure only on a trusted private interface'], authentication: ['obs-websocket v5 password authentication; exact protocol/version must be checked against installed OBS'], oauthScopes: [],
-    applicationRequirements: 'Separate desktop/media process and OBS WebSocket plugin/service; provider manifest notes GPL-2.0 and nested submodules.', accountRequirements: 'Local OBS project/scenes and authorized operator; does not grant social publishing access.', endpoints: ['WebSocket RPC Request/RequestBatch according to installed protocol; not REST'], webhooks: 'WebSocket event subscriptions are available for OBS events; no public webhook.',
-    rateLimitsAndPricing: 'No API fee; CPU/GPU, stream/CDN and platform usage costs are separate.', developerApproval: 'No OBS API approval; streaming platform APIs and account policies apply separately.',
-    environmentVariables: [env('OBS_WEBSOCKET_URL', false, false, 'Private OBS WebSocket address'), env('OBS_WEBSOCKET_PASSWORD', true, false, 'OBS WebSocket password')],
-    automationCapabilities: ['Control scenes/recording/stream state through websocket RPC when authorized'], restrictions: ['GPL-2.0: keep as separate process; do not link/vendor without license review', 'Never expose OBS websocket publicly'], productionNotes: 'Gitlink exists but source is uninitialized; OBS itself is not installed or connected.',
-  }),
-  automation({
-    key: 'nginx', name: 'NGINX reverse proxy / edge', category: 'infrastructure', verificationStatus: 'DISCOVERED',
-    officialDocs: [{ label: 'NGINX docs', url: 'https://nginx.org/en/docs/' }, { label: 'Pinned source', url: 'https://github.com/nginx/nginx' }],
-    apiBaseUrls: ['No application API; HTTP reverse proxy configuration is deployment-specific.'], authentication: ['TLS, network ACLs and upstream application authentication; NGINX does not replace dashboard login'], oauthScopes: [],
-    applicationRequirements: 'NGINX package/container or source build, validated configuration, TLS and supervised service.', accountRequirements: 'Host/operator privileges; no platform account linkage.', endpoints: ['Proxy locations, health checks, limit_req and TLS are configuration directives, not external app endpoints.'], webhooks: 'Can proxy an application webhook; it does not provide provider event subscriptions.',
-    rateLimitsAndPricing: 'Open-source NGINX is BSD-2-Clause; commercial NGINX products/support have separate licensing.', developerApproval: 'No API review.', environmentVariables: [],
-    automationCapabilities: ['Private reverse proxy/load balancing and narrowly scoped webhook routing; no workflow execution'], restrictions: ['Do not expose admin APIs publicly; restrict webhook paths separately and use TLS', 'Use one edge proxy, not both Caddy and NGINX'], productionNotes: 'Repository pin and sample config exist; no NGINX service is running or production-reviewed.',
-  }),
-];
+  for (const provider of ALL_INTEGRATION_CATALOG) {
+    if (provider.implementationLevel === 0) unverifiedCount += 1;
+    const urls = [
+      provider.officialWebsite,
+      provider.officialDeveloperPortal,
+      provider.officialApiDocumentation,
+      ...provider.officialDocs.map(d => d.url),
+    ].filter(Boolean);
 
-// Older source catalog remains part of the same intelligence API and export. Its
-// per-source verification results stay in ProviderRegistry and are shown separately.
-export const ALL_INTEGRATION_CATALOG = [...SOCIAL_API_CATALOG, ...AUTOMATION_CATALOG];
-export const CATALOG_VERSION = '2026-11-15';
+    let allHttps = urls.length > 0;
+    for (const raw of urls) {
+      try {
+        const parsed = new URL(raw);
+        if (parsed.protocol !== 'https:') {
+          allHttps = false;
+          issues.push({ providerKey: provider.key, issue: `Non-HTTPS doc URL: ${raw}` });
+        }
+      } catch {
+        allHttps = false;
+        issues.push({ providerKey: provider.key, issue: `Invalid URL: ${raw}` });
+      }
+    }
+    if (allHttps) validUrlProviders += 1;
+  }
+
+  return {
+    version: CATALOG_VERSION,
+    auditedAt: nowIso,
+    totalProviders: ALL_INTEGRATION_CATALOG.length,
+    validUrlProviders,
+    unverifiedCount,
+    issues,
+  };
+}
