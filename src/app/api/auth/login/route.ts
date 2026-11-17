@@ -15,7 +15,8 @@ import {
 import { loginIsLocked, loginThrottleKey, recordLoginFailure, clearLoginFailures } from '@/lib/security/login-throttle';
 import { constantTimeEqual, decryptVaultValue } from '@/lib/security/vault-crypto';
 import { verifyTotp } from '@/lib/security/totp';
-import { isSameOriginRequest } from '@/lib/security/request';
+import { isSameOriginRequest, isSecureRequest } from '@/lib/security/request';
+import { runPostLoginInitialization } from '@/lib/onboarding/initialization';
 
 function digestRecoveryCode(code: string): string {
   return createHash('sha256').update(code.trim().replace(/\s/g, '').toUpperCase()).digest('hex');
@@ -113,11 +114,23 @@ export async function POST(req: NextRequest) {
       }
 
       await clearLoginFailures(throttleKey);
+      const secureCookie = isSecureRequest(req) || (req.headers.get('origin')?.startsWith('https://') ?? false);
       const raw = await createSession({ role: 'admin', adminId: admin.id, ip, userAgent });
       const store = await cookies();
-      store.set(SESSION_COOKIE, raw, sessionCookieOptions(ADMIN_SESSION_HOURS * 3600));
+      store.set(SESSION_COOKIE, raw, sessionCookieOptions(ADMIN_SESSION_HOURS * 3600, secureCookie));
       await db.activityLog.create({ data: { actor: 'admin', action: 'admin_login', detail: 'Administrator signed in', ip } });
-      return NextResponse.json({ ok: true, role: 'admin', mfaEnabled: admin.mfaEnabled }, { headers: { 'Cache-Control': 'no-store' } });
+      const initialization = await runPostLoginInitialization(admin.username).catch(() => null);
+      return NextResponse.json(
+        {
+          ok: true,
+          role: 'admin',
+          mfaEnabled: admin.mfaEnabled,
+          initialization: initialization
+            ? { id: initialization.id, overallStatus: initialization.overallStatus, summary: initialization.summary }
+            : null,
+        },
+        { headers: { 'Cache-Control': 'no-store' } },
+      );
     }
 
     const client = await db.clientAccount.findUnique({ where: { username } });
@@ -131,9 +144,10 @@ export async function POST(req: NextRequest) {
     }
 
     await clearLoginFailures(throttleKey);
+    const secureCookie = isSecureRequest(req) || (req.headers.get('origin')?.startsWith('https://') ?? false);
     const raw = await createSession({ role: 'client', clientId: client.id, ip, userAgent });
     const store = await cookies();
-    store.set(SESSION_COOKIE, raw, sessionCookieOptions(CLIENT_SESSION_HOURS * 3600));
+    store.set(SESSION_COOKIE, raw, sessionCookieOptions(CLIENT_SESSION_HOURS * 3600, secureCookie));
     await db.activityLog.create({
       data: { clientId: client.id, actor: 'client', action: 'client_login', detail: 'Client signed in', ip },
     });

@@ -29,6 +29,7 @@ import CrmTasksTab from '@/components/crm/crm-tasks-tab';
 import AutomationsTab from '@/components/crm/automations-tab';
 import SetupBotAdminTab from '@/components/setupbot/setupbot-admin';
 import EngineTab from '@/components/engine/engine-tab';
+import OnboardingHub from '@/components/onboarding/onboarding-hub';
 import { BUSINESS } from '@/lib/business';
 import IntegrationIntelligenceTab from '@/components/integrations/integration-intelligence-tab';
 import AdminSecurityTab from '@/components/admin/admin-security-tab';
@@ -39,11 +40,11 @@ import PlannerTab from '@/components/planner-tab';
 import { usePersistentState } from '@/lib/usePersistentState';
 import { CHANNELS, LAUNCH_PHASES, type CompanyProfile, type ChannelStatusMap } from '@/lib/channels-data';
 
-type TabId = 'access' | 'crm' | 'tasks' | 'automation' | 'setupbot' | 'engine' | 'integrations' | 'security' | 'dashboard' | 'channels' | 'planner' | 'wizard' | 'credentials' | 'otp' | 'rotation' | 'env';
+type TabId = 'onboarding' | 'access' | 'crm' | 'tasks' | 'automation' | 'setupbot' | 'engine' | 'integrations' | 'security' | 'dashboard' | 'channels' | 'planner' | 'wizard' | 'credentials' | 'otp' | 'rotation' | 'env';
 
 export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
   // Navigation
-  const [activeTab, setActiveTab] = useState<TabId>('access');
+  const [activeTab, setActiveTab] = useState<TabId>('onboarding');
 
   // Company profile and manual channel checklist are local browser notes; no provider state is inferred.
   const [company, setCompany] = usePersistentState<CompanyProfile>('aia-company-v1', { name: '', niche: '', audience: '', budget: '' });
@@ -162,6 +163,19 @@ export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
 
         {/* Tab Navigation */}
         <div className="max-w-7xl mx-auto mt-4 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs font-medium border-t border-slate-800/60 pt-3">
+          <button
+            onClick={() => setActiveTab('onboarding')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all whitespace-nowrap relative font-semibold ${
+              activeTab === 'onboarding'
+                ? 'bg-slate-800 text-cyan-400 border border-cyan-500/30 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            Onboarding Hub (19 Views)
+            <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[9px] font-mono">V2</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('access')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all whitespace-nowrap relative font-semibold ${
@@ -372,6 +386,8 @@ export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
       {/* Main Content Viewport */}
       <main className="max-w-7xl mx-auto px-4 lg:px-8 pt-6">
 
+        {activeTab === 'onboarding' && <OnboardingHub onToast={showToast} />}
+
         {activeTab === 'access' && <ClientAccessTab />}
 
         {activeTab === 'crm' && <CrmTab />}
@@ -382,7 +398,7 @@ export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
         {activeTab === 'integrations' && <IntegrationIntelligenceTab />}
         {activeTab === 'security' && <AdminSecurityTab onLogout={onLogout} />}
 
-        {activeTab !== 'access' && activeTab !== 'crm' && activeTab !== 'tasks' && activeTab !== 'automation' && activeTab !== 'setupbot' && activeTab !== 'engine' && activeTab !== 'integrations' && activeTab !== 'security' && (
+        {activeTab !== 'onboarding' && activeTab !== 'access' && activeTab !== 'crm' && activeTab !== 'tasks' && activeTab !== 'automation' && activeTab !== 'setupbot' && activeTab !== 'engine' && activeTab !== 'integrations' && activeTab !== 'security' && (
         <>
         <div className="mb-6 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm text-amber-100">
           <strong>State boundary:</strong> this dashboard's launch checkboxes are local planning notes. They are not provider status. API Intelligence records only user-supplied setup data; no provider authorization or live verification has been performed here.

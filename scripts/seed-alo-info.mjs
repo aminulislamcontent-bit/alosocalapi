@@ -33,8 +33,8 @@ async function main() {
     throw new Error('A stable ALOAPI_VAULT_KEY of at least 32 bytes is required.');
   }
 
-  const { PrismaClient } = await import('@prisma/client');
-  const prisma = new PrismaClient();
+  const { createPrismaClient } = await import('./prisma-client.mjs');
+  const prisma = createPrismaClient();
   try {
     const client = await prisma.clientAccount.findUnique({ where: { username: 'aloeducation' }, select: { id: true } });
     if (!client) throw new Error('Local account "aloeducation" was not found; no rows were changed.');

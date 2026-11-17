@@ -8,8 +8,10 @@ const { inspectExistingDatabase, inspectMigrationReadiness } = require('../scrip
 
 const baselinePath = path.resolve(__dirname, '../prisma/migrations/20261115000000_baseline/migration.sql');
 const additivePath = path.resolve(__dirname, '../prisma/migrations/20261115000100_security_integrations/migration.sql');
+const additiveV2Path = path.resolve(__dirname, '../prisma/migrations/20261116000200_autonomous_onboarding_intelligence/migration.sql');
 const baselineSql = fs.readFileSync(baselinePath, 'utf8');
 const additiveSql = fs.readFileSync(additivePath, 'utf8');
+const additiveV2Sql = fs.readFileSync(additiveV2Path, 'utf8');
 
 function temporaryDatabase(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aloapi-migrations-'));
@@ -86,6 +88,37 @@ test('reviewed additive migration preserves existing account data and adds integ
   db.close();
 });
 
+test('autonomous onboarding v2 migration preserves baseline + security rows and adds all 10 onboarding tables', t => {
+  const databasePath = temporaryDatabase(t);
+  seedBaseline(databasePath);
+  const db = new DatabaseSync(databasePath);
+  db.exec(additiveSql);
+  db.prepare('INSERT INTO "IntegrationProvider" ("key", "category", "verificationStatus", "updatedAt") VALUES (?, ?, ?, ?)')
+    .run('whatsapp_cloud_api', 'messaging', 'DOCUMENTED', '2026-11-16T00:00:00.000Z');
+  db.exec(additiveV2Sql);
+  const admin = db.prepare('SELECT "id", "username" FROM "AdminUser" WHERE "id" = ?').get('admin-1');
+  const prov = db.prepare('SELECT "key", "category" FROM "IntegrationProvider" WHERE "key" = ?').get('whatsapp_cloud_api');
+  assert.equal(admin.username, 'owner');
+  assert.equal(prov.key, 'whatsapp_cloud_api');
+  const tables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row => row.name));
+  for (const table of [
+    'OnboardingWorkflow',
+    'ClientRequirementProfile',
+    'VaultCredential',
+    'OAuthAuthorizationState',
+    'BrowserWorkflowSession',
+    'AgentExecutionRun',
+    'OmniEvent',
+    'SystemInitializationRun',
+    'SystemIntegrityRecord',
+    'ApiDiscoverySnapshot',
+  ]) {
+    assert.ok(tables.has(table), `${table} was added`);
+  }
+  assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
+  db.close();
+});
+
 test('startup preflight refuses an unbaselined existing SQLite database without rewriting it', t => {
   const freshPath = temporaryDatabase(t);
   assert.deepEqual(inspectMigrationReadiness(freshPath), {
@@ -139,6 +172,8 @@ test('startup preflight allows only known, completed migration histories with ma
   recordMigration(current, '20261115000000_baseline');
   current.exec(additiveSql);
   recordMigration(current, '20261115000100_security_integrations');
+  current.exec(additiveV2Sql);
+  recordMigration(current, '20261116000200_autonomous_onboarding_intelligence');
   current.close();
   assert.equal(inspectMigrationReadiness(currentPath).ok, true);
 
@@ -155,6 +190,37 @@ test('startup preflight allows only known, completed migration histories with ma
 });
 
 test('checked-in migration SQL contains no destructive table or row operation', () => {
+  assert.doesNotMatch(additiveV2Sql, /\b(?:DROP\s+TABLE|DROP\s+COLUMN|DELETE\s+FROM|TRUNCATE)\b/i);
   assert.doesNotMatch(additiveSql, /\b(?:DROP\s+TABLE|DROP\s+COLUMN|DELETE\s+FROM|TRUNCATE)\b/i);
   assert.doesNotMatch(baselineSql, /\b(?:DROP\s+TABLE|DROP\s+COLUMN|DELETE\s+FROM|TRUNCATE)\b/i);
+});
+
+test('prisma schema defines all 47 models including 10 onboarding models matching v2 migration SQL and lockfile dependencies', () => {
+  const schemaText = fs.readFileSync(path.resolve(__dirname, '../prisma/schema.prisma'), 'utf8');
+  const modelNames = [...schemaText.matchAll(/^model\s+(\w+)\s+\{/gm)].map(m => m[1]);
+  assert.equal(modelNames.length, 47, `Expected 47 Prisma models, got ${modelNames.length}`);
+
+  const expectedOnboardingModels = [
+    'OnboardingWorkflow',
+    'ClientRequirementProfile',
+    'VaultCredential',
+    'OAuthAuthorizationState',
+    'BrowserWorkflowSession',
+    'AgentExecutionRun',
+    'OmniEvent',
+    'SystemInitializationRun',
+    'SystemIntegrityRecord',
+    'ApiDiscoverySnapshot',
+  ];
+  for (const model of expectedOnboardingModels) {
+    assert.ok(modelNames.includes(model), `Missing model ${model} in prisma/schema.prisma`);
+    assert.match(additiveV2Sql, new RegExp(`CREATE TABLE "${model}"`), `Missing CREATE TABLE "${model}" in v2 migration`);
+  }
+
+  const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));
+  const lock = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package-lock.json'), 'utf8'));
+  for (const dep of ['@prisma/client', '@prisma/adapter-libsql', '@libsql/client', 'next', 'react']) {
+    assert.ok(pkg.dependencies[dep], `Missing dependency ${dep} in package.json`);
+    assert.ok(lock.packages[`node_modules/${dep}`], `Missing ${dep} in package-lock.json`);
+  }
 });

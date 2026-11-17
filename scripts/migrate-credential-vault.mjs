@@ -59,8 +59,8 @@ async function main() {
   if (!process.env.ALOAPI_VAULT_KEY || Buffer.byteLength(process.env.ALOAPI_VAULT_KEY, 'utf8') < 32) {
     throw new Error('Set the stable ALOAPI_VAULT_KEY (at least 32 UTF-8 bytes) before vault migration.');
   }
-  const { PrismaClient } = await import('@prisma/client');
-  const db = new PrismaClient();
+  const { createPrismaClient } = await import('./prisma-client.mjs');
+  const db = createPrismaClient();
   try {
     await db.$connect();
     const result = await migrateCredentialRows(db);

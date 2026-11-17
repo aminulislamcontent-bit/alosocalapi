@@ -7,3 +7,8 @@ export {
   maskSecret,
   decodeLegacyStoredValue,
 } from './vault-crypto-core.mjs';
+
+export function vaultConfigured(): boolean {
+  const key = process.env.ALOAPI_VAULT_KEY ?? '';
+  return Buffer.byteLength(key, 'utf8') >= 32;
+}

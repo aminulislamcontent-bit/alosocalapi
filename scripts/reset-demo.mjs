@@ -1,9 +1,9 @@
 // Optional local maintenance helper. Never run automatically.
 // Usage: node scripts/reset-demo.mjs --apply
 import { randomBytes, scryptSync } from 'node:crypto';
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from './prisma-client.mjs';
 
-const db = new PrismaClient();
+const db = createPrismaClient();
 
 function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');

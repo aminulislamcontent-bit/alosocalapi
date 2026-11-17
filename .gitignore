@@ -10,6 +10,8 @@ out/
 
 # runtime data (SQLite lives here; created by prisma db push)
 db/
+/exports/
+/backups/
 
 # logs
 dev.log

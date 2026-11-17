@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { DatabaseSync } from 'node:sqlite';
 import { randomBytes } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import {
@@ -1109,7 +1110,26 @@ function baselineExisting() {
   if (!existsSync(prismaEntry)) throw new Error('Local Prisma CLI is missing. Run npm ci before baselining.');
   console.log(`Verified existing SQLite schema: ${result.reason}.`);
   console.log('Recording the original schema as applied, then applying only the checked-in additive migrations. Existing rows are not rewritten.');
-  runCommand(root, process.execPath, [prismaEntry, 'migrate', 'resolve', '--applied', '20261115000000_baseline', '--schema', 'prisma/schema.prisma'], 'Baseline verification');
+  // Ensure _prisma_migrations exists for Prisma WASM schema engine compatibility before resolve --applied.
+  const sqlite = new DatabaseSync(databasePath);
+  try {
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "checksum" TEXT NOT NULL,
+      "finished_at" DATETIME,
+      "migration_name" TEXT NOT NULL,
+      "logs" TEXT,
+      "rolled_back_at" DATETIME,
+      "started_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "applied_steps_count" INTEGER NOT NULL DEFAULT 0
+    );`);
+  } finally {
+    sqlite.close();
+  }
+  const resolveArgs = existsSync(path.join(root, 'prisma.config.ts'))
+    ? [prismaEntry, 'migrate', 'resolve', '--applied', '20261115000000_baseline']
+    : [prismaEntry, 'migrate', 'resolve', '--applied', '20261115000000_baseline', '--schema', 'prisma/schema.prisma'];
+  runCommand(root, process.execPath, resolveArgs, 'Baseline verification');
   runCommand(root, npmCommand(), ['run', 'db:migrate:deploy'], 'Additive database migrations');
   console.log('Existing database safely baselined; additive migrations applied. No db push, reset, drop, or data deletion was used.');
 }

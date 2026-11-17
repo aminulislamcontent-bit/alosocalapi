@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "client"
 }
 
 datasource db {
@@ -662,4 +663,224 @@ model CredentialTransferKey {
   createdAt            DateTime @default(now())
 
   @@index([expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// ALOAPI Autonomous Marketing Onboarding & Multi-Agent Intelligence
+// ─────────────────────────────────────────────────────────────
+
+// 20-state standardized account registration & developer setup state machine
+model OnboardingWorkflow {
+  id                    String    @id @default(cuid())
+  clientId              String
+  providerKey           String
+  state                 String    @default("NOT_STARTED")
+  implementationLevel   Int       @default(1)
+  ownerEmail            String?
+  businessName          String?
+  accountExistsDetected Boolean   @default(false)
+  registrationMethod    String    @default("GUIDED_MANUAL")
+  preparedPayload       String    @default("{}")
+  developerAppConfig    String    @default("{}")
+  pendingCheckpoint     String?
+  ownerApprovedAt       DateTime?
+  ownerApprovedBy       String?
+  lastError             String?
+  history               String    @default("[]")
+  correlationId         String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([clientId, providerKey])
+  @@index([providerKey, state])
+  @@index([state])
+}
+
+// Client requirements intake & platform recommendation plan
+model ClientRequirementProfile {
+  id                     String    @id @default(cuid())
+  clientId               String?
+  businessName           String
+  businessType           String
+  businessLocation       String
+  targetMarket           String
+  targetAudience         String
+  marketingBudget        String
+  monthlyContactVolume   Int       @default(0)
+  advertisingBudget      String
+  socialMediaChannels    String    @default("[]")
+  emailRequirements      String    @default("{}")
+  messagingRequirements  String    @default("{}")
+  crmRequirements        String    @default("{}")
+  ecommerceRequirements  String    @default("{}")
+  automationComplexity   String    @default("medium")
+  reportingRequirements  String    @default("{}")
+  recommendations        String    @default("{}")
+  selectedProviders      String    @default("[]")
+  approvedProviders      String    @default("[]")
+  approvedBy             String?
+  approvedAt             DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([clientId])
+}
+
+// Tenant-isolated encrypted credential vault supporting all 8 credential types
+model VaultCredential {
+  id             String    @id @default(cuid())
+  clientId       String
+  providerKey    String
+  credentialType String
+  label          String    @default("default")
+  ciphertext     String
+  keyVersion     Int       @default(1)
+  scopes         String    @default("[]")
+  expiresAt      DateTime?
+  refreshable    Boolean   @default(false)
+  revokedAt      DateTime?
+  revokedReason  String?
+  status         String    @default("active")
+  lastVerifiedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([clientId, providerKey, credentialType, label])
+  @@index([clientId, providerKey])
+  @@index([status, expiresAt])
+}
+
+// Single-use OAuth 2.0 state & PKCE verifier store
+model OAuthAuthorizationState {
+  id                     String    @id @default(cuid())
+  state                  String    @unique
+  clientId               String
+  providerKey            String
+  redirectUri            String
+  scopes                 String    @default("[]")
+  codeVerifierCiphertext String?
+  status                 String    @default("pending")
+  errorDetail            String?
+  expiresAt              DateTime
+  consumedAt             DateTime?
+  createdAt              DateTime  @default(now())
+
+  @@index([clientId, providerKey])
+  @@index([expiresAt])
+}
+
+// Isolated browser orchestration session state (no cookies or passwords stored)
+model BrowserWorkflowSession {
+  id              String   @id @default(cuid())
+  clientId        String
+  providerKey     String
+  workflowId      String?
+  purpose         String
+  officialUrl     String
+  contextKey      String
+  status          String   @default("idle")
+  currentAction   String
+  nextOwnerAction String?
+  executionMode   String   @default("guided_browser_handoff")
+  auditNotes      String   @default("[]")
+  startedAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([clientId, providerKey])
+  @@index([status])
+}
+
+// Multi-agent team execution log (Agents A-H)
+model AgentExecutionRun {
+  id                 String   @id @default(cuid())
+  agentId            String
+  agentName          String
+  clientId           String?
+  providerKey        String?
+  action             String
+  status             String   @default("completed")
+  correlationId      String
+  inputSummary       String   @default("{}")
+  outputSummary      String   @default("{}")
+  complianceDecision String   @default("ALLOWED")
+  complianceReason   String?
+  durationMs         Int      @default(0)
+  createdAt          DateTime @default(now())
+
+  @@index([agentId, createdAt])
+  @@index([clientId, providerKey])
+  @@index([correlationId])
+}
+
+// Omni-routing event bus with idempotency, retries, and dead-letter queue
+model OmniEvent {
+  id             String    @id @default(cuid())
+  eventType      String
+  eventName      String
+  source         String
+  idempotencyKey String    @unique
+  correlationId  String
+  clientId       String?
+  providerKey    String?
+  payload        String    @default("{}")
+  status         String    @default("queued")
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(3)
+  nextAttemptAt  DateTime?
+  lastError      String?
+  processedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([eventType, status])
+  @@index([correlationId])
+  @@index([status, nextAttemptAt])
+}
+
+// Post-login idempotent initialization report history
+model SystemInitializationRun {
+  id          String   @id @default(cuid())
+  triggeredBy String
+  status      String
+  steps       String   @default("[]")
+  summary     String   @default("{}")
+  idempotent  Boolean  @default(true)
+  durationMs  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Self-healing & integrity check/repair records
+model SystemIntegrityRecord {
+  id                  String   @id @default(cuid())
+  checkType           String
+  target              String
+  status              String
+  severity            String   @default("info")
+  detail              String
+  repaired            Boolean  @default(false)
+  backupPath          String?
+  verifiedAfterRepair Boolean  @default(false)
+  requiresApproval    Boolean  @default(false)
+  checkedAt           DateTime @default(now())
+
+  @@index([checkType, status])
+  @@index([checkedAt])
+}
+
+// Live/cached API documentation discovery & change detection snapshots
+model ApiDiscoverySnapshot {
+  id             String   @id @default(cuid())
+  providerKey    String
+  sourceUrl      String
+  apiVersion     String
+  docHash        String?
+  previousHash   String?
+  changed        Boolean  @default(false)
+  fetchStatus    String
+  discoveredMeta String   @default("{}")
+  checkedAt      DateTime @default(now())
+
+  @@index([providerKey, checkedAt])
 }

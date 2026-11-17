@@ -79,11 +79,11 @@ export interface SessionUser {
   expiresAt?: string;
 }
 
-export function sessionCookieOptions(maxAge: number) {
+export function sessionCookieOptions(maxAge: number, secureRequest = false) {
   return {
     httpOnly: true,
     sameSite: 'lax' as const,
-    secure: process.env.NODE_ENV === 'production',
+    secure: secureRequest,
     path: '/',
     maxAge,
   };

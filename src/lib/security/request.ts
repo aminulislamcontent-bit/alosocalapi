@@ -7,8 +7,21 @@ export function isSameOriginRequest(req: NextRequest): boolean {
   try {
     const parsed = new URL(origin);
     const host = req.headers.get('host');
-    return Boolean(host && parsed.host.toLowerCase() === host.toLowerCase() && (parsed.protocol === 'https:' || parsed.protocol === 'http:'));
+    const forwardedHost = process.env.ALOAPI_TRUST_PROXY === 'true'
+      ? req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+      : undefined;
+    const expectedHosts = [host, forwardedHost].filter(Boolean).map(value => value!.toLowerCase());
+    return Boolean(expectedHosts.includes(parsed.host.toLowerCase()) && (parsed.protocol === 'https:' || parsed.protocol === 'http:'));
   } catch {
     return false;
   }
+}
+
+export function isSecureRequest(req: NextRequest): boolean {
+  if (req.nextUrl.protocol === 'https:') return true;
+  if (process.env.ALOAPI_TRUST_PROXY === 'true') {
+    const proto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim().toLowerCase();
+    if (proto === 'https') return true;
+  }
+  return false;
 }
