@@ -5,6 +5,7 @@ import {
   completeCheckpointAndResumeWorkflow,
   generateRequiredCheckpointsForProvider,
 } from '@/lib/engineering/verification-coordinator';
+import { verifyProjectProviderDns } from '@/lib/engineering/dns-verifier';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,15 @@ export async function POST(req: NextRequest) {
         actor: guard.user.username,
       });
       return NextResponse.json({ checkpoints });
+    }
+
+    if (action === 'verify_dns') {
+      const report = await verifyProjectProviderDns({
+        projectId: String(body.projectId || ''),
+        providerKey: String(body.providerKey || ''),
+        actor: guard.user.username,
+      });
+      return NextResponse.json(report);
     }
 
     if (action === 'complete_and_resume') {

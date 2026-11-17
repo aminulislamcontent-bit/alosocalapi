@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdminApi } from '@/lib/security/admin-guard';
-import { createOAuthAuthorizationFlow, handleOAuthCallback, revokeOAuthTokens } from '@/lib/onboarding/oauth-service';
+import { createOAuthAuthorizationFlow, handleOAuthCallback, refreshOAuthTokens, revokeOAuthTokens } from '@/lib/onboarding/oauth-service';
 import { dispatchOmniEvent } from '@/lib/onboarding/omni-routing';
 
 export const runtime = 'nodejs';
@@ -87,6 +87,24 @@ export async function POST(req: NextRequest) {
           actor: guard.user.username,
         }).catch(() => undefined);
       }
+      return NextResponse.json(res, { status: res.ok ? 200 : 400 });
+    }
+
+    if (action === 'refresh') {
+      const tenantId = String(body.tenantId || '').trim();
+      const providerKey = String(body.providerKey || '').trim();
+      if (!tenantId || !providerKey) {
+        return NextResponse.json({ error: 'tenantId and providerKey are required.' }, { status: 400 });
+      }
+      const res = await refreshOAuthTokens({
+        tenantId,
+        providerKey,
+        dynamicParams: (body.dynamicParams && typeof body.dynamicParams === 'object')
+          ? (body.dynamicParams as Record<string, string>)
+          : undefined,
+        actor: guard.user.username,
+        ip: guard.ip,
+      });
       return NextResponse.json(res, { status: res.ok ? 200 : 400 });
     }
 

@@ -1161,6 +1161,165 @@ function showVersion() {
   }
 }
 
+function openSqliteReadonly(root) {
+  loadLocalEnv(root);
+  const dbUrl = process.env.DATABASE_URL || 'file:./db/custom.db';
+  const dbPath = sqliteFileFromDatabaseUrl(dbUrl, path.join(root, 'prisma'));
+  const readiness = inspectMigrationReadiness(dbPath);
+  return { dbPath, readiness };
+}
+
+function querySqliteCountSafe(sqlite, tableName, whereClause = '') {
+  try {
+    const exists = sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
+    if (!exists) return 0;
+    const row = sqlite.prepare(`SELECT COUNT(*) AS cnt FROM "${tableName}" ${whereClause}`).get();
+    return Number(row?.cnt ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
+function runDbValidate({ json = false } = {}) {
+  const root = resolveProjectRoot();
+  const prismaEntry = path.join(root, 'node_modules', 'prisma', 'build', 'index.js');
+  const validateRes = spawnSync(process.execPath, [prismaEntry, 'validate'], { cwd: root, encoding: 'utf8' });
+  const { dbPath, readiness } = openSqliteReadonly(root);
+  const ok = validateRes.status === 0 && readiness.ok;
+  const payload = { ok, schemaValid: validateRes.status === 0, databasePath: dbPath, readiness };
+  if (json) console.log(JSON.stringify(payload, null, 2));
+  else console.log(`Schema valid: ${payload.schemaValid} | DB readiness (${readiness.kind}): ${readiness.reason}`);
+  if (!ok) process.exitCode = 1;
+}
+
+function runMigrationStatus({ json = false } = {}) {
+  const root = resolveProjectRoot();
+  const { dbPath, readiness } = openSqliteReadonly(root);
+  let applied = [];
+  if (existsSync(dbPath)) {
+    const sqlite = new DatabaseSync(dbPath, { readOnly: true });
+    try {
+      const hasTable = sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='_prisma_migrations'").get();
+      if (hasTable) {
+        applied = sqlite.prepare('SELECT migration_name, finished_at, applied_steps_count FROM "_prisma_migrations" ORDER BY started_at ASC').all();
+      }
+    } finally {
+      sqlite.close();
+    }
+  }
+  const payload = { ok: readiness.ok, databasePath: dbPath, readiness, appliedMigrations: applied };
+  if (json) console.log(JSON.stringify(payload, null, 2));
+  else {
+    console.log(`Migration status (${readiness.kind}): ${readiness.reason}`);
+    for (const m of applied) console.log(`  - ${m.migration_name} (${m.finished_at || 'pending'})`);
+  }
+  if (!readiness.ok) process.exitCode = 1;
+}
+
+function runSubDoctor(domain, { json = false } = {}) {
+  const root = resolveProjectRoot();
+  const { dbPath } = openSqliteReadonly(root);
+  const sqlite = existsSync(dbPath) ? new DatabaseSync(dbPath, { readOnly: true }) : null;
+  try {
+    let report = {};
+    if (domain === 'provider') {
+      const catFiles = readdirSync(path.join(root, 'src', 'lib', 'intelligence', 'providers')).filter(f => /^cat\d+.*\.ts$/.test(f));
+      report = {
+        ok: catFiles.length === 11,
+        categoryFiles: catFiles.length,
+        integrationProjects: sqlite ? querySqliteCountSafe(sqlite, 'IntegrationProject') : 0,
+        oauthAppsPrepared: sqlite ? querySqliteCountSafe(sqlite, 'OAuthAppRegistryEntry') : 0,
+        credentialsPrepared: sqlite ? querySqliteCountSafe(sqlite, 'CredentialPreparationRecord') : 0,
+      };
+    } else if (domain === 'oauth') {
+      report = {
+        ok: true,
+        pendingStates: sqlite ? querySqliteCountSafe(sqlite, 'OAuthAuthorizationState', "WHERE status='pending'") : 0,
+        processingStates: sqlite ? querySqliteCountSafe(sqlite, 'OAuthAuthorizationState', "WHERE status='processing'") : 0,
+        authorizedStates: sqlite ? querySqliteCountSafe(sqlite, 'OAuthAuthorizationState', "WHERE status='authorized'") : 0,
+        expiredOrFailedStates: sqlite ? querySqliteCountSafe(sqlite, 'OAuthAuthorizationState', "WHERE status IN ('expired','failed','denied')") : 0,
+      };
+    } else if (domain === 'vault') {
+      const configured = Boolean(process.env.ALOAPI_VAULT_KEY && Buffer.byteLength(process.env.ALOAPI_VAULT_KEY, 'utf8') >= 32);
+      report = {
+        ok: configured || !existsSync(path.join(root, '.env')),
+        vaultKeyConfigured: configured,
+        activeCredentials: sqlite ? querySqliteCountSafe(sqlite, 'VaultCredential', "WHERE status='active' AND revokedAt IS NULL") : 0,
+        revokedCredentials: sqlite ? querySqliteCountSafe(sqlite, 'VaultCredential', 'WHERE revokedAt IS NOT NULL') : 0,
+      };
+    } else if (domain === 'webhook') {
+      report = {
+        ok: true,
+        completedEvents: sqlite ? querySqliteCountSafe(sqlite, 'OmniEvent', "WHERE status='COMPLETED' AND source LIKE '%webhook%'") : 0,
+        retryScheduledEvents: sqlite ? querySqliteCountSafe(sqlite, 'OmniEvent', "WHERE status='RETRY_SCHEDULED'") : 0,
+        deadLetterEvents: sqlite ? querySqliteCountSafe(sqlite, 'OmniEvent', "WHERE status='DEAD_LETTER'") : 0,
+      };
+    }
+    if (json) console.log(JSON.stringify(report, null, 2));
+    else console.log(`${domain.toUpperCase()} Doctor:`, JSON.stringify(report));
+    if (report.ok === false) process.exitCode = 1;
+  } finally {
+    sqlite?.close();
+  }
+}
+
+function runBackup({ outPath, json = false } = {}) {
+  const root = resolveProjectRoot();
+  const { dbPath } = openSqliteReadonly(root);
+  if (!existsSync(dbPath)) throw new Error(`Database file does not exist yet at ${dbPath}`);
+  const backupsDir = path.join(root, 'backups');
+  mkdirSync(backupsDir, { recursive: true, mode: 0o700 });
+  const target = path.resolve(outPath || path.join(backupsDir, `aloapi-backup-${Date.now()}.db`));
+  const sqlite = new DatabaseSync(dbPath);
+  try {
+    sqlite.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
+  } finally {
+    sqlite.close();
+  }
+  chmodSync(target, 0o600);
+  const payload = { ok: true, backupFile: target, bytes: statSync(target).size };
+  if (json) console.log(JSON.stringify(payload, null, 2));
+  else console.log(`Created atomic SQLite backup: ${target} (${payload.bytes} bytes)`);
+}
+
+function runRestore({ filePath, json = false } = {}) {
+  if (!filePath) throw new Error('Specify backup file via --file <path> or positional argument.');
+  const root = resolveProjectRoot();
+  const src = path.resolve(filePath);
+  if (!existsSync(src)) throw new Error(`Backup file not found: ${src}`);
+  const { dbPath } = openSqliteReadonly(root);
+  const checkDb = new DatabaseSync(src, { readOnly: true });
+  try {
+    const integrity = checkDb.prepare('PRAGMA integrity_check').get();
+    if (integrity?.integrity_check !== 'ok') throw new Error('Backup SQLite integrity check failed.');
+  } finally {
+    checkDb.close();
+  }
+  const destBackup = `${dbPath}.pre-restore-${Date.now()}.bak`;
+  if (existsSync(dbPath)) writeFileSync(destBackup, readFileSync(dbPath), { mode: 0o600 });
+  writeFileSync(dbPath, readFileSync(src), { mode: 0o600 });
+  const payload = { ok: true, restoredTo: dbPath, preRestoreSnapshot: existsSync(destBackup) ? destBackup : null };
+  if (json) console.log(JSON.stringify(payload, null, 2));
+  else console.log(`Restored verified SQLite backup to ${dbPath}`);
+}
+
+function runImportValidate({ filePath, json = false } = {}) {
+  if (!filePath) throw new Error('Specify client-project-import.json path via --file <path> or positional argument.');
+  const resolved = path.resolve(filePath);
+  if (!existsSync(resolved)) throw new Error(`Import manifest not found: ${resolved}`);
+  const raw = readFileSync(resolved, 'utf8');
+  const data = JSON.parse(raw);
+  const errors = [];
+  if (data?.schema !== 'aloapi-client-import-v1') errors.push('Invalid schema (expected aloapi-client-import-v1).');
+  if (data?.secretsIncluded !== false) errors.push('secretsIncluded must be false.');
+  if (/"__proto__"|"constructor"|"prototype"/.test(raw)) errors.push('Forbidden prototype key detected.');
+  if (/(whsec_aloapi_|jwt_aloapi_|BEGIN PRIVATE KEY|xoxb-|ghp_|sk_live_)/.test(raw)) errors.push('Embedded secret detected in import manifest.');
+  const payload = { ok: errors.length === 0, file: resolved, providersCount: Array.isArray(data?.providers) ? data.providers.length : 0, errors };
+  if (json) console.log(JSON.stringify(payload, null, 2));
+  else console.log(payload.ok ? `Import manifest valid (${payload.providersCount} providers, 0 secrets).` : `Import validation failed: ${errors.join('; ')}`);
+  if (!payload.ok) process.exitCode = 1;
+}
+
 function help() {
   console.log(`ALOAPI — One-Command Local Service CLI
 
@@ -1176,6 +1335,15 @@ Usage:
   aloapi status [--json]        Show service, port, PID, and database health status
   aloapi logs [-n N] [-f]       View or follow service logs (--path prints log file path)
   aloapi doctor [--json]        Run non-destructive environment, security, and port diagnostics
+  aloapi db:validate [--json]   Validate Prisma schema and SQLite migration parity
+  aloapi migration:status       Display applied Prisma migrations and readiness status
+  aloapi provider:doctor        Inspect external provider catalog & prepared project counts
+  aloapi oauth:doctor           Inspect OAuth authorization state lifecycle counts
+  aloapi vault:doctor           Verify AES-256-GCM Vault configuration & active count
+  aloapi webhook:doctor         Inspect webhook event delivery and DLQ counters
+  aloapi backup [--out FILE]    Create atomic SQLite backup snapshot via VACUUM INTO
+  aloapi restore --file FILE    Validate integrity and restore SQLite backup
+  aloapi import-validate FILE   Validate a secret-free aloapi-client-import-v1 manifest
   aloapi open                   Open http://localhost:${DEFAULT_PORT} in default browser
   aloapi setup                  Create private .env and one-time admin credentials
   aloapi baseline-existing      Strictly verify a legacy SQLite schema, then record baseline
@@ -1200,6 +1368,8 @@ export function parseCliOptions(args) {
   let follow = false;
   let pathOnly = false;
   let lines = 100;
+  let outPath = '';
+  let filePath = '';
   let wantHelp = false;
   let wantVersion = false;
 
@@ -1213,9 +1383,16 @@ export function parseCliOptions(args) {
     else if (arg === '--rebuild') rebuild = true;
     else if (arg === '--foreground') foreground = true;
     else if (arg === '--json') json = true;
+    else if (arg === '--yes' || arg === '-y') { /* non-interactive confirm flag */ }
     else if (arg === '-f' || arg === '--follow') follow = true;
     else if (arg === '--path') pathOnly = true;
-    else if (arg === '-n' || arg === '--lines') {
+    else if (arg === '--out') {
+      outPath = args[i + 1] || '';
+      i += 1;
+    } else if (arg === '--file') {
+      filePath = args[i + 1] || '';
+      i += 1;
+    } else if (arg === '-n' || arg === '--lines') {
       const next = Number(args[i + 1]);
       if (!Number.isInteger(next) || next < 1) throw new Error(`${arg} requires a positive integer.`);
       lines = next;
@@ -1232,10 +1409,12 @@ export function parseCliOptions(args) {
   }
 
   let command = positionals[0] || 'start';
+  if (!filePath && positionals[1]) filePath = positionals[1];
+  if (command === 'backup' && !outPath && positionals[1]) outPath = positionals[1];
   if (wantHelp) command = 'help';
   else if (wantVersion) command = 'version';
 
-  return { command, dev, noOpen, open, rebuild, foreground, json, follow, pathOnly, lines };
+  return { command, dev, noOpen, open, rebuild, foreground, json, follow, pathOnly, lines, outPath, filePath };
 }
 
 async function main() {
@@ -1252,6 +1431,15 @@ async function main() {
   if (command === 'status') return showStatus(options);
   if (command === 'logs') return showLogs(options);
   if (command === 'doctor') return runDoctor(options);
+  if (command === 'db:validate') return runDbValidate(options);
+  if (command === 'migration:status') return runMigrationStatus(options);
+  if (command === 'provider:doctor') return runSubDoctor('provider', options);
+  if (command === 'oauth:doctor') return runSubDoctor('oauth', options);
+  if (command === 'vault:doctor') return runSubDoctor('vault', options);
+  if (command === 'webhook:doctor') return runSubDoctor('webhook', options);
+  if (command === 'backup') return runBackup(options);
+  if (command === 'restore') return runRestore(options);
+  if (command === 'import-validate') return runImportValidate(options);
   if (command === 'baseline-existing') return baselineExisting();
   if (command === 'open') {
     const config = runtimeConfig(resolveProjectRoot());

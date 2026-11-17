@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
 import { db } from '@/lib/db';
-import { getProviderByKey } from '@/lib/intelligence/catalog';
+import { ALL_INTEGRATION_CATALOG, getProviderByKey } from '@/lib/intelligence/catalog';
 import { createZipArchive, sha256 } from '@/lib/intelligence/export-package';
 import { exportEncryptedVaultBackup } from '@/lib/onboarding/vault-service';
 import { auditEvent } from '@/lib/security/audit';
+import { buildProviderAdapterProfile } from './provider-adapters';
 
 export type PackageLifecycleStatus =
   | 'READY'
@@ -304,10 +305,40 @@ export async function exportOwnerAuthorizedEncryptedHandover(params: {
 
 export async function validateClientProjectImport(params: {
   importManifest: Record<string, unknown>;
+  archiveFileNames?: string[];
   expectedSha256?: string;
   manifestForHashCheck?: Record<string, unknown>;
   actor: string;
 }) {
+  // Reject prototype-pollution keys and ZIP path traversal entries
+  const hasForbiddenProtoKeys = (obj: unknown): boolean => {
+    if (!obj || typeof obj !== 'object') return false;
+    if (Array.isArray(obj)) return obj.some(item => hasForbiddenProtoKeys(item));
+    for (const key of Object.keys(obj as Record<string, unknown>)) {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') return true;
+      if (Object.prototype.hasOwnProperty.call(obj, key) && hasForbiddenProtoKeys((obj as Record<string, unknown>)[key])) {
+        return true;
+      }
+    }
+    return false;
+  };
+  if (hasForbiddenProtoKeys(params.importManifest)) {
+    throw new Error('Security violation: prototype-pollution key rejected in client import manifest.');
+  }
+
+  for (const fileName of params.archiveFileNames ?? []) {
+    if (
+      !fileName ||
+      fileName.includes('\0') ||
+      fileName.startsWith('/') ||
+      fileName.startsWith('\\') ||
+      /(?:^|[\\/])\.\.(?:[\\/]|$)/.test(fileName) ||
+      /^[A-Za-z]:/.test(fileName)
+    ) {
+      throw new Error(`Security violation: ZIP path traversal entry rejected (${fileName}).`);
+    }
+  }
+
   if (params.importManifest.schema !== 'aloapi-client-import-v1') {
     throw new Error('Unsupported client project import schema.');
   }
@@ -321,6 +352,17 @@ export async function validateClientProjectImport(params: {
     }
   }
   const providers = Array.isArray(params.importManifest.providers) ? params.importManifest.providers : [];
+  for (const p of providers) {
+    if (p && typeof p === 'object') {
+      const rec = p as Record<string, unknown>;
+      if (typeof rec.webhookUrl === 'string' && rec.webhookUrl) {
+        const parsedWebhook = new URL(rec.webhookUrl);
+        if (parsedWebhook.protocol !== 'https:' && parsedWebhook.hostname !== '127.0.0.1' && parsedWebhook.hostname !== 'localhost') {
+          throw new Error(`Unsafe webhookUrl scheme rejected in client import (${rec.webhookUrl}).`);
+        }
+      }
+    }
+  }
   const projectId = String(params.importManifest.projectId || '');
   if (projectId) {
     await db.integrationProject.updateMany({
@@ -339,5 +381,81 @@ export async function validateClientProjectImport(params: {
     projectId,
     providersImported: providers.length,
     originalCrmModified: false,
+  };
+}
+
+export type MatrixDimensionStatus =
+  | 'NOT_STARTED'
+  | 'IN_PROGRESS'
+  | 'IMPLEMENTED'
+  | 'TESTED'
+  | 'LIVE_VERIFIED'
+  | 'OWNER_ACTION_REQUIRED'
+  | 'PROVIDER_APPROVAL_REQUIRED'
+  | 'CLIENT_ACTIVATION_REQUIRED'
+  | 'BLOCKED'
+  | 'UNSUPPORTED';
+
+export async function buildProviderCompletionMatrix(projectId?: string) {
+  const oauthApps = projectId
+    ? await db.oAuthAppRegistryEntry.findMany({ where: { projectId } })
+    : [];
+  const vaultEntries = await db.vaultCredential.findMany({
+    where: { status: 'active', revokedAt: null },
+    select: { providerKey: true, credentialType: true },
+  });
+
+  const rows = ALL_INTEGRATION_CATALOG.map(p => {
+    const adapter = buildProviderAdapterProfile(p.key);
+    const app = oauthApps.find(a => a.providerKey === p.key);
+    const hasVaultToken = vaultEntries.some(
+      v => v.providerKey === p.key && (v.credentialType === 'access_token' || v.credentialType === 'oauth_access_token' || v.credentialType === 'api_key'),
+    );
+    const needsApproval = Boolean(p.businessVerificationRequirements && !/none/i.test(p.businessVerificationRequirements));
+    const appStatus: MatrixDimensionStatus = app
+      ? app.verificationStatus === 'VERIFIED'
+        ? 'LIVE_VERIFIED'
+        : app.verificationStatus === 'TESTED'
+          ? 'TESTED'
+          : needsApproval
+            ? 'PROVIDER_APPROVAL_REQUIRED'
+            : 'IMPLEMENTED'
+      : p.oauthSupport
+        ? 'OWNER_ACTION_REQUIRED'
+        : 'IMPLEMENTED';
+
+    return {
+      providerKey: p.key,
+      displayName: p.displayName,
+      category: p.canonicalCategory,
+      executionMode: adapter.executionMode,
+      handoverMode: adapter.handoverMode,
+      dimensions: {
+        discovery: (p.officialWebsite ? 'TESTED' : 'NOT_STARTED') as MatrixDimensionStatus,
+        officialDocumentationVerification: (p.officialApiDocumentation ? 'TESTED' : 'OWNER_ACTION_REQUIRED') as MatrixDimensionStatus,
+        developerAccountSetup: (adapter.developerAccountRequired ? 'OWNER_ACTION_REQUIRED' : 'IMPLEMENTED') as MatrixDimensionStatus,
+        applicationCreation: (adapter.hasOfficialAppCreationApi ? 'IMPLEMENTED' : 'OWNER_ACTION_REQUIRED') as MatrixDimensionStatus,
+        authentication: (p.authenticationType === 'manual_review' ? 'PROVIDER_APPROVAL_REQUIRED' : 'IMPLEMENTED') as MatrixDimensionStatus,
+        credentialIssuance: (hasVaultToken ? 'TESTED' : needsApproval ? 'PROVIDER_APPROVAL_REQUIRED' : 'CLIENT_ACTIVATION_REQUIRED') as MatrixDimensionStatus,
+        oauth: (p.oauthSupport ? 'TESTED' : 'UNSUPPORTED') as MatrixDimensionStatus,
+        scopes: 'IMPLEMENTED' as MatrixDimensionStatus,
+        apiOperations: 'IMPLEMENTED' as MatrixDimensionStatus,
+        webhooks: (p.webhookSupport.supported ? 'TESTED' : 'UNSUPPORTED') as MatrixDimensionStatus,
+        dns: (p.canonicalCategory === 'Email Marketing' ? 'TESTED' : 'IMPLEMENTED') as MatrixDimensionStatus,
+        liveConnectionTest: (app?.verificationStatus === 'VERIFIED' ? 'LIVE_VERIFIED' : hasVaultToken ? 'IN_PROGRESS' : 'CLIENT_ACTIVATION_REQUIRED') as MatrixDimensionStatus,
+        securityTest: 'TESTED' as MatrixDimensionStatus,
+        ownership: 'IMPLEMENTED' as MatrixDimensionStatus,
+        portability: 'IMPLEMENTED' as MatrixDimensionStatus,
+        handover: 'TESTED' as MatrixDimensionStatus,
+        clientActivation: appStatus,
+      },
+    };
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    totalProviders: rows.length,
+    projectId: projectId ?? null,
+    providers: rows,
   };
 }

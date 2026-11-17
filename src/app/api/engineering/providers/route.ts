@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdminApi } from '@/lib/security/admin-guard';
-import { buildProviderAdapterProfile, listAllUniversalAdapters } from '@/lib/engineering/provider-adapters';
+import {
+  buildProviderAdapterProfile,
+  executeProviderAdapterLifecycle,
+  listAllUniversalAdapters,
+  type AdapterLifecycleOperation,
+} from '@/lib/engineering/provider-adapters';
 import { prepareProviderEngineeringSetup } from '@/lib/engineering/credential-engineering';
 import { executeAuthorizedClientApiAction } from '@/lib/engineering/client-api-executor';
+import { buildProviderCompletionMatrix } from '@/lib/engineering/handover-packager';
 import { runLiveReadOnlyVerification } from '@/lib/onboarding/api-discovery';
 
 export const runtime = 'nodejs';
@@ -12,6 +18,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   const guard = await requireAdminApi(req);
   if (!guard.ok) return guard.response;
+
+  const format = req.nextUrl.searchParams.get('format');
+  if (format === 'matrix') {
+    const projectId = req.nextUrl.searchParams.get('projectId') || undefined;
+    const matrix = await buildProviderCompletionMatrix(projectId);
+    return NextResponse.json(matrix);
+  }
 
   const providerKey = req.nextUrl.searchParams.get('providerKey');
   const category = req.nextUrl.searchParams.get('category') || undefined;
@@ -78,6 +91,23 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json({ probe, updatedVerificationStatus: nextStatus });
+    }
+
+    if (action === 'adapter_lifecycle') {
+      const project = await db.integrationProject.findUnique({ where: { id: projectId } });
+      if (!project) return NextResponse.json({ error: 'IntegrationProject not found.' }, { status: 404 });
+      const op = String(body.operation || 'account_discovery') as AdapterLifecycleOperation;
+      const out = await executeProviderAdapterLifecycle({
+        operation: op,
+        providerKey,
+        tenantId: project.clientId,
+        projectId,
+        redirectUri: body.redirectUri ? String(body.redirectUri) : undefined,
+        payloadRaw: body.payloadRaw ? String(body.payloadRaw) : undefined,
+        signatureHeader: body.signatureHeader ? String(body.signatureHeader) : undefined,
+        actor: guard.user.username,
+      });
+      return NextResponse.json(out);
     }
 
     if (action === 'execute_client_api') {

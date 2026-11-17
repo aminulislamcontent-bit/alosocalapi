@@ -340,6 +340,111 @@ test('Universal Provider Adapters cover all 131 providers & end-to-end Credentia
   assert.ok(!approvedExec.responsePreview.includes('SG.test_live_authorized_token_xyz_123456'));
   assert.ok(approvedExec.responsePreview.includes('[REDACTED]'));
 
+  // 8. 429 Retry-After backoff + Idempotency-Key deduplication
+  let retryCalls = 0;
+  const retrySrv = http.createServer((req, res) => {
+    retryCalls += 1;
+    if (retryCalls === 1) {
+      res.writeHead(429, { 'Retry-After': '0', 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'rate_limited' }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, idempotentHeader: req.headers['idempotency-key'] }));
+  });
+  await new Promise(resolve => retrySrv.listen(0, '127.0.0.1', resolve));
+  t.after(() => retrySrv.close());
+  const retryUrl = `http://127.0.0.1:${retrySrv.address().port}/v1/sync`;
+
+  const retriedExec = await executor.executeAuthorizedClientApiAction({
+    projectId: disc.project.id,
+    providerKey: 'sendgrid_api',
+    actionName: 'sync_audience_tags',
+    httpMethod: 'POST',
+    idempotencyKey: 'idem_test_retry_key_1',
+    retryBaseDelayMs: 10,
+    allowLoopbackForTest: true,
+    testEndpointOverride: retryUrl,
+    actor: 'ai_agent',
+  });
+  assert.equal(retriedExec.status, 'EXECUTED');
+  assert.equal(retriedExec.attempts, 2);
+  assert.equal(retryCalls, 2);
+
+  const replayExec = await executor.executeAuthorizedClientApiAction({
+    projectId: disc.project.id,
+    providerKey: 'sendgrid_api',
+    actionName: 'sync_audience_tags',
+    httpMethod: 'POST',
+    idempotencyKey: 'idem_test_retry_key_1',
+    allowLoopbackForTest: true,
+    testEndpointOverride: retryUrl,
+    actor: 'ai_agent',
+  });
+  assert.equal(replayExec.status, 'EXECUTED');
+  assert.equal(replayExec.deduplicatedReplay, true);
+  assert.equal(retryCalls, 2, 'Duplicate Idempotency-Key must NOT hit upstream API again');
+
+  // 9. DNS Verifier honest miss vs live match + ZIP path traversal / prototype pollution blocking + 131x17 matrix + adapter lifecycle
+  const dnsVerifier = loadTsModule('src/lib/engineering/dns-verifier.ts');
+  const failedDns = await dnsVerifier.verifyProjectProviderDns({
+    projectId: disc.project.id,
+    providerKey: 'sendgrid_api',
+    actor: 'engineer',
+    resolver: {
+      resolveTxt: async () => [],
+      resolveCname: async () => [],
+      resolveMx: async () => [],
+    },
+  });
+  assert.equal(failedDns.verified, false);
+  assert.equal(failedDns.status, 'DNS_RECORDS_NOT_OBSERVED');
+
+  const okDns = await dnsVerifier.verifyLiveDnsRecords({
+    domain: 'growth-agency.example.com',
+    expectedRecords: [
+      { type: 'TXT', host: '@', expectedValueSubstring: 'v=spf1', purpose: 'SPF' },
+      { type: 'TXT', host: '_dmarc', expectedValueSubstring: 'v=DMARC1', purpose: 'DMARC' },
+    ],
+    resolver: {
+      resolveTxt: async h => (h === '_dmarc.growth-agency.example.com' ? [['v=DMARC1; p=quarantine']] : [['v=spf1 include:sendgrid.net ~all']]),
+      resolveCname: async () => [],
+      resolveMx: async () => [],
+    },
+  });
+  assert.equal(okDns.verified, true);
+  assert.equal(okDns.status, 'DNS_LIVE_VERIFIED');
+
+  await assert.rejects(
+    () => handover.validateClientProjectImport({
+      importManifest: pkg.clientImportManifest,
+      archiveFileNames: ['../../etc/passwd'],
+      actor: 'attacker',
+    }),
+    /ZIP path traversal/,
+  );
+
+  await assert.rejects(
+    () => handover.validateClientProjectImport({
+      importManifest: JSON.parse('{"schema":"aloapi-client-import-v1","secretsIncluded":false,"__proto__":{"polluted":true}}'),
+      actor: 'attacker',
+    }),
+    /prototype-pollution/,
+  );
+
+  const matrix = await handover.buildProviderCompletionMatrix(disc.project.id);
+  assert.equal(matrix.totalProviders, 131);
+  assert.equal(Object.keys(matrix.providers[0].dimensions).length, 17);
+
+  const lifecycle = await adapters.executeProviderAdapterLifecycle({
+    operation: 'ownership_analysis',
+    providerKey: 'shopify_admin_api',
+    tenantId: disc.project.clientId,
+    actor: 'engineer',
+  });
+  assert.equal(lifecycle.supported, true);
+  assert.equal(lifecycle.handoverMode, 'DIRECT_TRANSFER');
+
   assert.equal(await db.lead.count(), 0);
   assert.equal(await db.contact.count(), 0);
   assert.equal(await db.crmTask.count(), 0);

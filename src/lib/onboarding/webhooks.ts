@@ -1,6 +1,7 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { getProviderByKey } from '@/lib/intelligence/catalog';
 import { resolveVaultSecretForServer } from './vault-service';
+import { dispatchOmniEvent } from './omni-routing';
 import { auditEvent } from '@/lib/security/audit';
 
 export type WebhookSignatureScheme =
@@ -233,3 +234,151 @@ export async function runWebhookSignatureSelfTest(params: {
 
   return { verified: result.valid, source, result };
 }
+
+export function verifyWebhookChallenge(params: {
+  scheme: 'meta_subscribe' | 'slack_url_verification' | 'generic_challenge';
+  hubMode?: string | null;
+  hubVerifyToken?: string | null;
+  hubChallenge?: string | null;
+  expectedVerifyToken?: string;
+  bodyType?: string;
+  bodyChallenge?: string;
+}): { ok: boolean; statusCode: number; challengeEcho?: string; reason: string } {
+  if (params.scheme === 'meta_subscribe') {
+    if (params.hubMode !== 'subscribe' || !params.hubChallenge) {
+      return { ok: false, statusCode: 400, reason: 'Invalid hub.mode or missing hub.challenge.' };
+    }
+    if (!params.expectedVerifyToken || !params.hubVerifyToken) {
+      return { ok: false, statusCode: 403, reason: 'Verify token missing.' };
+    }
+    const valid = safeCompareStrings(params.hubVerifyToken, params.expectedVerifyToken);
+    return valid
+      ? { ok: true, statusCode: 200, challengeEcho: params.hubChallenge, reason: 'Meta webhook challenge verified.' }
+      : { ok: false, statusCode: 403, reason: 'Meta hub.verify_token mismatch.' };
+  }
+  if (params.scheme === 'slack_url_verification') {
+    if (params.bodyType === 'url_verification' && params.bodyChallenge) {
+      return { ok: true, statusCode: 200, challengeEcho: params.bodyChallenge, reason: 'Slack URL verification challenge accepted.' };
+    }
+    return { ok: false, statusCode: 400, reason: 'Not a valid Slack url_verification payload.' };
+  }
+  if (params.bodyChallenge) {
+    return { ok: true, statusCode: 200, challengeEcho: params.bodyChallenge, reason: 'Generic challenge echoed.' };
+  }
+  return { ok: false, statusCode: 400, reason: 'Missing challenge parameter.' };
+}
+
+export async function ingestVerifiedWebhookEvent(params: {
+  tenantId: string;
+  providerKey: string;
+  scheme: WebhookSignatureScheme;
+  payloadRaw: string;
+  signatureHeader: string;
+  timestampHeader?: string;
+  method?: string;
+  requestUri?: string;
+  eventId?: string;
+  secretOverride?: string;
+  actor: string;
+}) {
+  const provider = getProviderByKey(params.providerKey);
+  if (!provider) throw new Error('Unknown providerKey.');
+
+  let signingSecret = params.secretOverride || '';
+  let secretSource: 'vault' | 'override' | 'none' = params.secretOverride ? 'override' : 'none';
+  if (!signingSecret) {
+    const stored =
+      (await resolveVaultSecretForServer({
+        tenantId: params.tenantId,
+        providerKey: params.providerKey,
+        credentialType: 'webhook_signing_secret',
+        actor: params.actor,
+        reason: 'Verify inbound webhook payload',
+      })) ||
+      (await resolveVaultSecretForServer({
+        tenantId: params.tenantId,
+        providerKey: params.providerKey,
+        credentialType: 'webhook_secret',
+        actor: params.actor,
+        reason: 'Verify inbound webhook payload',
+      }));
+    if (stored) {
+      signingSecret = stored.plaintext;
+      secretSource = 'vault';
+    }
+  }
+
+  if (!signingSecret) {
+    return {
+      accepted: false,
+      statusCode: 401,
+      deduplicated: false,
+      reason: 'No webhook signing secret configured in Vault for this tenant/provider.',
+    };
+  }
+
+  const verification = verifyWebhookSignature({
+    scheme: params.scheme,
+    payloadRaw: params.payloadRaw,
+    signatureHeader: params.signatureHeader,
+    timestampHeader: params.timestampHeader,
+    method: params.method,
+    requestUri: params.requestUri,
+    secret: signingSecret,
+  });
+
+  if (!verification.valid) {
+    await auditEvent({
+      actor: params.actor,
+      action: 'webhook.ingest.rejected',
+      target: `${params.tenantId}:${params.providerKey}`,
+      providerKey: params.providerKey,
+      metadata: { scheme: params.scheme, reason: verification.reason },
+    });
+    return {
+      accepted: false,
+      statusCode: 401,
+      deduplicated: false,
+      verification,
+      reason: verification.reason,
+    };
+  }
+
+  const parsedPayload = (() => {
+    try { return JSON.parse(params.payloadRaw) as Record<string, unknown>; } catch { return { raw: params.payloadRaw }; }
+  })();
+  const dedupeSeed = params.eventId
+    ? `${params.tenantId}:${params.providerKey}:${params.eventId}`
+    : `${params.tenantId}:${params.providerKey}:${params.payloadRaw}`;
+  const dedupeKey = `wh_${createHash('sha256').update(dedupeSeed, 'utf8').digest('hex').slice(0, 40)}`;
+
+  const queued = await dispatchOmniEvent({
+    tenantId: params.tenantId,
+    eventType: 'webhook.received',
+    providerKey: params.providerKey,
+    sourceChannel: 'provider_webhook',
+    payload: parsedPayload,
+    idempotencyKey: dedupeKey,
+    actor: params.actor,
+  });
+
+  await auditEvent({
+    actor: params.actor,
+    action: queued.deduplicated ? 'webhook.ingest.replay_deduplicated' : 'webhook.ingest.accepted',
+    target: `${params.tenantId}:${params.providerKey}`,
+    providerKey: params.providerKey,
+    metadata: { scheme: params.scheme, dedupeKey, deduplicated: queued.deduplicated, secretSource },
+  });
+
+  return {
+    accepted: true,
+    statusCode: 200,
+    deduplicated: queued.deduplicated,
+    dedupeKey,
+    secretSource,
+    verification,
+    event: queued.event,
+    reason: queued.deduplicated ? 'Idempotent replay detected; existing processed webhook event returned.' : 'Webhook verified and queued.',
+  };
+}
+

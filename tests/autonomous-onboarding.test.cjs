@@ -252,6 +252,89 @@ test('[MOCKED TOKEN ENDPOINT] OAuth PKCE S256 token exchange verifies code_verif
     assert.ok(storedMeta.some(c => c.credentialType === 'oauth_refresh_token' && c.effectiveStatus === 'ACTIVE'));
     assert.equal(JSON.stringify(storedMeta).includes('mock-access-token-xyz'), false);
 
+    // Refresh token rotation test
+    globalThis.fetch = async (url, init) => {
+      const bodyStr = String(init?.body || '');
+      assert.match(bodyStr, /grant_type=refresh_token/);
+      return new Response(JSON.stringify({
+        access_token: 'mock-access-token-rotated',
+        refresh_token: 'mock-refresh-token-rotated',
+        expires_in: 7200,
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    const refreshed = await oauth.refreshOAuthTokens({ tenantId, providerKey: 'google_analytics4', actor: 'tester' });
+    assert.equal(refreshed.ok, true);
+    assert.equal(refreshed.rotatedRefreshToken, true);
+
+    // Concurrent race condition protection: 5 simultaneous callbacks on the same state must hit token endpoint AT MOST ONCE
+    const raceFlow = await oauth.createOAuthAuthorizationFlow({
+      tenantId,
+      providerKey: 'google_analytics4',
+      redirectUri: 'https://aloapi.test/api/onboarding/oauth/callback',
+      actor: 'tester',
+    });
+    let raceTokenCalls = 0;
+    globalThis.fetch = async () => {
+      raceTokenCalls += 1;
+      await new Promise(r => setTimeout(r, 40));
+      return new Response(JSON.stringify({
+        access_token: 'mock-race-winner-token',
+        expires_in: 3600,
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    const raceResults = await Promise.allSettled(
+      Array.from({ length: 5 }, () =>
+        oauth.handleOAuthCallback({ stateToken: raceFlow.stateToken, code: 'race-code-1', actor: 'tester' }),
+      ),
+    );
+    const winners = raceResults.filter(r => r.status === 'fulfilled' && r.value.ok === true);
+    const losers = raceResults.filter(r => r.status === 'rejected');
+    assert.equal(raceTokenCalls, 1, 'Only ONE concurrent callback may invoke external token endpoint');
+    assert.equal(winners.length, 1);
+    assert.equal(losers.length, 4);
+
+    // Webhook challenge-response & replay-deduplicated event ingestion test
+    const wh = loadTsModule('src/lib/onboarding/webhooks.ts');
+    const metaCh = wh.verifyWebhookChallenge({
+      scheme: 'meta_subscribe',
+      hubMode: 'subscribe',
+      hubVerifyToken: 'verify-tok-123',
+      hubChallenge: 'ch_9876',
+      expectedVerifyToken: 'verify-tok-123',
+    });
+    assert.equal(metaCh.ok, true);
+    assert.equal(metaCh.challengeEcho, 'ch_9876');
+
+    const { createHmac } = require('node:crypto');
+    const whPayload = '{"entry":[{"id":"page1"}]}';
+    const whSecret = 'whsec_test_123456';
+    const whSig = `sha256=${createHmac('sha256', whSecret).update(whPayload).digest('hex')}`;
+    const firstIngest = await wh.ingestVerifiedWebhookEvent({
+      tenantId,
+      providerKey: 'meta_facebook_pages',
+      scheme: 'meta_hmac_sha256',
+      payloadRaw: whPayload,
+      signatureHeader: whSig,
+      eventId: 'evt_unique_100',
+      secretOverride: whSecret,
+      actor: 'tester',
+    });
+    assert.equal(firstIngest.accepted, true);
+    assert.equal(firstIngest.deduplicated, false);
+
+    const replayIngest = await wh.ingestVerifiedWebhookEvent({
+      tenantId,
+      providerKey: 'meta_facebook_pages',
+      scheme: 'meta_hmac_sha256',
+      payloadRaw: whPayload,
+      signatureHeader: whSig,
+      eventId: 'evt_unique_100',
+      secretOverride: whSecret,
+      actor: 'tester',
+    });
+    assert.equal(replayIngest.accepted, true);
+    assert.equal(replayIngest.deduplicated, true);
+
     // Revoke OAuth tokens and verify revocation status
     const rev = await oauth.revokeOAuthTokens({ tenantId, providerKey: 'google_analytics4', actor: 'tester' });
     assert.equal(rev.revokedCredentials, 2);
@@ -401,6 +484,26 @@ test('browser URL guard permits only official HTTPS domains', () => {
   assert.equal(browser.validateOfficialProviderUrl('meta_facebook_pages', 'https://developers.facebook.com/apps/').ok, true);
   assert.equal(browser.validateOfficialProviderUrl('meta_facebook_pages', 'http://developers.facebook.com/apps/').ok, false);
   assert.equal(browser.validateOfficialProviderUrl('meta_facebook_pages', 'https://evil-phishing-facebook.com/login').ok, false);
+
+  const cap = browser.detectBrowserRuntimeCapability();
+  assert.equal(cap.playwrightAvailable, true);
+  assert.equal(cap.chromiumAvailable, true);
+  assert.equal(cap.executionMode, 'isolated_browser');
+});
+
+test('Playwright Chromium launcher initializes isolated headless browser session cleanly', async () => {
+  const browserMod = loadTsModule('src/lib/onboarding/browser-orchestrator.ts');
+  const browser = await browserMod.launchIsolatedPlaywrightBrowser();
+  try {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.setContent('<html><head><title>ALOAPI Headless Check</title></head><body><h1>OK</h1></body></html>');
+    const title = await page.title();
+    assert.equal(title, 'ALOAPI Headless Check');
+    await context.close();
+  } finally {
+    await browser.close();
+  }
 });
 
 test('per-provider export bundle contains all 14 files, valid ZIP header, and zero secrets', () => {

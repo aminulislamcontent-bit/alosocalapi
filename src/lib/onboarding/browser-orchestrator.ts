@@ -1,6 +1,9 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { brotliDecompressSync } from 'node:zlib';
 import { db } from '@/lib/db';
 import { getProviderByKey } from '@/lib/intelligence/catalog';
 import { redactSecretText } from './vault-service';
@@ -30,6 +33,33 @@ const CHROMIUM_CANDIDATES = [
   '/usr/bin/google-chrome-stable',
 ];
 
+function findSparticuzChromiumPath(): { execPath: string | null; args: string[]; libDir: string | null } {
+  const pkgDir = path.join(/*turbopackIgnore: true*/ process.cwd(), 'node_modules', '@sparticuz', 'chromium');
+  const binDir = path.join(pkgDir, 'bin');
+  const alArchive = path.join(binDir, 'al2023.tar.br');
+  if (!existsSync(/*turbopackIgnore: true*/ path.join(pkgDir, 'package.json'))) {
+    return { execPath: null, args: [], libDir: null };
+  }
+  const libDir = '/tmp/sparticuz-libs';
+  if (existsSync(/*turbopackIgnore: true*/ alArchive) && !existsSync(/*turbopackIgnore: true*/ path.join(libDir, 'lib', 'libnspr4.so'))) {
+    try {
+      mkdirSync(libDir, { recursive: true });
+      const tarBuf = brotliDecompressSync(readFileSync(/*turbopackIgnore: true*/ alArchive));
+      const tmpTar = '/tmp/al2023.tar';
+      writeFileSync(tmpTar, tarBuf);
+      execFileSync('tar', ['-xf', tmpTar, '-C', libDir], { stdio: 'ignore' });
+    } catch {
+      // ignore extraction failure
+    }
+  }
+  const existingTmpBin = '/tmp/chromium';
+  return {
+    execPath: existsSync(/*turbopackIgnore: true*/ existingTmpBin) ? existingTmpBin : null,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process', '--no-zygote'],
+    libDir: existsSync(/*turbopackIgnore: true*/ path.join(libDir, 'lib', 'libnspr4.so')) ? path.join(libDir, 'lib') : null,
+  };
+}
+
 export function detectBrowserRuntimeCapability(): BrowserCapabilityReport {
   let chromiumPath: string | null = null;
   for (const candidate of CHROMIUM_CANDIDATES) {
@@ -51,6 +81,11 @@ export function detectBrowserRuntimeCapability(): BrowserCapabilityReport {
       }
     }
   }
+  const sparticuzAvailable = existsSync(/*turbopackIgnore: true*/ path.join(/*turbopackIgnore: true*/ process.cwd(), 'node_modules', '@sparticuz', 'chromium', 'bin', 'chromium.br'));
+  if (!chromiumPath && sparticuzAvailable) {
+    const sp = findSparticuzChromiumPath();
+    chromiumPath = sp.execPath || path.join(/*turbopackIgnore: true*/ process.cwd(), 'node_modules', '@sparticuz', 'chromium');
+  }
 
   const playwrightAvailable = existsSync(/*turbopackIgnore: true*/ path.join(/*turbopackIgnore: true*/ process.cwd(), 'node_modules', 'playwright'));
 
@@ -64,6 +99,68 @@ export function detectBrowserRuntimeCapability(): BrowserCapabilityReport {
       ? 'Isolated Playwright/Chromium driver detected; runs strictly on official allowlisted URLs with owner approval gates.'
       : 'No local Chromium/Playwright driver is installed in this environment. Session orchestration enforces URL allowlisting, duplicate checks, and owner approval checkpoints via guided official portal handoff.',
   };
+}
+
+export async function launchIsolatedPlaywrightBrowser() {
+  const runtime = detectBrowserRuntimeCapability();
+  if (!runtime.playwrightAvailable || !runtime.chromiumAvailable) {
+    throw new Error('Playwright/Chromium runtime is not available in this environment.');
+  }
+  const req = createRequire(pathToFileURL(path.join(/*turbopackIgnore: true*/ process.cwd(), 'package.json')).href);
+  const playwright = req('playwright') as typeof import('playwright');
+  const sp = findSparticuzChromiumPath();
+  let execPath = runtime.chromiumPath!;
+  let args: string[] = ['--no-sandbox', '--disable-setuid-sandbox'];
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  if (sp.libDir) {
+    env.LD_LIBRARY_PATH = `${sp.libDir}:${process.env.LD_LIBRARY_PATH || ''}`;
+  }
+  if (!CHROMIUM_CANDIDATES.includes(execPath)) {
+    const spMod = req('@sparticuz/chromium');
+    const chromium = spMod.default || spMod;
+    execPath = await chromium.executablePath();
+    args = chromium.args || args;
+  }
+  return playwright.chromium.launch({
+    executablePath: execPath,
+    args,
+    headless: true,
+    env,
+  });
+}
+
+export async function captureAuthorizedPortalNavigation(params: {
+  sessionId: string;
+  targetUrl: string;
+  screenshotPath?: string;
+  actor: string;
+}) {
+  const session = await db.browserWorkflowSession.findUnique({ where: { id: params.sessionId } });
+  if (!session) throw new Error('Browser workflow session not found.');
+  const check = validateOfficialProviderUrl(session.providerKey, params.targetUrl);
+  if (!check.ok) {
+    throw new Error(check.reason || 'URL outside official provider allowlist.');
+  }
+
+  const browser = await launchIsolatedPlaywrightBrowser();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(params.targetUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+    const title = await page.title();
+    if (params.screenshotPath) {
+      await page.screenshot({ path: params.screenshotPath, fullPage: false });
+    }
+    await auditEvent({
+      actor: params.actor,
+      action: 'browser.portal.navigated',
+      target: `${session.clientId}:${session.providerKey}:${session.id}`,
+      providerKey: session.providerKey,
+      metadata: { allowedDomain: check.hostname, title: redactSecretText(title).slice(0, 120) },
+    });
+    return { ok: true, allowedDomain: check.hostname, title, screenshotCaptured: Boolean(params.screenshotPath) };
+  } finally {
+    await browser.close();
+  }
 }
 
 export function validateOfficialProviderUrl(providerKey: string, targetUrl: string): { ok: boolean; hostname?: string; reason?: string } {

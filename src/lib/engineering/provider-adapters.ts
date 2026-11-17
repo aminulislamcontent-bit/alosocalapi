@@ -1,5 +1,10 @@
 import { ALL_INTEGRATION_CATALOG, getProviderByKey } from '@/lib/intelligence/catalog';
 import type { IntegrationProviderRecord } from '@/lib/intelligence/types';
+import { listVaultCredentialsMetadata } from '@/lib/onboarding/vault-service';
+import { createOAuthAuthorizationFlow, refreshOAuthTokens, revokeOAuthTokens } from '@/lib/onboarding/oauth-service';
+import { runLiveReadOnlyVerification } from '@/lib/onboarding/api-discovery';
+import { runWebhookSignatureSelfTest } from '@/lib/onboarding/webhooks';
+import { checkDuplicateAccountRisk } from '@/lib/onboarding/browser-orchestrator';
 
 export type AdapterExecutionMode =
   | 'FULLY_AUTOMATED'
@@ -239,4 +244,115 @@ export function listAllUniversalAdapters(options: { category?: string; publicBas
     ? ALL_INTEGRATION_CATALOG.filter(p => p.canonicalCategory === options.category)
     : ALL_INTEGRATION_CATALOG;
   return filtered.map(p => buildProviderAdapterProfile(p.key, { publicBaseUrl: options.publicBaseUrl }));
+}
+
+export type AdapterLifecycleOperation =
+  | 'account_discovery'
+  | 'permission_inspection'
+  | 'credential_expiration_check'
+  | 'oauth_authorize'
+  | 'token_refresh'
+  | 'token_revoke'
+  | 'webhook_verify'
+  | 'api_connectivity'
+  | 'ownership_analysis'
+  | 'disconnect_cleanup';
+
+export async function executeProviderAdapterLifecycle(params: {
+  operation: AdapterLifecycleOperation;
+  providerKey: string;
+  tenantId: string;
+  projectId?: string;
+  redirectUri?: string;
+  payloadRaw?: string;
+  signatureHeader?: string;
+  actor: string;
+}) {
+  const profile = buildProviderAdapterProfile(params.providerKey);
+  const provider = getProviderByKey(params.providerKey)!;
+
+  switch (params.operation) {
+    case 'account_discovery': {
+      const risk = await checkDuplicateAccountRisk(params.tenantId, params.providerKey, '');
+      return { operation: params.operation, providerKey: params.providerKey, supported: true, result: risk };
+    }
+    case 'permission_inspection': {
+      const creds = await listVaultCredentialsMetadata(params.tenantId, params.providerKey);
+      return {
+        operation: params.operation,
+        providerKey: params.providerKey,
+        supported: true,
+        requiredScopes: profile.requiredPermissionsAndScopes,
+        storedCredentialScopes: creds.map(c => ({ id: c.id, type: c.credentialType, scopes: c.scopes, status: c.effectiveStatus })),
+      };
+    }
+    case 'credential_expiration_check': {
+      const creds = await listVaultCredentialsMetadata(params.tenantId, params.providerKey);
+      return {
+        operation: params.operation,
+        providerKey: params.providerKey,
+        supported: true,
+        total: creds.length,
+        expiringSoonOrExpired: creds.filter(c => c.effectiveStatus === 'EXPIRED' || c.effectiveStatus === 'EXPIRING_SOON').length,
+        credentials: creds.map(c => ({ id: c.id, label: c.label, status: c.effectiveStatus, expiresAt: c.expiresAt })),
+      };
+    }
+    case 'oauth_authorize': {
+      if (!provider.oauthSupport) {
+        return { operation: params.operation, providerKey: params.providerKey, supported: false, reason: `${provider.displayName} uses non-OAuth authentication (${provider.authenticationType}).` };
+      }
+      const flow = await createOAuthAuthorizationFlow({
+        tenantId: params.tenantId,
+        providerKey: params.providerKey,
+        redirectUri: params.redirectUri || profile.oauthRedirectUrisTemplate[0] || 'https://localhost:47831/api/onboarding/oauth/callback',
+        actor: params.actor,
+      });
+      return { operation: params.operation, providerKey: params.providerKey, supported: true, result: flow };
+    }
+    case 'token_refresh': {
+      if (!provider.oauthSupport) {
+        return { operation: params.operation, providerKey: params.providerKey, supported: false, reason: `${provider.displayName} does not issue refreshable OAuth tokens.` };
+      }
+      const res = await refreshOAuthTokens({ tenantId: params.tenantId, providerKey: params.providerKey, actor: params.actor });
+      return { operation: params.operation, providerKey: params.providerKey, supported: true, result: res };
+    }
+    case 'token_revoke':
+    case 'disconnect_cleanup': {
+      const res = await revokeOAuthTokens({ tenantId: params.tenantId, providerKey: params.providerKey, reason: `Adapter lifecycle: ${params.operation}`, actor: params.actor });
+      return { operation: params.operation, providerKey: params.providerKey, supported: true, result: res };
+    }
+    case 'webhook_verify': {
+      if (!provider.webhookSupport.supported) {
+        return { operation: params.operation, providerKey: params.providerKey, supported: false, reason: `${provider.displayName} does not expose inbound webhooks.` };
+      }
+      const res = await runWebhookSignatureSelfTest({
+        tenantId: params.tenantId,
+        providerKey: params.providerKey,
+        scheme: 'generic_hmac_sha256',
+        payloadRaw: params.payloadRaw || '{"event":"ping"}',
+        signatureHeader: params.signatureHeader,
+        actor: params.actor,
+      });
+      return { operation: params.operation, providerKey: params.providerKey, supported: true, result: res };
+    }
+    case 'api_connectivity': {
+      const probe = await runLiveReadOnlyVerification({
+        tenantId: params.tenantId,
+        providerKey: params.providerKey,
+        actor: params.actor,
+      });
+      return { operation: params.operation, providerKey: params.providerKey, supported: true, result: probe };
+    }
+    case 'ownership_analysis': {
+      return {
+        operation: params.operation,
+        providerKey: params.providerKey,
+        supported: true,
+        handoverMode: profile.handoverMode,
+        credentialsTransferable: profile.credentialsTransferable,
+        rationale: profile.handoverRationale,
+        clientOwnedConfiguration: profile.clientOwnedConfiguration,
+      };
+    }
+  }
 }

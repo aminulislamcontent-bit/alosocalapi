@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
         importManifest: body.importManifest && typeof body.importManifest === 'object'
           ? (body.importManifest as Record<string, unknown>)
           : {},
+        archiveFileNames: Array.isArray(body.archiveFileNames) ? body.archiveFileNames.map(String) : undefined,
         expectedSha256: body.expectedSha256 ? String(body.expectedSha256) : undefined,
         manifestForHashCheck: body.manifestForHashCheck && typeof body.manifestForHashCheck === 'object'
           ? (body.manifestForHashCheck as Record<string, unknown>)

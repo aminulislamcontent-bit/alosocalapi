@@ -342,11 +342,21 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3 text-xs">
           <div className="flex flex-wrap justify-between items-center gap-2">
             <input value={adapterFilter} onChange={e => setAdapterFilter(e.target.value)} placeholder="Filter 131 adapters by name, category, or key..." className="w-80 rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-white" />
-            {activeProject && (
-              <button disabled={busy} onClick={() => void prepareProviders()} className="rounded bg-cyan-500 px-3.5 py-1.5 font-semibold text-slate-950">
-                Prepare Selected ({selectedProviders.length}) for {activeProject.name}
-              </button>
-            )}
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={`/api/engineering/providers?format=matrix${activeProject ? `&projectId=${encodeURIComponent(activeProject.id)}` : ''}`}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-slate-200"
+              >
+                131&times;17 Completion Matrix JSON
+              </a>
+              {activeProject && (
+                <button disabled={busy} onClick={() => void prepareProviders()} className="rounded bg-cyan-500 px-3.5 py-1.5 font-semibold text-slate-950">
+                  Prepare Selected ({selectedProviders.length}) for {activeProject.name}
+                </button>
+              )}
+            </div>
           </div>
           <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 max-h-[520px] overflow-y-auto">
             {filteredAdapters.map(a => {
@@ -387,21 +397,38 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
                           <strong className="text-white">{app.appName}</strong>
                           <span className="ml-2 font-mono text-[10px] text-cyan-300">{app.executionMode} · {app.verificationStatus}</span>
                         </div>
-                        <button
-                          onClick={async () => {
-                            const res = await fetch('/api/engineering/providers', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ action: 'test_connection', projectId: activeProject.id, providerKey: app.providerKey }),
-                            });
-                            const d = await res.json();
-                            notify(d.probe?.message || d.error || 'Probe completed', !d.probe?.verified);
-                            await reload();
-                          }}
-                          className="rounded border border-cyan-500/40 px-2.5 py-1 text-[11px] text-cyan-200"
-                        >
-                          Run Honest Live Connection Probe
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={async () => {
+                              const res = await fetch('/api/engineering/providers', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'test_connection', projectId: activeProject.id, providerKey: app.providerKey }),
+                              });
+                              const d = await res.json();
+                              notify(d.probe?.message || d.error || 'Probe completed', !d.probe?.verified);
+                              await reload();
+                            }}
+                            className="rounded border border-cyan-500/40 px-2.5 py-1 text-[11px] text-cyan-200"
+                          >
+                            Run Honest Live Connection Probe
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const res = await fetch('/api/engineering/checkpoints', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'verify_dns', projectId: activeProject.id, providerKey: app.providerKey }),
+                              });
+                              const d = await res.json();
+                              notify(`DNS Check (${d.domain}): ${d.status}`, !d.verified);
+                              await reload();
+                            }}
+                            className="rounded border border-emerald-500/40 px-2.5 py-1 text-[11px] text-emerald-200"
+                          >
+                            Verify Live DNS
+                          </button>
+                        </div>
                       </div>
                       <div className="text-[11px] text-slate-400">Webhook: {app.webhookUrl} ({app.webhookSignatureAlgorithm}) · API {app.apiVersion}</div>
                     </div>
