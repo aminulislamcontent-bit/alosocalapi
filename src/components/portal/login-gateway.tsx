@@ -16,33 +16,33 @@ import { useToast } from '@/hooks/use-toast';
 const HOW_IT_WORKS = [
   {
     icon: Landmark,
-    title: '১. ALOAPI অ্যাকাউন্ট',
-    desc: 'অ্যাডমিন ALOAPI লগইন তৈরি করে সম্মত কোনো মাধ্যমে আপনাকে তথ্য দেন। এই অ্যাপ নিজে WhatsApp বা SMS পাঠায় না।',
+    title: '১. Business ও provider discovery',
+    desc: 'Website ও business context থেকে প্রাসঙ্গিক integration provider, channel এবং প্রয়োজনীয় setup শনাক্ত করুন।',
   },
   {
     icon: ClipboardCopy,
-    title: '২. নির্দেশনা দেখে তথ্য দিন',
-    desc: 'বাংলা নির্দেশনা অনুসরণ করে শুধু চাওয়া API value দিন। Provider account password, OTP বা recovery code দেবেন না।',
+    title: '২. OAuth ও webhook প্রস্তুতি',
+    desc: 'Official provider requirements, scopes, callback URL, webhook endpoint এবং credential prerequisites প্রস্তুত করুন।',
   },
   {
     icon: RefreshCcw,
-    title: '৩. সংগ্রহ শেষ ও সেশন বন্ধ',
-    desc: 'শেষ করলে ALOAPI সেশন বন্ধ করে এবং collection সম্পন্ন হিসেবে চিহ্নিত করে। এতে কোনো provider account-এ login বা verification হয় না।',
+    title: '৩. Verify, secure vault ও handover',
+    desc: 'Credential encrypted vault-এ রাখুন, supported read-only/API checks চালান এবং secret-free client handover তৈরি করুন।',
   },
 ];
 
 const SECURITY_CHIPS = [
-  { icon: Lock, label: 'ALOAPI লগইন' },
-  { icon: ShieldCheck, label: 'শেষে ALOAPI সেশন বন্ধ' },
-  { icon: EyeOff, label: 'Provider password চাই না' },
-  { icon: Zap, label: 'Provider authorization আলাদা' },
+  { icon: Lock, label: 'Admin authentication' },
+  { icon: ShieldCheck, label: 'Approval-gated actions' },
+  { icon: EyeOff, label: 'Secrets redacted' },
+  { icon: Zap, label: 'Provider authorization stays explicit' },
 ];
 
 export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void }) {
   const { toast } = useToast();
   const router = useRouter();
   const [clientForm, setClientForm] = useState({ username: '', password: '' });
-  const [adminForm, setAdminForm] = useState({ username: '', password: '', mfaCode: '' });
+  const [adminForm, setAdminForm] = useState({ username: 'aloapi-admin', password: '', mfaCode: '' });
   const [showPw, setShowPw] = useState<{ client: boolean; admin: boolean }>({ client: false, admin: false });
   const [loading, setLoading] = useState<'client' | 'admin' | null>(null);
 
@@ -92,17 +92,17 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
                 </div>
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-white">ALO EDUCATION BD</h1>
-                <p className="text-xs font-mono text-cyan-400 uppercase tracking-wider">CRM &amp; Automation Hub · v4.0</p>
+                <h1 className="text-2xl font-bold tracking-tight text-white">ALOAPI</h1>
+                <p className="text-xs font-mono text-cyan-400 uppercase tracking-wider">LOCAL INTEGRATION ENGINEERING</p>
               </div>
             </div>
 
             <h2 className="text-3xl md:text-4xl font-bold leading-tight text-white mb-4">
-              ক্রেডেনশিয়াল তুলতে আর <span className="text-cyan-400">হুলুস্থুল নয়</span> —
-              ক্লায়েন্ট নিজেই দিয়ে দেবে, <span className="text-cyan-400">ধাপে ধাপে</span>
+              Business integration এক জায়গায় <span className="text-cyan-400">discover, prepare ও verify</span> করুন —
+              তারপর নিরাপদে <span className="text-cyan-400">handover</span> দিন
             </h2>
             <p className="text-slate-400 leading-relaxed mb-8">
-              এই পোর্টাল বাংলা নির্দেশনা দিয়ে নির্বাচিত integration-এর জন্য অনুমোদিত API value সংগ্রহে সাহায্য করে। এতে provider-এর কাছে login, OAuth authorization, live verification বা কোনো বাহ্যিক কাজ স্বয়ংক্রিয়ভাবে হয় না।
+              ALOAPI একটি local-first integration engineering workspace: website discovery, provider mapping, OAuth ও webhook preparation, encrypted credential vault, supported verification এবং client handover। Provider-issued credentials official provider flow থেকেই আসবে; MFA, CAPTCHA, billing, review ও high-impact actions-এ owner approval বজায় থাকবে।
             </p>
 
             <div className="space-y-4 mb-8">
@@ -136,7 +136,7 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-xl text-white">লগইন করুন</CardTitle>
-                    <CardDescription className="text-slate-400 mt-1">আপনার অ্যাকাউন্টের ধরন বেছে নিন</CardDescription>
+                    <CardDescription className="text-slate-400 mt-1">Administrator workspace-এ প্রবেশ করুন অথবা client handover session খুলুন</CardDescription>
                   </div>
                   <Badge variant="outline" className="border-amber-500/40 text-amber-400 bg-amber-500/10 font-mono text-[10px]">
                     ALOAPI ACCESS
@@ -144,7 +144,7 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
                 </div>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="client" className="w-full">
+                <Tabs defaultValue="admin" className="w-full">
                   <TabsList className="grid grid-cols-2 w-full bg-slate-950 border border-slate-800">
                     <TabsTrigger value="client" className="data-[state=active]:bg-cyan-500/10 data-[state=active]:text-cyan-300 gap-2">
                       <UserRound className="w-4 h-4" /> ক্লায়েন্ট
@@ -273,7 +273,7 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
 
             <div className="mt-4 flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs leading-relaxed text-slate-400">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
-              Credential values are encrypted in the browser for transfer and encrypted at rest by the configured ALOAPI vault key. The ALOAPI server still decrypts them briefly to store them; use HTTPS and a trusted, private deployment. Provider authorization remains separate.
+              Credentials are encrypted at rest by the configured ALOAPI vault key and redacted from logs. Provider-issued secrets are never fabricated; official authorization and owner approvals remain explicit. Keep this local service loopback-only unless a separately secured HTTPS deployment is configured.
             </div>
           </section>
         </div>

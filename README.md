@@ -1,6 +1,6 @@
-# ALOAPI — private CRM, Growth Engine & integration intelligence
+# ALOAPI — local-first integration engineering & credential preparation
 
-ALOAPI continues the existing Next.js/TypeScript/Prisma application. It keeps the existing CRM and Growth Engine, and adds a local-first administration CLI, encrypted write-only credential handling, administrator security controls, provider documentation/permission guidance, a WhatsApp webhook-signature helper, and offline integration handoff exports.
+ALOAPI is a self-hosted, browser-based integration engineering workspace. Run `aloapi` from a terminal to start the local service and open its dashboard. The workspace brings together business/website discovery, provider and channel mapping, OAuth authorization lifecycle, webhook preparation and signature checks, encrypted credential storage, supported live read-only verification, workflow orchestration, and client-ready handover packages. Provider-specific automation depends on each provider's documented API and supported adapter capabilities; ALOAPI never fabricates provider-issued credentials or bypasses account-owner verification.
 
 ## Stack
 
@@ -38,7 +38,7 @@ aloapi doctor         # run non-destructive environment, security, and port chec
 aloapi setup          # create private .env and one-time admin credentials only
 ```
 
-See [docs/CLI_LAUNCHER.md](docs/CLI_LAUNCHER.md) for installation details, WSL2/macOS/Linux browser integration, and troubleshooting.
+See [docs/CLI_LAUNCHER.md](docs/CLI_LAUNCHER.md) for installation details, WSL2/macOS/Linux browser integration, and troubleshooting. GitHub Pages is not part of this product: ALOAPI runs as a local Node.js service and does not require a static Pages deployment.
 
 `setup` creates a private `.env` only if one does not already exist. It generates a random vault key and one-time administrator password and prints the bootstrap credentials once. Store those securely; after first login remove `ADMIN_BOOTSTRAP_USERNAME` and `ADMIN_BOOTSTRAP_PASSWORD` from `.env`. Do not change `ALOAPI_VAULT_KEY` after values have been encrypted unless they are re-encrypted with the original key. If you want to require administrator MFA, first leave `ALOAPI_REQUIRE_ADMIN_MFA=false`, sign in locally and enroll MFA in Security, then set it to `true`; requiring it before enrollment blocks initial login.
 
@@ -68,13 +68,16 @@ DATABASE_URL='file:./db/custom.db' npm run db:validate
 
 All production migrations are checked into `prisma/migrations/`. The normal startup path uses `prisma migrate deploy`; there is intentionally no `db push --accept-data-loss` or reset script. `vault:migrate:credentials` is idempotent, authenticates already-encrypted rows before writing, encrypts legacy values in bounded transactions, compares old values before replacing them, and never prints credential contents.
 
-## Product boundaries and provider state
+## Integration workflow, provider boundaries and security
 
-- Growth Engine, CRM, SetupBot and existing portal functionality remain part of this repository. Provider manifest entries report local checkout/environment presence, not a running service or authorization.
-- Integration Intelligence is a documentation and manual-setup assistant. Catalog entries, required-scope lists, identifiers in environment templates, and local records are not proof of a provider grant. No OAuth authorization or live provider verification is performed by this workspace.
-- The WhatsApp workflow directs the owner to Meta's official business/developer interfaces. This deployment does not collect WhatsApp phone numbers, WABA IDs, Phone Number IDs, or access tokens and does not infer authorization from a phone number. A separate write-only vault can hold only the Meta app webhook-signature secret and a locally chosen webhook verification token. The webhook handler checks signatures and records event names only; it does not store webhook bodies, send messages, or authorize an account.
-- Integration exports are offline documentation packages with blank environment templates, official documentation pointers, setup requirements, scopes, endpoint/webhook notes, aggregate state metadata, and checksums. They exclude credential values, ciphertext, identifiers, phone numbers, OTPs, and raw webhook payloads.
-- ALOAPI does not connect to or modify any external CRM or its database. Exports are intended for owner-managed, manual handoff.
+- **Discovery:** the onboarding APIs create and retain provider-specific discovery snapshots. Website/provider discovery is a preparation aid; it is not proof that an account is connected.
+- **OAuth:** the onboarding OAuth service supports authorization-flow creation, callback processing, token refresh and revocation where a provider adapter is configured. Provider-issued client IDs, secrets, consent, scopes and approvals must come from that provider's official developer platform. A local generated secret is not a substitute for a provider-issued credential.
+- **Webhooks:** ALOAPI prepares challenge verification and supports configured signature self-tests/verified event ingestion. Production callback reachability, provider-side webhook registration and provider-specific signing requirements must be completed through authorized provider settings.
+- **Credential vault:** supported credential types can be stored encrypted at rest, listed as metadata, rotated, revoked and backed up through the authenticated admin API. Secret values must not be committed to Git or included in ordinary handover exports.
+- **Verification:** only configured adapters can run live checks. The discovery endpoint exposes a live read-only verification action; other providers may remain in a preparation/manual state until a real adapter and authorized credential exist. A catalog entry or prepared workflow is never represented as a successful provider grant.
+- **Handover:** provider bundles and client project handover packages are generated with secrets excluded by default. Encrypted transfer is a separate owner-authorized operation and requires explicit approval.
+- **Owner-controlled steps:** business identity, billing, MFA/OTP, CAPTCHA, provider review, app publication, external permission changes, message sending, payments and other high-impact actions remain with the authorized owner. ALOAPI must not bypass these controls.
+- **Isolation:** ALOAPI is an independent integration engineering workspace. It does not silently connect to or modify a client's external CRM, database, source repository or production deployment.
 
 ## Submodules
 

@@ -253,6 +253,8 @@ test('installer + outside-repo launcher opens dashboard on each start and suppor
     encoding: 'utf8',
   });
   assert.equal(installRes.status, 0, installRes.stderr);
+  assert.match(installRes.stdout, /aloapi v/i, `Installer version check did not run: ${installRes.stdout}`);
+  assert.equal(fs.existsSync(fx.browserLog), false, `Installer unexpectedly opened browser: ${fs.existsSync(fx.browserLog) ? fs.readFileSync(fx.browserLog, 'utf8') : ''}`);
   assert.equal(fs.existsSync(path.join(fx.binDir, 'aloapi')), true);
 
   // 2. Run `aloapi` from OUTSIDE the repository (os.tmpdir())
