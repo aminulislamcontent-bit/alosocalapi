@@ -152,6 +152,9 @@ export async function discoverProviderAccounts(params: {
   const baseUrl = provider.apiBaseUrls.find(u => isSafeHttpsProbeUrl(u));
   if (!baseUrl) throw new Error('Meta Graph API HTTPS base URL is not configured.');
   const base = baseUrl.replace(/\/$/, '');
+  const tokenScopes = (() => {
+    try { return JSON.parse(token.scopes) as string[]; } catch { return []; }
+  })();
   const discovered: DiscoveredProviderAccount[] = [];
   let storedCredentialCount = 0;
 
@@ -168,7 +171,7 @@ export async function discoverProviderAccounts(params: {
         credentialType: 'account_identifier',
         label: `page_${id}`,
         plaintextValue: id,
-        scopes: token.scopes ? String(token.scopes).split(',').filter(Boolean) : [],
+        scopes: tokenScopes,
         actor: params.actor,
         ip: params.ip,
       });
