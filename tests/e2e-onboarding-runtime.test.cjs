@@ -211,7 +211,7 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
 
     // Provider-issued identifiers may be included in owner handover; access tokens must remain encrypted and absent.
     for (const credential of [
-      { providerKey: 'meta_facebook_pages', credentialType: 'account_identifier', label: 'page_123456', value: '123456' },
+      { providerKey: 'meta_facebook_pages', credentialType: 'account_identifier', label: 'page_primary', value: '123456' },
       { providerKey: 'meta_facebook_pages', credentialType: 'page_access_token', label: '123456', value: 'PAGE_ACCESS_TOKEN_SENTINEL_778899' },
       { providerKey: 'whatsapp_cloud_api', credentialType: 'business_identifier', label: 'primary', value: 'WABA_123456' },
       { providerKey: 'whatsapp_cloud_api', credentialType: 'account_identifier', label: 'primary', value: 'PHONE_ID_98765' },
