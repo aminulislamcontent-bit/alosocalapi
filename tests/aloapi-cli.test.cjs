@@ -11,6 +11,7 @@ const { scryptSync } = require('node:crypto');
 
 const cli = import('../scripts/aloapi.mjs');
 const REPO_ROOT = path.resolve(__dirname, '..');
+const FIXTURE_VERSION = '1.2.3-fixture';
 
 function getFreePort() {
   return new Promise((resolve, reject) => {
@@ -73,15 +74,13 @@ function createFixtureProject(t, port) {
   fs.mkdirSync(stateDir, { recursive: true, mode: 0o700 });
   fs.mkdirSync(binDir, { recursive: true });
 
-  fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'aloapi.mjs'), path.join(repoDir, 'scripts', 'aloapi.mjs'));
-  fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'migrations.mjs'), path.join(repoDir, 'scripts', 'migrations.mjs'));
-  fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'install.sh'), path.join(repoDir, 'scripts', 'install.sh'));
-  fs.chmodSync(path.join(repoDir, 'scripts', 'aloapi.mjs'), 0o755);
-  fs.chmodSync(path.join(repoDir, 'scripts', 'install.sh'), 0o755);
+  for (const file of ['aloapi.mjs', 'migrations.mjs', 'version.mjs', 'install.sh']) {
+    fs.copyFileSync(path.join(REPO_ROOT, 'scripts', file), path.join(repoDir, 'scripts', file));
+  }
 
   fs.writeFileSync(path.join(repoDir, 'package.json'), JSON.stringify({
     name: 'aloapi-test-fixture',
-    version: '0.2.1',
+    version: FIXTURE_VERSION,
     bin: { aloapi: './scripts/aloapi.mjs' },
     scripts: {
       'db:migrate:deploy': 'node -e "process.exit(0)"',
@@ -143,6 +142,21 @@ printf '%s|%s\\n' "$(basename "$0")" "$*" >> "${browserLog}"
 
   return { tmpBase, repoDir, stateDir, binDir, browserLog };
 }
+
+test('release and runtime metadata match the npm manifest', async () => {
+  const pkg = require('../package.json');
+  const lock = require('../package-lock.json');
+  const { NODE_RANGE, supportsNode } = await import('../scripts/version.mjs');
+  assert.equal(fs.readFileSync(path.join(REPO_ROOT, 'VERSION'), 'utf8').trim(), pkg.version);
+  assert.equal(lock.version, pkg.version);
+  assert.equal(lock.packages[''].version, pkg.version);
+  assert.equal(pkg.engines.node, NODE_RANGE);
+  assert.equal(lock.packages[''].engines.node, NODE_RANGE);
+  assert.equal(supportsNode('22.16.0'), false);
+  assert.equal(supportsNode('22.17.0'), true);
+  assert.equal(supportsNode('23.0.0'), false);
+  assert.equal(supportsNode('24.0.0'), true);
+});
 
 test('CLI binds to private default port and rejects unsafe public host/invalid port', async () => {
   const { parsePort, isLoopbackHost, serviceUrl, dashboardUrl } = await cli;
@@ -254,18 +268,23 @@ test('installer + outside-repo launcher opens dashboard on each start and suppor
   delete env.ALOAPI_PORT;
 
   // 1. Install CLI into fx.binDir
-  const installRes = spawnSync('bash', [path.join(fx.repoDir, 'scripts', 'install.sh'), '--prefix', fx.binDir, '--no-npm-install'], {
+  const installRes = spawnSync(path.join(fx.repoDir, 'scripts', 'install.sh'), ['--prefix', fx.binDir, '--no-npm-install'], {
     cwd: fx.repoDir,
     env,
     encoding: 'utf8',
   });
-  assert.equal(installRes.status, 0, installRes.stderr);
-  assert.match(installRes.stdout, /aloapi v/i, `Installer version check did not run: ${installRes.stdout}`);
+  assert.equal(installRes.status, 0, installRes.error?.message || installRes.stderr);
+  assert.ok(installRes.stdout.includes(`ALOAPI v${FIXTURE_VERSION}`), installRes.stdout);
+  assert.ok(installRes.stdout.includes('Run `aloapi` from any directory'), installRes.stdout);
+  assert.equal(fs.existsSync(path.join(fx.stateDir, 'service.json')), false, 'installer started the service');
   assert.equal(fs.existsSync(fx.browserLog), false, `Installer unexpectedly opened browser: ${fs.existsSync(fx.browserLog) ? fs.readFileSync(fx.browserLog, 'utf8') : ''}`);
   assert.equal(fs.existsSync(path.join(fx.binDir, 'aloapi')), true);
 
   // 2. Run `aloapi` from OUTSIDE the repository (os.tmpdir())
   const outsideCwd = os.tmpdir();
+  const versionRes = spawnSync('aloapi', ['--version'], { cwd: outsideCwd, env, encoding: 'utf8' });
+  assert.equal(versionRes.status, 0, versionRes.stderr);
+  assert.equal(versionRes.stdout.trim(), `aloapi v${FIXTURE_VERSION} (${fx.repoDir})`);
   const startRes = spawnSync('aloapi', [], { cwd: outsideCwd, env, encoding: 'utf8', timeout: 20_000 });
   assert.equal(startRes.status, 0, `${startRes.stdout}\n${startRes.stderr}`);
   assert.match(startRes.stdout, new RegExp(`http://localhost:${port}`));
@@ -280,6 +299,7 @@ test('installer + outside-repo launcher opens dashboard on each start and suppor
   assert.equal(healthJson.status, 'ok');
 
   // Verify browser was opened exactly once with http://localhost:<port>
+  await waitForBrowserCalls(fx.browserLog, 1);
   const firstBrowserCalls = fs.readFileSync(fx.browserLog, 'utf8').trim().split('\n');
   assert.equal(firstBrowserCalls.length, 1);
   assert.match(firstBrowserCalls[0], new RegExp(`http://localhost:${port}`));

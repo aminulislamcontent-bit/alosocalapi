@@ -35,11 +35,16 @@ function loadManifest(): ManifestEntry[] {
   }
 }
 
+// Optional submodule metadata belongs to the live checkout, not the bundle.
+function checkoutPath(...parts: string[]): string {
+  return join(/* turbopackIgnore: true */ process.env.ALOAPI_ROOT || process.cwd(), ...parts);
+}
+
 function submoduleCommit(relPath: string): string | null {
   try {
-    const gitFile = readFileSync(join(process.cwd(), relPath, '.git'), 'utf8');
+    const gitFile = readFileSync(checkoutPath(relPath, '.git'), 'utf8');
     const rawDir = gitFile.replace('gitdir:', '').trim();
-    const rawGitDir = isAbsolute(rawDir) ? rawDir : join(process.cwd(), relPath, rawDir);
+    const rawGitDir = isAbsolute(rawDir) ? rawDir : checkoutPath(relPath, rawDir);
     // Shallow submodule gitdirs delegate shared refs via a `commondir` file.
     let gitDir = rawGitDir;
     try {
@@ -69,7 +74,7 @@ function submoduleCommit(relPath: string): string | null {
 export function getAutomationProviders(): AutomationProvider[] {
   return loadManifest().map((p) => ({
     ...p,
-    present: existsSync(join(process.cwd(), p.path, '.git')),
+    present: existsSync(checkoutPath(p.path, '.git')),
     commit: submoduleCommit(p.path),
     configuredEnv: (p.env ?? []).filter((name) => Boolean(process.env[name])),
   }));

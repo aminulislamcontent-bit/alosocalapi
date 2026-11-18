@@ -1,0 +1,8 @@
+# Legacy GitHub Pages (main:/) is documentation only. Do not process the
+# Next.js app, local runtime files, or third-party provider submodules.
+exclude:
+  - "*"
+include:
+  - README.md
+  - docs
+  - CLI_LAUNCHER.md

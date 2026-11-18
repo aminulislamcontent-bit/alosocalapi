@@ -16,24 +16,29 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate (Node.js ${{ matrix.node-version }})
+    name: Validate (Node.js ${{ matrix.label }})
     runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        node-version: [22.x, 24.x]
+        include:
+          - label: 22.x
+            node-version-file: .nvmrc
+          - label: 24.x
+            node-version: 24.x
     env:
-      CI: true
-      NEXT_TELEMETRY_DISABLED: 1
+      CI: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
+          node-version-file: ${{ matrix.node-version-file }}
           node-version: ${{ matrix.node-version }}
           cache: npm
 
@@ -55,5 +60,10 @@ jobs:
       - name: Production build
         run: npm run build
 
-      - name: Production runtime E2E (HTTP + real Chromium UI)
+      - name: Check standalone bundle
+        run: |
+          cmp VERSION .next/standalone/VERSION
+          test ! -e .next/standalone/.git
+
+      - name: End-to-end runtime and browser tests
         run: npm run test:e2e
