@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getProviderByKey } from '@/lib/intelligence/catalog';
 import { resolveVaultSecretForServer, redactSecretText } from './vault-service';
 import { auditEvent } from '@/lib/security/audit';
+import { transitionWorkflowState } from '@/lib/onboarding/state-machine';
 
 const INJECTION_PATTERNS = [
   /ignore\s+(?:all\s+)?previous\s+instructions/i,
@@ -242,6 +243,30 @@ export async function runLiveReadOnlyVerification(params: {
         where: { id: activeSecret.id },
         data: { lastVerifiedAt: new Date(testedAt) },
       });
+      const workflow = await db.onboardingWorkflow.findUnique({
+        where: { clientId_providerKey: { clientId: params.tenantId, providerKey: params.providerKey } },
+      });
+      if (workflow?.state === 'AUTHORIZED') {
+        const configured = await transitionWorkflowState({
+          workflowId: workflow.id,
+          nextState: 'CONFIGURED',
+          actor: params.actor,
+          reason: 'Provider-specific read-only account probe succeeded.',
+        });
+        await transitionWorkflowState({
+          workflowId: configured.id,
+          nextState: 'VERIFIED',
+          actor: params.actor,
+          reason: 'Provider-specific API response contained accessible account identity records.',
+        });
+      } else if (workflow?.state === 'CONFIGURED') {
+        await transitionWorkflowState({
+          workflowId: workflow.id,
+          nextState: 'VERIFIED',
+          actor: params.actor,
+          reason: 'Provider-specific API response contained accessible account identity records.',
+        });
+      }
     }
 
     await auditEvent({
