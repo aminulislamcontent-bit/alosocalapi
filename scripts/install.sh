@@ -57,7 +57,7 @@ if [[ ! -f "$REPO_ROOT/package.json" || ! -f "$REPO_ROOT/scripts/aloapi.mjs" || 
 fi
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "Error: Node.js (>= 22.5.0) is required but was not found in PATH." >&2
+  echo "Error: Node.js was not found in PATH. Use the version in .nvmrc." >&2
   exit 1
 fi
 
@@ -66,11 +66,7 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
-NODE_OK="$(node -e 'const [maj, min] = process.versions.node.split(".").map(Number); process.stdout.write((maj > 22 || (maj === 22 && min >= 5)) ? "1" : "0");')"
-if [[ "$NODE_OK" != "1" ]]; then
-  echo "Error: Node.js >= 22.5.0 is required (found $(node -v))." >&2
-  exit 1
-fi
+PACKAGE_VERSION="$(node "$SCRIPT_DIR/version.mjs")"
 
 chmod +x "$REPO_ROOT/scripts/aloapi.mjs" "$REPO_ROOT/scripts/install.sh"
 
@@ -166,7 +162,6 @@ echo "ALOAPI CLI installed successfully."
 echo "  Executable:   $TARGET_BIN"
 echo "  Project root: $REPO_ROOT"
 echo "  Dashboard:    http://localhost:47831"
-PACKAGE_VERSION="$(node -e 'const fs = require("node:fs"); const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(pkg.version || "0.0.0");' "$REPO_ROOT/package.json")"
 echo "  ALOAPI v$PACKAGE_VERSION"
 
 if ! path_contains "$INSTALL_DIR"; then
@@ -181,5 +176,5 @@ if ! path_contains "$INSTALL_DIR"; then
   fi
 else
   echo ""
-  echo "Run `aloapi` from any directory to start ALOAPI and open http://localhost:47831."
+  echo 'Run `aloapi` from any directory to start ALOAPI and open http://localhost:47831.'
 fi

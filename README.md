@@ -4,7 +4,7 @@ ALOAPI is a self-hosted, browser-based integration engineering workspace. Run `a
 
 ## Stack
 
-- Node.js 22.5+ and npm (the checked-in `package-lock.json` is the reproducible install source)
+- Node.js 22.x starting at 22.17.0, or Node.js 24 and later, with npm (the checked-in `package-lock.json` is the reproducible install source)
 - Next.js App Router, React, TypeScript, Tailwind CSS
 - Prisma ORM with SQLite; checked-in, additive migrations
 - scrypt password hashes, revocable database sessions, optional TOTP MFA, login throttling, and same-origin mutation guards
@@ -38,7 +38,7 @@ aloapi doctor         # run non-destructive environment, security, and port chec
 aloapi setup          # create private .env and one-time admin credentials only
 ```
 
-See [docs/CLI_LAUNCHER.md](docs/CLI_LAUNCHER.md) for installation details, WSL2/macOS/Linux browser integration, and troubleshooting. GitHub Pages is not part of this product: ALOAPI runs as a local Node.js service and does not require a static Pages deployment.
+See [docs/CLI_LAUNCHER.md](docs/CLI_LAUNCHER.md) for installation details, WSL2/macOS/Linux browser integration, and troubleshooting. ALOAPI runs as a local Node.js service, not a GitHub Pages app. If legacy Pages publishing from `main:/` is enabled, `_config.yml` limits Jekyll to the README and launcher guide instead of processing the application and provider submodules. If you do not want a documentation site, select **None** under **Settings → Pages → Branch**.
 
 `setup` creates a private `.env` only if one does not already exist. It generates a random vault key and one-time administrator password and prints the bootstrap credentials once. Store those securely; after first login remove `ADMIN_BOOTSTRAP_USERNAME` and `ADMIN_BOOTSTRAP_PASSWORD` from `.env`. Do not change `ALOAPI_VAULT_KEY` after values have been encrypted unless they are re-encrypted with the original key. If you want to require administrator MFA, first leave `ALOAPI_REQUIRE_ADMIN_MFA=false`, sign in locally and enroll MFA in Security, then set it to `true`; requiring it before enrollment blocks initial login.
 
@@ -58,7 +58,12 @@ The normal startup preflight opens an existing SQLite file read-only and allows 
 
 ## Development and verification
 
+With nvm, run `nvm install` from the repository root to select the default Node.js line in `.nvmrc`. CI checks that line and Node.js 24.x using `npm ci`.
+
+The application release number comes from `package.json` (installer, `aloapi version`, and `GET /api`). When changing it, update the plain-text `VERSION` file and the npm lockfile in the same change; `npm test` checks that they agree.
+
 ```bash
+npm ci
 npm run dev                    # loopback-only service on port 47831
 npm run typecheck
 npm run lint

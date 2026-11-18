@@ -89,6 +89,9 @@ test('full E2E Integration Engineering HTTP runtime: URL discovery -> 131 adapte
 
   try {
     await waitForHealth(baseUrl);
+    const info = await fetch(`${baseUrl}/api`);
+    assert.equal(info.status, 200);
+    assert.equal((await info.json()).version, require('../package.json').version);
 
     // 1. Auth & CSRF enforcement
     const unauth = await fetch(`${baseUrl}/api/engineering/projects`);

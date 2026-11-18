@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
+import metadata from '../../../package.json';
 
 export async function GET() {
   return NextResponse.json({
     service: 'ALOAPI',
-    version: '0.1.0',
+    version: metadata.version,
     health: '/api/health',
     authentication: '/api/auth/login',
     localOnly: true,

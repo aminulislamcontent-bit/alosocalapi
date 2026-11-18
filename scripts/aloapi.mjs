@@ -23,11 +23,10 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inspectExistingDatabase, inspectMigrationReadiness, sqliteFileFromDatabaseUrl } from './migrations.mjs';
+import { NODE_RANGE, projectVersion, supportsNode } from './version.mjs';
 
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 47831;
-const MIN_NODE_MAJOR = 22;
-const MIN_NODE_MINOR = 5;
 
 const SECRET_ENV_PATTERN = /(VAULT_KEY|PASSWORD|SECRET|TOKEN|PRIVATE_KEY)/i;
 
@@ -491,6 +490,7 @@ function runServerForeground(dev, config) {
       HOSTNAME: config.host,
       PORT: String(config.port),
       ALOAPI_INSTANCE_ID: config.instanceId,
+      ALOAPI_ROOT: config.root,
       DATABASE_URL: resolvedDatabaseUrlForChild(config.root, process.env.DATABASE_URL),
     },
   });
@@ -674,6 +674,7 @@ async function startBackground({ dev, noOpen, rebuild = false, foreground = fals
       HOSTNAME: config.host,
       PORT: String(config.port),
       ALOAPI_INSTANCE_ID: config.instanceId,
+      ALOAPI_ROOT: config.root,
       DATABASE_URL: resolvedDatabaseUrlForChild(root, process.env.DATABASE_URL),
     },
   });
@@ -980,9 +981,7 @@ async function runDoctor({ json = false } = {}) {
   const add = (name, status, detail) => checks.push({ name, status, detail });
 
   // 1. Node.js version
-  const [major, minor] = process.versions.node.split('.').map(Number);
-  const nodeOk = major > MIN_NODE_MAJOR || (major === MIN_NODE_MAJOR && minor >= MIN_NODE_MINOR);
-  add('node_version', nodeOk ? 'pass' : 'fail', `Node.js ${process.version} (requires >= v${MIN_NODE_MAJOR}.${MIN_NODE_MINOR}.0)`);
+  add('node_version', supportsNode(process.versions.node) ? 'pass' : 'fail', `Node.js ${process.version} (requires ${NODE_RANGE})`);
 
   // 2. Project root
   let root = null;
@@ -1152,13 +1151,8 @@ function setup() {
 }
 
 function showVersion() {
-  try {
-    const root = resolveProjectRoot();
-    const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
-    console.log(`aloapi v${pkg.version ?? '0.0.0'} (${root})`);
-  } catch {
-    console.log('aloapi CLI');
-  }
+  const root = resolveProjectRoot();
+  console.log(`aloapi v${projectVersion(root)} (${root})`);
 }
 
 function openSqliteReadonly(root) {

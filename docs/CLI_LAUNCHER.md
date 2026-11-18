@@ -25,7 +25,7 @@ npm run install:cli
 ```
 
 What the installer does:
-1. Verifies Node.js `>= 22.5.0` and `npm`.
+1. Verifies Node.js (22.x starting at 22.17.0, or 24 and later) and `npm`. With nvm, `nvm install` in the repository root selects the default version from `.nvmrc`.
 2. Installs dependencies via `npm ci` if `node_modules` is missing.
 3. Persists the repository path in `~/.aloapi/project-root` (mode `0600` inside `0700` `~/.aloapi`).
 4. Registers an executable `aloapi` command in your `PATH`:
