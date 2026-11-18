@@ -110,6 +110,14 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
   const [ownerApprovalGate, setOwnerApprovalGate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [credentialProviderKey, setCredentialProviderKey] = useState('meta_facebook_pages');
+  const [credentialType, setCredentialType] = useState('oauth_client_id');
+  const [credentialLabel, setCredentialLabel] = useState('primary');
+  const [credentialValue, setCredentialValue] = useState('');
+  const [credentialScopes, setCredentialScopes] = useState('');
+  const [credentialExpiryDays, setCredentialExpiryDays] = useState('');
+  const [savingCredential, setSavingCredential] = useState(false);
+  const [vaultCredentialRows, setVaultCredentialRows] = useState<Array<{ id: string; providerKey: string; credentialType: string; label: string; effectiveStatus: string; keyVersion: number; expiresAt: string | null }>>([]);
 
   const notify = useCallback(
     (msg: string, isErr = false) => {
@@ -161,6 +169,86 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
   }, []);
 
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0] || null;
+
+  const loadVaultCredentials = useCallback(async () => {
+    if (!activeProject?.clientId) {
+      setVaultCredentialRows([]);
+      return;
+    }
+    try {
+      const query = new URLSearchParams({ tenantId: activeProject.clientId });
+      if (credentialProviderKey) query.set('providerKey', credentialProviderKey);
+      const res = await fetch(`/api/onboarding/vault?${query.toString()}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to load saved credentials');
+      setVaultCredentialRows(data.credentials || []);
+    } catch (e) {
+      notify((e as Error).message, true);
+    }
+  }, [activeProject?.clientId, credentialProviderKey, notify]);
+
+  useEffect(() => { void loadVaultCredentials(); }, [loadVaultCredentials]);
+
+  const saveProviderCredential = async () => {
+    if (!activeProject?.clientId || !credentialProviderKey || !credentialValue.trim()) {
+      notify('Select a provider and enter the credential value.', true);
+      return;
+    }
+    setSavingCredential(true);
+    try {
+      const days = Number(credentialExpiryDays);
+      const expiresAt = Number.isFinite(days) && days > 0 ? new Date(Date.now() + days * 86400000).toISOString() : undefined;
+      const res = await fetch('/api/onboarding/vault', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'store',
+          tenantId: activeProject.clientId,
+          providerKey: credentialProviderKey,
+          credentialType,
+          label: credentialLabel.trim() || 'primary',
+          value: credentialValue,
+          scopes: credentialScopes.split(',').map(s => s.trim()).filter(Boolean),
+          expiresAt,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Credential storage failed');
+      setCredentialValue('');
+      notify(`Encrypted ${credentialType} for ${credentialProviderKey} in the project vault.`);
+      await loadVaultCredentials();
+      await reload();
+    } catch (e) {
+      notify((e as Error).message, true);
+    } finally {
+      setSavingCredential(false);
+    }
+  };
+
+  const startProviderOAuth = async () => {
+    if (!activeProject?.clientId) return;
+    try {
+      const res = await fetch('/api/onboarding/oauth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_flow',
+          tenantId: activeProject.clientId,
+          providerKey: credentialProviderKey,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to start OAuth');
+      if (!data.clientIdConfigured) {
+        notify(data.warning || 'Save the official OAuth Client ID first, then start authorization.', true);
+        return;
+      }
+      if (!data.authorizationUrl) throw new Error('Provider did not return an authorization URL.');
+      window.location.assign(data.authorizationUrl);
+    } catch (e) {
+      notify((e as Error).message, true);
+    }
+  };
 
   if (error && projects.length === 0) {
     return (
@@ -387,6 +475,75 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
         <div className="space-y-4 text-xs">
           {!activeProject ? <p className="text-slate-400">Create or select an Engineering Project first.</p> : (
             <>
+              <div className="rounded-xl border border-cyan-500/30 bg-slate-900 p-4 space-y-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Connect a Provider — Add API Keys, App ID, App Secret &amp; Tokens</h3>
+                  <p className="mt-1 text-[11px] text-slate-300">This is the actual credential entry point for the selected project. Values are sent directly to the server and encrypted in the AES-256-GCM Vault; they are never displayed again or written to browser storage.</p>
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <label className="space-y-1">
+                    <span className="text-[11px] text-slate-300">Platform / Provider</span>
+                    <select value={credentialProviderKey} onChange={e => setCredentialProviderKey(e.target.value)} className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white">
+                      {adapters.map(a => <option key={a.providerKey} value={a.providerKey}>{a.displayName} ({a.providerKey})</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] text-slate-300">Credential field</span>
+                    <select value={credentialType} onChange={e => setCredentialType(e.target.value)} className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white">
+                      <option value="oauth_client_id">OAuth Client ID / Meta App ID</option>
+                      <option value="oauth_client_secret">OAuth Client Secret / Meta App Secret</option>
+                      <option value="oauth_access_token">OAuth / Page Access Token</option>
+                      <option value="access_token">Access Token</option>
+                      <option value="api_key">API Key</option>
+                      <option value="app_secret">App Secret (provider-specific)</option>
+                      <option value="refresh_token">Refresh Token</option>
+                      <option value="business_identifier">Business ID</option>
+                      <option value="account_identifier">Account / Page ID</option>
+                      <option value="bot_token">Bot Token</option>
+                      <option value="webhook_secret">Webhook Verify / Signing Secret</option>
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] text-slate-300">Label</span>
+                    <input value={credentialLabel} onChange={e => setCredentialLabel(e.target.value)} placeholder="primary" className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white" />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] text-slate-300">Expires in days (optional)</span>
+                    <input value={credentialExpiryDays} onChange={e => setCredentialExpiryDays(e.target.value)} inputMode="numeric" placeholder="Leave blank if unknown" className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white" />
+                  </label>
+                </div>
+                <label className="block space-y-1">
+                  <span className="text-[11px] text-slate-300">Credential value</span>
+                  <input type="password" autoComplete="new-password" value={credentialValue} onChange={e => setCredentialValue(e.target.value)} placeholder="Paste the value issued by the provider — never paste your account password or OTP" className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white" />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] text-slate-300">Granted scopes / permissions (comma-separated, optional)</span>
+                  <input value={credentialScopes} onChange={e => setCredentialScopes(e.target.value)} placeholder="pages_show_list, pages_read_engagement, pages_manage_posts" className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white" />
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button disabled={savingCredential || !credentialValue.trim()} onClick={() => void saveProviderCredential()} className="rounded bg-cyan-500 px-3.5 py-2 text-xs font-semibold text-slate-950 disabled:opacity-50">{savingCredential ? 'Encrypting…' : 'Save Credential Securely'}</button>
+                  <button onClick={() => void startProviderOAuth()} className="rounded border border-emerald-500/40 px-3.5 py-2 text-xs font-semibold text-emerald-200">Continue with Official OAuth</button>
+                  {adapters.find(a => a.providerKey === credentialProviderKey) && <a className="rounded border border-slate-700 px-3.5 py-2 text-xs text-cyan-200" href={`/api/engineering/providers?providerKey=${encodeURIComponent(credentialProviderKey)}`} target="_blank" rel="noreferrer">View Provider Setup Profile</a>}
+                </div>
+                {credentialProviderKey === 'meta_facebook_pages' && (
+                  <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-[11px] text-slate-200 space-y-1">
+                    <strong className="text-blue-200">Meta / Facebook Pages setup</strong>
+                    <p>1. Create or select your app at developers.facebook.com. 2. Save its App ID as OAuth Client ID. 3. Save its App Secret as OAuth Client Secret. 4. Add the displayed redirect URI in the Meta app's Facebook Login settings. 5. Use Continue with Official OAuth and approve only the required permissions. 6. The returned access token is stored by the callback. For server-side Page publishing, make sure the granted token is a Page token and that the app has the required Page permissions and review/access level.</p>
+                    <p className="text-slate-400">Never enter your Facebook password, OTP, or recovery code here. Meta issues the App ID, App Secret and tokens; ALOAPI cannot generate them.</p>
+                    <a className="text-cyan-300 underline" href="https://developers.facebook.com/docs/graph-api/get-started/" target="_blank" rel="noreferrer">Meta official Graph API guide</a>
+                  </div>
+                )}
+                <div className="rounded-lg border border-slate-700 bg-slate-950 p-3 space-y-2">
+                  <div className="text-[11px] font-semibold text-slate-200">Saved encrypted credentials for this provider ({vaultCredentialRows.length})</div>
+                  {vaultCredentialRows.length === 0 ? <p className="text-[11px] text-slate-500">No credentials stored for this provider in the selected project yet.</p> : vaultCredentialRows.map(row => (
+                    <div key={row.id} className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                      <span className="font-mono text-slate-300">{row.credentialType} · {row.label} · v{row.keyVersion}</span>
+                      <span className="text-emerald-300">{row.effectiveStatus}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-2">
                 <h3 className="text-sm font-semibold text-white flex items-center gap-2"><KeyRound className="w-4 h-4 text-cyan-400" /> Prepared OAuth Apps, Webhooks, DNS &amp; Live Read-Only Connection Probes ({activeProject.oauthApps.length})</h3>
                 <div className="space-y-2">
