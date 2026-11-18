@@ -44,16 +44,17 @@ export async function buildIntegrationHandoverPackage(params: {
   ]);
   const playbook = PLATFORM_SPECIFIC_PLAYBOOKS.find(p => p.appliesToProviders.includes(provider.key));
   const credentialTypeForEnvironmentVariable = (name: string, secret: boolean) => {
-    if (!secret) return 'config_value';
     if (/CLIENT_ID|APP_ID|APPLICATION_ID|CLIENT_KEY/i.test(name)) return 'oauth_client_id';
     if (/CLIENT_SECRET|APP_SECRET/i.test(name)) return 'oauth_client_secret';
+    if (/WABA_ID|WHATSAPP_BUSINESS_ACCOUNT_ID|BUSINESS_ACCOUNT_ID/i.test(name)) return 'business_identifier';
+    if (/PHONE_NUMBER_ID|PAGE_ID|ACCOUNT_ID/i.test(name)) return 'account_identifier';
     if (/REFRESH_TOKEN/i.test(name)) return 'oauth_refresh_token';
     if (/ACCESS_TOKEN/i.test(name)) return 'oauth_access_token';
     if (/SERVICE_ACCOUNT/i.test(name)) return 'service_account';
     if (/BOT_TOKEN/i.test(name)) return 'bot_token';
     if (/WEBHOOK_VERIFY_TOKEN/i.test(name)) return 'webhook_verify_token';
     if (/API_KEY|APIKEY/i.test(name)) return 'api_key';
-    return 'api_key';
+    return secret ? 'api_key' : 'config_value';
   };
   const requiredCredentialTypes = Array.from(new Set([
     ...provider.environmentVariables.filter(v => v.required).map(v => credentialTypeForEnvironmentVariable(v.name, v.secret)),
