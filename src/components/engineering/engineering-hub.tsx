@@ -175,14 +175,12 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
   }, []);
 
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0] || null;
+  const activeProjectClientId = activeProject?.clientId;
 
   const loadVaultCredentials = useCallback(async () => {
-    if (!activeProject?.clientId) {
-      setVaultCredentialRows([]);
-      return;
-    }
+    if (!activeProjectClientId) return;
     try {
-      const query = new URLSearchParams({ tenantId: activeProject.clientId });
+      const query = new URLSearchParams({ tenantId: activeProjectClientId });
       if (credentialProviderKey) query.set('providerKey', credentialProviderKey);
       const res = await fetch(`/api/onboarding/vault?${query.toString()}`, { cache: 'no-store' });
       const data = await res.json();
@@ -191,7 +189,7 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
     } catch (e) {
       notify((e as Error).message, true);
     }
-  }, [activeProject?.clientId, credentialProviderKey, notify]);
+  }, [activeProjectClientId, credentialProviderKey, notify]);
 
   useEffect(() => { void loadVaultCredentials(); }, [loadVaultCredentials]);
 
