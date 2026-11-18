@@ -272,7 +272,7 @@ test('installer + outside-repo launcher opens dashboard on each start and suppor
 
   // Verify browser was opened exactly once with http://localhost:<port>
   const firstBrowserCalls = fs.readFileSync(fx.browserLog, 'utf8').trim().split('\n');
-  assert.equal(firstBrowserCalls.length, 1);
+  assert.equal(firstBrowserCalls.length, 1, `Unexpected browser launch count: ${JSON.stringify(firstBrowserCalls)}`);
   assert.match(firstBrowserCalls[0], new RegExp(`http://localhost:${port}`));
 
   // 3. Running `aloapi` again reuses the service and opens the dashboard as requested

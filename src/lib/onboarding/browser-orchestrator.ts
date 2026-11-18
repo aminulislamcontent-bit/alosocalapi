@@ -112,14 +112,16 @@ export async function launchIsolatedPlaywrightBrowser() {
   let execPath = runtime.chromiumPath!;
   let args: string[] = ['--no-sandbox', '--disable-setuid-sandbox'];
   const env: NodeJS.ProcessEnv = { ...process.env };
-  if (sp.libDir) {
-    env.LD_LIBRARY_PATH = `${sp.libDir}:${process.env.LD_LIBRARY_PATH || ''}`;
-  }
   if (!CHROMIUM_CANDIDATES.includes(execPath)) {
     const spMod = req('@sparticuz/chromium');
     const chromium = spMod.default || spMod;
     execPath = await chromium.executablePath();
     args = chromium.args || args;
+    // Sparticuz ships its own runtime libraries. Do not prepend them when
+    // launching system Chromium: doing so can break NSS/NSPR ABI compatibility.
+    if (sp.libDir) {
+      env.LD_LIBRARY_PATH = `${sp.libDir}:${process.env.LD_LIBRARY_PATH || ''}`;
+    }
   }
   return playwright.chromium.launch({
     executablePath: execPath,
