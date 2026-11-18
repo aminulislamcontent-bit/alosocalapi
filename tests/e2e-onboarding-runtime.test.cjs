@@ -209,6 +209,43 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     });
     assert.equal(noTokenAssetDiscovery.status, 400, 'Account discovery must require an actual provider-issued OAuth token.');
 
+    // Provider-issued identifiers may be included in owner handover; access tokens must remain encrypted and absent.
+    for (const credential of [
+      { providerKey: 'meta_facebook_pages', credentialType: 'account_identifier', label: 'page_123456', value: '123456' },
+      { providerKey: 'meta_facebook_pages', credentialType: 'page_access_token', label: '123456', value: 'PAGE_ACCESS_TOKEN_SENTINEL_778899' },
+      { providerKey: 'whatsapp_cloud_api', credentialType: 'business_identifier', label: 'primary', value: 'WABA_123456' },
+      { providerKey: 'whatsapp_cloud_api', credentialType: 'account_identifier', label: 'primary', value: 'PHONE_ID_98765' },
+    ]) {
+      const storedIdentifier = await api('/api/onboarding/vault', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'store',
+          tenantId: client.id,
+          providerKey: credential.providerKey,
+          credentialType: credential.credentialType,
+          label: credential.label,
+          value: credential.value,
+        }),
+      });
+      assert.equal(storedIdentifier.status, 200);
+      assert.equal(JSON.stringify(await storedIdentifier.json()).includes(credential.value), false);
+    }
+    const idHandover = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenantId: client.id,
+        providerKey: 'whatsapp_cloud_api',
+        identityKind: 'phone',
+        identityValue: '+8801711000001',
+      }),
+    });
+    assert.equal(idHandover.status, 200);
+    const idHandoverData = await idHandover.json();
+    const issuedIds = idHandoverData.handover.handover.providerIssuedIdentifiers.map(item => item.value);
+    assert.ok(issuedIds.includes('WABA_123456'));
+    assert.ok(issuedIds.includes('PHONE_ID_98765'));
+    assert.equal(JSON.stringify(idHandoverData).includes('PAGE_ACCESS_TOKEN_SENTINEL_778899'), false, 'Handover must never expose provider access tokens.');
+
     const accessOnlyVault = await api('/api/onboarding/vault', {
       method: 'POST',
       body: JSON.stringify({
