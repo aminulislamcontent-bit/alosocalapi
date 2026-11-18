@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdminApi } from '@/lib/security/admin-guard';
-import { generateApiDiscoverySnapshot, runLiveReadOnlyVerification } from '@/lib/onboarding/api-discovery';
+import { discoverProviderAccounts, generateApiDiscoverySnapshot, runLiveReadOnlyVerification } from '@/lib/onboarding/api-discovery';
 import { dispatchOmniEvent } from '@/lib/onboarding/omni-routing';
 
 export const runtime = 'nodejs';
@@ -40,6 +40,19 @@ export async function POST(req: NextRequest) {
         actor: guard.user.username,
       });
       return NextResponse.json(result);
+    }
+
+    if (action === 'discover_accounts') {
+      const tenantId = String(body.tenantId || '').trim();
+      if (!tenantId) return NextResponse.json({ error: 'tenantId is required for provider account discovery.' }, { status: 400 });
+      const result = await discoverProviderAccounts({
+        tenantId,
+        providerKey,
+        actor: guard.user.username,
+        ip: guard.ip,
+        identityValue: body.identityValue ? String(body.identityValue) : undefined,
+      });
+      return NextResponse.json({ discovery: result });
     }
 
     if (action === 'verify_live') {
