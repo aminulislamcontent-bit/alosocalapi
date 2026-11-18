@@ -209,6 +209,28 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     });
     assert.equal(noTokenAssetDiscovery.status, 400, 'Account discovery must require an actual provider-issued OAuth token.');
 
+    const accessOnlyVault = await api('/api/onboarding/vault', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'store',
+        tenantId: client.id,
+        providerKey: 'hubspot_crm_api',
+        credentialType: 'api_key',
+        label: 'access_only_test',
+        value: 'HUBSPOT_ACCESS_ONLY_SENTINEL',
+      }),
+    });
+    assert.equal(accessOnlyVault.status, 200);
+    const honestProbe = await api('/api/onboarding/discovery', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'verify_live', tenantId: client.id, providerKey: 'hubspot_crm_api' }),
+    });
+    assert.equal(honestProbe.status, 200);
+    assert.equal((await honestProbe.json()).verification.verified, false);
+    const accessOnlyMetadata = await api(`/api/onboarding/vault?tenantId=${encodeURIComponent(client.id)}&providerKey=hubspot_crm_api`);
+    const accessOnlyRows = (await accessOnlyMetadata.json()).credentials;
+    assert.equal(accessOnlyRows.find(row => row.credentialType === 'api_key')?.lastVerifiedAt, null, 'Reading/decrypting a credential must not mark it API-verified.');
+
     const facebookHandover = await api('/api/onboarding/handover', {
       method: 'POST',
       body: JSON.stringify({
