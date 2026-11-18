@@ -153,10 +153,23 @@ test('Real Playwright Chromium click-through acceptance across login, discovery,
     await page.waitForSelector('text=Dhaka Browser Commerce', { timeout: 15_000 });
     await page.screenshot({ path: path.join(shotsDir, '02-discovery.png') });
 
+    // 2b. Account identity -> handover manifest -> official owner portal checkpoint through real Admin UI.
+    await page.getByPlaceholder('https://facebook.com/your-page').fill('https://www.facebook.com/dhakacommerce');
+    await page.getByLabel(/Create supervised official-portal checkpoint/).check();
+    await page.getByRole('button', { name: /Generate Real Handover Manifest/ }).click();
+    await page.waitForSelector('text=Open official provider portal', { timeout: 15_000 });
+    const handoverSection = page.locator('section').filter({ hasText: 'Account Identity → Integration Handover' });
+    const handoverText = await handoverSection.innerText();
+    assert.match(handoverText, /secretsIncluded/);
+    assert.match(handoverText, /false/);
+    const officialPortalHref = await page.getByRole('link', { name: /Open official provider portal/ }).getAttribute('href');
+    assert.match(officialPortalHref, /^https:\/\/developers\.facebook\.com\//);
+    await page.screenshot({ path: path.join(shotsDir, '03-identity-handover.png') });
+
     // 3. Universal Adapters (131) & Prepare Selected
     await page.getByRole('button', { name: /2\. Universal Adapters \(131\)/ }).click();
     await page.waitForSelector('text=131×17 Completion Matrix JSON', { timeout: 10_000 });
-    await page.getByRole('button', { name: /Prepare Selected/ }).click();
+    await page.getByRole('button', { name: /Prepare Local Configurations/ }).click();
     await page.screenshot({ path: path.join(shotsDir, '03-adapters.png') });
 
     // 4. Credentials, OAuth, DNS Verification & Approval-Gated Client API Runner
