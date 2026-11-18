@@ -6,6 +6,8 @@ const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const { DatabaseSync } = require('node:sqlite');
+const { scryptSync } = require('node:crypto');
 
 const cli = import('../scripts/aloapi.mjs');
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -33,7 +35,10 @@ function isPidAlive(pid) {
 async function waitForBrowserCalls(browserLog, count) {
   const deadline = Date.now() + 2000;
   while (Date.now() < deadline) {
-    if (fs.existsSync(browserLog) && fs.readFileSync(browserLog, 'utf8').trim().split('\n').length >= count) return;
+    if (fs.existsSync(browserLog)) {
+      const content = fs.readFileSync(browserLog, 'utf8').trim();
+      if (content && content.split('\n').length >= count) return;
+    }
     await new Promise(resolve => setTimeout(resolve, 25));
   }
 }
@@ -62,6 +67,7 @@ function createFixtureProject(t, port) {
   fs.mkdirSync(path.join(repoDir, 'scripts'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, 'prisma', 'migrations'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, 'node_modules', 'next', 'dist', 'bin'), { recursive: true });
+  fs.mkdirSync(path.join(repoDir, 'node_modules', 'prisma', 'build'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, 'node_modules', '.prisma', 'client'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, '.next', 'standalone'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, 'src'), { recursive: true });
@@ -87,6 +93,7 @@ function createFixtureProject(t, port) {
   fs.writeFileSync(path.join(repoDir, 'prisma', 'schema.prisma'), '// test schema\n');
   fs.writeFileSync(path.join(repoDir, 'prisma', 'migrations', 'migration_lock.toml'), 'provider = "sqlite"\n');
   fs.writeFileSync(path.join(repoDir, 'node_modules', 'next', 'dist', 'bin', 'next'), '#!/usr/bin/env node\n');
+  fs.writeFileSync(path.join(repoDir, 'node_modules', 'prisma', 'build', 'index.js'), 'process.exit(0);\n');
   fs.writeFileSync(path.join(repoDir, 'node_modules', '.prisma', 'client', 'default.js'), 'module.exports = {};\n');
 
   // Create BUILD_ID slightly in the future relative to src/ so needsProductionBuild is false
@@ -432,10 +439,7 @@ test('WSL2 environment triggers Windows browser integration and resolveProjectRo
     timeout: 20_000,
   });
   assert.equal(startRes.status, 0, `${startRes.stdout}\n${startRes.stderr}`);
-  const deadline = Date.now() + 2000;
-  while (!fs.existsSync(fx.browserLog) && Date.now() < deadline) {
-    await new Promise(resolve => setTimeout(resolve, 25));
-  }
+  await waitForBrowserCalls(fx.browserLog, 1);
   const calls = fs.readFileSync(fx.browserLog, 'utf8').trim().split('\n');
   assert.equal(calls.length, 1);
   assert.match(calls[0], new RegExp(`^(wslview|cmd\\.exe)\\|.*http://localhost:${port}`));
@@ -522,4 +526,42 @@ test('CLI diagnostics, import-validate, and help expose all operational commands
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+});
+
+test('admin:reset-password rotates the existing admin password and revokes admin sessions without touching vault config', t => {
+  const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'aloapi-admin-reset-'));
+  const repoDir = path.join(tmpBase, 'repo');
+  const dbDir = path.join(repoDir, 'prisma', 'db');
+  fs.mkdirSync(path.join(repoDir, 'scripts'), { recursive: true });
+  fs.mkdirSync(path.join(repoDir, 'prisma'), { recursive: true });
+  fs.mkdirSync(dbDir, { recursive: true });
+  fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'aloapi.mjs'), path.join(repoDir, 'scripts', 'aloapi.mjs'));
+  fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'migrations.mjs'), path.join(repoDir, 'scripts', 'migrations.mjs'));
+  fs.writeFileSync(path.join(repoDir, 'package.json'), '{}');
+  fs.writeFileSync(path.join(repoDir, 'prisma', 'schema.prisma'), '// fixture');
+  const envFile = path.join(repoDir, '.env');
+  const vaultKey = 'stable-fixture-vault-key-0123456789';
+  fs.writeFileSync(envFile, 'DATABASE_URL="file:./db/custom.db"\nALOAPI_VAULT_KEY="' + vaultKey + '"\n', { mode: 0o600 });
+  const dbPath = path.join(dbDir, 'custom.db');
+  const db = new DatabaseSync(dbPath);
+  db.exec('CREATE TABLE "AdminUser" ("id" TEXT PRIMARY KEY, "username" TEXT NOT NULL UNIQUE, "passwordHash" TEXT NOT NULL, "createdAt" TEXT NOT NULL); CREATE TABLE "PortalSession" ("token" TEXT PRIMARY KEY, "role" TEXT NOT NULL, "adminId" TEXT);');
+  db.prepare('INSERT INTO "AdminUser" VALUES (?, ?, ?, ?)').run('admin-1', 'aloapi-admin', 'old-hash', '2026-11-18');
+  db.prepare('INSERT INTO "PortalSession" VALUES (?, ?, ?)').run('admin-session', 'admin', 'admin-1');
+  db.prepare('INSERT INTO "PortalSession" VALUES (?, ?, ?)').run('client-session', 'client', null);
+  db.close();
+  t.after(() => fs.rmSync(tmpBase, { recursive: true, force: true }));
+  const result = spawnSync(process.execPath, [path.join(repoDir, 'scripts', 'aloapi.mjs'), 'admin:reset-password'], { cwd: repoDir, encoding: 'utf8', env: { ...process.env, ALOAPI_ROOT: repoDir } });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Administrator password reset successfully/);
+  assert.match(result.stdout, /Administrator username: aloapi-admin/);
+  const password = result.stdout.match(/New one-time password: ([A-Za-z0-9_-]+)/)?.[1];
+  assert.ok(password && password.length >= 32, 'a strong one-time password is printed');
+  const check = new DatabaseSync(dbPath);
+  const admin = check.prepare('SELECT "passwordHash" FROM "AdminUser" WHERE id = ?').get('admin-1');
+  const sessions = check.prepare('SELECT token FROM "PortalSession" ORDER BY token').all().map(row => row.token);
+  check.close();
+  const parts = admin.passwordHash.split(':');
+  assert.equal(scryptSync(password, parts[0], 64).toString('hex'), parts[1]);
+  assert.deepEqual(sessions, ['client-session'], 'only administrator sessions are revoked');
+  assert.match(fs.readFileSync(envFile, 'utf8'), new RegExp(vaultKey), 'vault key remains unchanged');
 });
