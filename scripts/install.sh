@@ -111,14 +111,34 @@ fi
 
 mkdir -p "$INSTALL_DIR"
 TARGET_BIN="$INSTALL_DIR/aloapi"
-rm -f "$TARGET_BIN"
+EXPECTED_TARGET="$REPO_ROOT/scripts/aloapi.mjs"
 
-if ln -s "$REPO_ROOT/scripts/aloapi.mjs" "$TARGET_BIN" 2>/dev/null; then
+# Never delete or overwrite an unrelated executable at the chosen install path.
+if [[ -L "$TARGET_BIN" ]]; then
+  EXISTING_TARGET="$(readlink "$TARGET_BIN")"
+  if [[ "$EXISTING_TARGET" != "$EXPECTED_TARGET" ]]; then
+    echo "Error: $TARGET_BIN is an existing symlink not owned by this ALOAPI installation ($EXISTING_TARGET)." >&2
+    echo "Choose another directory with --prefix <dir>, or move that file yourself." >&2
+    exit 1
+  fi
+  rm -- "$TARGET_BIN"
+elif [[ -e "$TARGET_BIN" ]]; then
+  if [[ -f "$TARGET_BIN" ]] && grep -Fq '# ALOAPI CLI managed launcher' "$TARGET_BIN"; then
+    rm -- "$TARGET_BIN"
+  else
+    echo "Error: $TARGET_BIN already exists and is not an ALOAPI-managed launcher." >&2
+    echo "Choose another directory with --prefix <dir>, or move that file yourself." >&2
+    exit 1
+  fi
+fi
+
+if ln -s "$EXPECTED_TARGET" "$TARGET_BIN" 2>/dev/null; then
   :
 else
   cat > "$TARGET_BIN" <<EOF
 #!/usr/bin/env sh
-exec node "$REPO_ROOT/scripts/aloapi.mjs" "\$@"
+# ALOAPI CLI managed launcher
+exec node "$EXPECTED_TARGET" "\$@"
 EOF
   chmod 755 "$TARGET_BIN"
 fi
@@ -160,5 +180,5 @@ if ! path_contains "$INSTALL_DIR"; then
   fi
 else
   echo ""
-  echo "Run \`aloapi\` from any directory to start ALOAPI and open http://localhost:47831."
+  echo "Run `aloapi` from any directory to start ALOAPI and open http://localhost:47831."
 fi
