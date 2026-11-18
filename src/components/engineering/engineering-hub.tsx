@@ -101,6 +101,12 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
     'whatsapp_cloud_api',
   ]);
   const [websiteUrl, setWebsiteUrl] = useState('https://example.com');
+  const [identityKind, setIdentityKind] = useState<'url' | 'phone' | 'account'>('url');
+  const [identityValue, setIdentityValue] = useState('');
+  const [identityProviderKey, setIdentityProviderKey] = useState('meta_facebook_pages');
+  const [identityHandover, setIdentityHandover] = useState<Record<string, unknown> | null>(null);
+  const [identityPortal, setIdentityPortal] = useState(false);
+
   const [projectName, setProjectName] = useState('');
   const [htmlSnapshot, setHtmlSnapshot] = useState('');
   const [subTab, setSubTab] = useState<'discover' | 'adapters' | 'credentials' | 'checkpoints' | 'handover'>('discover');
@@ -279,6 +285,34 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
     );
   }
 
+  const generateIdentityHandover = async () => {
+    if (!activeProject?.clientId) { notify('Create or select a client project first.', true); return; }
+    if (!identityValue.trim()) { notify('Enter a Facebook Page URL, WhatsApp phone number, or account identifier.', true); return; }
+    setBusy(true);
+    setIdentityHandover(null);
+    try {
+      const res = await fetch('/api/onboarding/handover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: activeProject.clientId,
+          providerKey: identityProviderKey,
+          identityKind,
+          identityValue: identityValue.trim(),
+          startOfficialPortal: identityPortal,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to generate integration handover.');
+      setIdentityHandover(data as Record<string, unknown>);
+      notify('Handover manifest generated. Provider-side app creation is not claimed.');
+    } catch (e) {
+      notify((e as Error).message, true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const runDiscovery = async () => {
     setBusy(true);
     try {
@@ -369,6 +403,30 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
           </button>
         </div>
       </div>
+
+      <section className="rounded-xl border border-cyan-500/30 bg-slate-900 p-4 space-y-3 text-xs">
+        <div>
+          <h3 className="text-sm font-semibold text-white">Account Identity → Integration Handover</h3>
+          <p className="text-slate-400">Start from a Facebook Page URL, WhatsApp number, or provider account ID. Generates a tenant-scoped manifest and optional official-portal owner checkpoint. Provider credentials are never fabricated.</p>
+        </div>
+        <div className="grid gap-2 md:grid-cols-4">
+          <select value={identityProviderKey} onChange={e => setIdentityProviderKey(e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-white">
+            {adapters.map(a => <option key={a.providerKey} value={a.providerKey}>{a.displayName}</option>)}
+          </select>
+          <select value={identityKind} onChange={e => setIdentityKind(e.target.value as typeof identityKind)} className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-white">
+            <option value="url">Page / Account URL</option>
+            <option value="phone">WhatsApp Phone (E.164)</option>
+            <option value="account">Account Identifier</option>
+          </select>
+          <input value={identityValue} onChange={e => setIdentityValue(e.target.value)} placeholder={identityKind === 'phone' ? '+8801XXXXXXXXX' : identityKind === 'url' ? 'https://facebook.com/your-page' : 'Provider account ID'} className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-white md:col-span-2" />
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-slate-300"><input type="checkbox" checked={identityPortal} onChange={e => setIdentityPortal(e.target.checked)} /> Create supervised official-portal checkpoint</label>
+          <button disabled={busy || !activeProject} onClick={() => void generateIdentityHandover()} className="rounded bg-cyan-500 px-3 py-2 font-semibold text-slate-950 disabled:opacity-50">{busy ? 'Preparing…' : 'Generate Real Handover Manifest'}</button>
+          {!activeProject && <span className="text-amber-300">Create/select a project first.</span>}
+        </div>
+        {identityHandover && <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-all rounded border border-slate-700 bg-slate-950 p-3 text-[11px] text-cyan-100">{JSON.stringify(identityHandover, null, 2)}</pre>}
+      </section>
 
       {/* Navigation Tabs */}
       <div className="flex flex-wrap gap-2 rounded-xl border border-slate-800 bg-slate-900/70 p-2 text-xs">
