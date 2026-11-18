@@ -183,7 +183,7 @@ export async function discoverProviderAccounts(params: {
           credentialType: 'page_access_token',
           label: id,
           plaintextValue: String(page.access_token),
-          scopes: token.scopes ? String(token.scopes).split(',').filter(Boolean) : [],
+          scopes: tokenScopes,
           actor: params.actor,
           ip: params.ip,
         });
@@ -231,7 +231,7 @@ export async function discoverProviderAccounts(params: {
           credentialType: 'business_identifier',
           label: `waba_${waba.id}`,
           plaintextValue: waba.id,
-          scopes: token.scopes ? String(token.scopes).split(',').filter(Boolean) : [],
+          scopes: tokenScopes,
           actor: params.actor,
           ip: params.ip,
         });
@@ -241,7 +241,7 @@ export async function discoverProviderAccounts(params: {
           credentialType: 'account_identifier',
           label: `phone_${phone.id}`,
           plaintextValue: phone.id,
-          scopes: token.scopes ? String(token.scopes).split(',').filter(Boolean) : [],
+          scopes: tokenScopes,
           actor: params.actor,
           ip: params.ip,
         });
