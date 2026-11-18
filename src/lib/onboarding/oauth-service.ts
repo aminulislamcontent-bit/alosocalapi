@@ -115,6 +115,11 @@ export async function createOAuthAuthorizationFlow(params: {
     }
   }
 
+  const savedCredentialMetadata = await listVaultCredentialsMetadata(params.tenantId, params.providerKey);
+  const clientSecretConfigured = savedCredentialMetadata.some(
+    credential => credential.credentialType === 'oauth_client_secret' && credential.effectiveStatus === 'ACTIVE',
+  );
+
   const stateToken = randomBytes(24).toString('base64url');
   const pkceVerifier = provider.oauthConfig.pkceSupported ? randomBytes(48).toString('base64url') : null;
   const codeChallenge = pkceVerifier ? base64UrlSha256(pkceVerifier) : null;
@@ -165,11 +170,14 @@ export async function createOAuthAuthorizationFlow(params: {
     expiresAt: expiresAt.toISOString(),
     pkceEnabled: Boolean(codeChallenge),
     clientIdConfigured: Boolean(clientId),
+    clientSecretConfigured,
     authorizationUrl: authUrl.toString(),
     scopes,
-    warning: clientId
-      ? null
-      : 'Client ID is not yet stored in Vault or env; replace CONFIGURE_OFFICIAL_CLIENT_ID_IN_VAULT after registering your official app.',
+    warning: !clientId
+      ? 'Save the official OAuth Client ID / App ID in the provider Vault before continuing.'
+      : !clientSecretConfigured
+        ? 'Save the official OAuth Client Secret / App Secret in the provider Vault before continuing.'
+        : null,
   };
 }
 
