@@ -375,6 +375,7 @@ export async function restoreEncryptedVaultBackup(params: {
           expiresAt: rec.expiresAt ? new Date(rec.expiresAt) : null,
           revokedAt: rec.revokedAt ? new Date(rec.revokedAt) : null,
           status: rec.status || 'active',
+          lastVerifiedAt: null,
         },
         create: {
           clientId: params.tenantId,
