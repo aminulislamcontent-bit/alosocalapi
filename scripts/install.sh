@@ -74,9 +74,22 @@ fi
 
 chmod +x "$REPO_ROOT/scripts/aloapi.mjs" "$REPO_ROOT/scripts/install.sh"
 
-if [[ "$RUN_NPM_INSTALL" -eq 1 && ! -d "$REPO_ROOT/node_modules/next" ]]; then
-  echo "Installing Node.js dependencies via npm ci..."
-  (cd "$REPO_ROOT" && npm ci)
+PRISMA_CLI="$REPO_ROOT/node_modules/prisma/build/index.js"
+NEXT_CLI="$REPO_ROOT/node_modules/next/dist/bin/next"
+
+if [[ "$RUN_NPM_INSTALL" -eq 1 && ( ! -f "$NEXT_CLI" || ! -f "$PRISMA_CLI" ) ]]; then
+  echo "Installing or repairing Node.js dependencies via npm ci..."
+  (cd "$REPO_ROOT" && npm ci --no-audit --no-fund --fetch-retries=5 --fetch-timeout=300000)
+fi
+
+if [[ ! -f "$NEXT_CLI" || ! -f "$PRISMA_CLI" ]]; then
+  echo "Error: ALOAPI dependencies are incomplete (Next.js or Prisma CLI is missing)." >&2
+  if [[ "$RUN_NPM_INSTALL" -eq 0 ]]; then
+    echo "Run 'npm ci --no-audit --no-fund --fetch-retries=5 --fetch-timeout=300000' in $REPO_ROOT, then rerun this installer." >&2
+  else
+    echo "npm ci did not complete successfully. Check your network connection and rerun this installer." >&2
+  fi
+  exit 1
 fi
 
 STATE_DIR="${ALOAPI_STATE_DIR:-$HOME/.aloapi}"
