@@ -210,7 +210,16 @@ test('Real Playwright Chromium click-through acceptance across login, discovery,
     for (const label of adminViews) {
       const navButton = page.locator('header button').filter({ hasText: label }).first();
       await navButton.click();
-      await page.waitForTimeout(100);
+      // Wait for the view's real content instead of a fixed timer; async tab data
+      // can take longer than 100ms under concurrent CI load.
+      await page.waitForFunction(
+        () => {
+          const main = document.querySelector('main');
+          return Boolean(main && main.innerText.trim().length > 20);
+        },
+        undefined,
+        { timeout: 10_000 },
+      );
       const mainText = (await page.locator('main').innerText()).trim();
       assert.ok(mainText.length > 20, 'Admin view should render after navigation: ' + label);
     }

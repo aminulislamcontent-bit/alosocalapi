@@ -60,6 +60,16 @@ aloapi doctor
 
 ---
 
+## First-run credentials & environment overrides
+
+On the first launch `aloapi` creates a private `.env` (mode `0600`) and prints a one-time administrator username/password plus a generated `ALOAPI_VAULT_KEY`. Those exact values are written to `.env`, so subsequent launches reuse them. Keep them in a password manager and remove the bootstrap username/password from `.env` after the first login.
+
+If you supply `ADMIN_BOOTSTRAP_USERNAME`, `ADMIN_BOOTSTRAP_PASSWORD`, or `ALOAPI_VAULT_KEY` in the environment before the first launch, the CLI uses **those** values, prints them, and saves them to `.env` as well. The printed credentials therefore always match the credentials the service actually accepts. Values containing newlines or both quote styles are refused rather than written into a malformed `.env`.
+
+`npm run build` never ships private runtime configuration: `next.config.ts` excludes `.env*` from standalone file tracing and `scripts/copy-standalone-assets.mjs` defensively removes any such file from `.next/standalone`, restoring only the public `.env.example` template.
+
+---
+
 ## Platform & Browser Behavior
 
 - **macOS:** opens `http://localhost:47831` with `open`.
@@ -72,7 +82,7 @@ aloapi doctor
 ## Security Guarantees
 
 - **Loopback-only by default:** binds only to `127.0.0.1:47831` (`http://localhost:47831`). Non-loopback `ALOAPI_HOST` values are rejected unless `ALOAPI_ALLOW_PUBLIC_BIND="true"` is explicitly configured (only behind a TLS-terminating reverse proxy with authentication).
-- **Zero secret leaks:** `aloapi status`, `aloapi doctor`, `aloapi logs`, and error messages never print `ALOAPI_VAULT_KEY`, passwords, or tokens.
+- **Zero secret leaks:** `aloapi status`, `aloapi doctor`, `aloapi logs`, and error messages never print `ALOAPI_VAULT_KEY`, passwords, or tokens. The production standalone bundle contains no private `.env` file.
 - **Non-destructive lifecycle:**
   - `aloapi start` checks port `47831` first and refuses to terminate unrelated processes occupying the port.
   - `aloapi stop` verifies both the PID and `/api/health` `instanceId` before signalling `SIGTERM`.

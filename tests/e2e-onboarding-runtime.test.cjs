@@ -501,6 +501,110 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     assert.equal(webhookPass.status, 200);
     assert.equal((await webhookPass.json()).verified, true);
 
+    // 11c. Autonomous Integration Handover (POST /api/onboarding/handover)
+    // Real production HTTP coverage for identity normalization, honest verification,
+    // secret-free export, supervised owner checkpoint creation and access guards.
+    const handoverPayload = (overrides = {}) => JSON.stringify({
+      tenantId: client.id,
+      providerKey: 'sendgrid_api',
+      identityKind: 'url',
+      identityValue: 'https://example.com/sendgrid-account',
+      ...overrides,
+    });
+
+    const handoverUnauth = await fetch(`${baseUrl}/api/onboarding/handover`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: baseUrl },
+      body: handoverPayload(),
+    });
+    assert.equal(handoverUnauth.status, 401, 'Unauthenticated handover generation must be refused');
+
+    const handoverCrossOrigin = await fetch(`${baseUrl}/api/onboarding/handover`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: cookieHeader, origin: 'https://evil.example.com' },
+      body: handoverPayload(),
+    });
+    assert.equal(handoverCrossOrigin.status, 403, 'Cross-origin handover generation must be refused');
+
+    const handoverMissing = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId: client.id, providerKey: 'sendgrid_api' }),
+    });
+    assert.equal(handoverMissing.status, 400);
+
+    const handoverHttpUrl = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: handoverPayload({ identityValue: 'http://example.com/account' }),
+    });
+    assert.equal(handoverHttpUrl.status, 400, 'Non-HTTPS identity URLs must be refused');
+
+    const handoverBadPhone = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: handoverPayload({ identityKind: 'phone', identityValue: '01712345678' }),
+    });
+    assert.equal(handoverBadPhone.status, 400, 'Phone numbers without a country code must be refused');
+
+    const handoverUnknownProvider = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: handoverPayload({ providerKey: 'not_a_real_provider' }),
+    });
+    assert.equal(handoverUnknownProvider.status, 400);
+
+    const handoverPhoneRes = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: handoverPayload({ identityKind: 'phone', identityValue: '+880 (171) 234-5678' }),
+    });
+    assert.equal(handoverPhoneRes.status, 200, `Handover failed: ${await handoverPhoneRes.clone().text()}`);
+    const handoverPhone = await handoverPhoneRes.json();
+    const phoneManifest = handoverPhone.handover;
+    assert.equal(phoneManifest.schemaVersion, 'aloapi.integration-handover.v1');
+    assert.equal(phoneManifest.tenantId, client.id);
+    assert.equal(phoneManifest.provider.key, 'sendgrid_api');
+    assert.equal(phoneManifest.suppliedIdentity.value, '+8801712345678', 'Phone must normalize to true E.164');
+    assert.equal(phoneManifest.handover.secretsIncluded, false);
+    assert.equal(phoneManifest.verification.verified, false, 'No live verification is claimed for an unverified workflow');
+    assert.ok(!JSON.stringify(handoverPhone).includes(secretSentinel), 'Plaintext vault secret leaked into handover response');
+    assert.ok(phoneManifest.preparation.requiredCredentials.length > 0);
+    assert.ok(phoneManifest.preparation.setupChecklist.length > 0);
+    assert.ok(phoneManifest.preparation.ownerApprovalsAndRestrictions.length > 0);
+    assert.ok(phoneManifest.preparation.requiredOwnerActions.length > 0);
+    assert.equal(phoneManifest.preparation.ownerCheckpoints.length, 4);
+    assert.deepEqual(phoneManifest.handover.requiredOwnerActions, phoneManifest.preparation.requiredOwnerActions);
+    assert.ok(handoverPhone.discovery.snapshotId, 'Discovery snapshot must be persisted and referenced');
+    assert.equal(handoverPhone.browserSession, null, 'No browser session unless explicitly requested');
+    assert.equal(handoverPhone.liveVerification, null, 'No live probe runs unless explicitly requested');
+
+    const handoverProbeRes = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: handoverPayload({ providerKey: 'hubspot_crm_api', runLiveProbe: true }),
+    });
+    assert.equal(handoverProbeRes.status, 200, `Live probe handover failed: ${await handoverProbeRes.clone().text()}`);
+    const handoverProbe = await handoverProbeRes.json();
+    assert.equal(handoverProbe.liveVerification.executed, false, 'No authorized credential means no outbound API call');
+    assert.equal(handoverProbe.liveVerification.verified, false);
+    assert.equal(handoverProbe.liveVerification.status, 'OWNER_ACTION_REQUIRED');
+    assert.match(handoverProbe.liveVerification.message, /No active authorized OAuth token or API key/);
+    assert.equal(handoverProbe.handover.verification.verified, false, 'A live probe result never fabricates a VERIFIED manifest');
+    assert.ok(!JSON.stringify(handoverProbe).includes(secretSentinel));
+
+    const handoverPortalRes = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: handoverPayload({ startOfficialPortal: true, ownerEmail: 'owner@example.com' }),
+    });
+    assert.equal(handoverPortalRes.status, 200, `Portal checkpoint failed: ${await handoverPortalRes.clone().text()}`);
+    const handoverPortal = await handoverPortalRes.json();
+    assert.equal(handoverPortal.handover.suppliedIdentity.hostname, 'example.com');
+    assert.ok(handoverPortal.browserSession?.id, 'Supervised owner checkpoint must be created');
+    assert.equal(handoverPortal.browserSession.status, 'WAITING_FOR_OWNER');
+    assert.ok(['isolated_browser', 'guided_official_handoff'].includes(handoverPortal.browserSession.executionMode));
+    assert.match(handoverPortal.browserSession.officialUrl, /^https:\/\//);
+    assert.match(handoverPortal.browserSession.note, /does not automate login/);
+    assert.ok(!JSON.stringify(handoverPortal).includes(secretSentinel));
+    const overviewAfterHandover = await api('/api/onboarding/overview');
+    assert.equal(overviewAfterHandover.status, 200);
+    const overviewHandover = await overviewAfterHandover.json();
+    assert.ok(overviewHandover.browserSessions.some(s => s.id === handoverPortal.browserSession.id), 'Owner checkpoint must remain visible in the admin overview');
+
     // 12. Discovery + Honest Live Verification Guard
     const verifyRes = await api('/api/onboarding/discovery', {
       method: 'POST',
