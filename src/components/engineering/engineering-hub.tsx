@@ -192,7 +192,18 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
     }
   }, [activeProjectClientId, credentialProviderKey, notify]);
 
-  useEffect(() => { void loadVaultCredentials(); }, [loadVaultCredentials]);
+  useEffect(() => {
+    if (!activeProjectClientId) return;
+    const query = new URLSearchParams({ tenantId: activeProjectClientId });
+    if (credentialProviderKey) query.set('providerKey', credentialProviderKey);
+    void fetch(`/api/onboarding/vault?${query.toString()}`, { cache: 'no-store' })
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Unable to load saved credentials');
+        setVaultCredentialRows(data.credentials || []);
+      })
+      .catch(e => notify(e instanceof Error ? e.message : 'Unable to load saved credentials', true));
+  }, [activeProjectClientId, credentialProviderKey, notify]);
 
   const saveProviderCredential = async () => {
     if (!activeProject?.clientId || !credentialProviderKey || !credentialValue.trim()) {
