@@ -82,6 +82,7 @@ export async function storeVaultCredential(params: {
           revokedAt: null,
           revokedReason: null,
           status: 'active',
+          lastVerifiedAt: null,
           keyVersion: existing.keyVersion + 1,
         },
       })
@@ -187,10 +188,6 @@ export async function resolveVaultSecretForServer(params: {
     throw new Error(`Credential ${row.label} for ${row.providerKey} has expired.`);
   }
   const plaintext = decryptVaultValue(row.ciphertext);
-  await db.vaultCredential.update({
-    where: { id: row.id },
-    data: { lastVerifiedAt: new Date() },
-  });
   await auditEvent({
     actor: params.actor,
     action: 'vault.credential.access',
@@ -378,6 +375,7 @@ export async function restoreEncryptedVaultBackup(params: {
           expiresAt: rec.expiresAt ? new Date(rec.expiresAt) : null,
           revokedAt: rec.revokedAt ? new Date(rec.revokedAt) : null,
           status: rec.status || 'active',
+          lastVerifiedAt: null,
         },
         create: {
           clientId: params.tenantId,

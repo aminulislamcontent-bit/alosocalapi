@@ -101,6 +101,13 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
     'whatsapp_cloud_api',
   ]);
   const [websiteUrl, setWebsiteUrl] = useState('https://example.com');
+  const [identityKind, setIdentityKind] = useState<'url' | 'phone' | 'account'>('url');
+  const [identityValue, setIdentityValue] = useState('');
+  const [identityProviderKey, setIdentityProviderKey] = useState('meta_facebook_pages');
+  const [identityHandover, setIdentityHandover] = useState<Record<string, unknown> | null>(null);
+  const [accountDiscoveryResult, setAccountDiscoveryResult] = useState<Record<string, unknown> | null>(null);
+  const [identityPortal, setIdentityPortal] = useState(false);
+
   const [projectName, setProjectName] = useState('');
   const [htmlSnapshot, setHtmlSnapshot] = useState('');
   const [subTab, setSubTab] = useState<'discover' | 'adapters' | 'credentials' | 'checkpoints' | 'handover'>('discover');
@@ -169,18 +176,13 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
   }, []);
 
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0] || null;
+  const activeProjectClientId = activeProject?.clientId;
 
-  const loadVaultCredentials = async (
-    clientId: string | null | undefined = activeProject?.clientId,
-    providerKey: string = credentialProviderKey,
-  ) => {
-    if (!clientId) {
-      setVaultCredentialRows([]);
-      return;
-    }
+  const loadVaultCredentials = useCallback(async () => {
+    if (!activeProjectClientId) return;
     try {
-      const query = new URLSearchParams({ tenantId: clientId });
-      if (providerKey) query.set('providerKey', providerKey);
+      const query = new URLSearchParams({ tenantId: activeProjectClientId });
+      if (credentialProviderKey) query.set('providerKey', credentialProviderKey);
       const res = await fetch(`/api/onboarding/vault?${query.toString()}`, { cache: 'no-store' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unable to load saved credentials');
@@ -188,19 +190,20 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
     } catch (e) {
       notify((e as Error).message, true);
     }
-  };
+  }, [activeProjectClientId, credentialProviderKey, notify]);
 
   useEffect(() => {
-    let cancelled = false;
-    // Defer the load to a promise callback so state is never set synchronously
-    // inside the effect body (React Compiler set-state-in-effect rule).
-    void Promise.resolve().then(async () => {
-      if (!cancelled) await loadVaultCredentials();
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeProject?.clientId, credentialProviderKey]);
+    if (!activeProjectClientId) return;
+    const query = new URLSearchParams({ tenantId: activeProjectClientId });
+    if (credentialProviderKey) query.set('providerKey', credentialProviderKey);
+    void fetch(`/api/onboarding/vault?${query.toString()}`, { cache: 'no-store' })
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Unable to load saved credentials');
+        setVaultCredentialRows(data.credentials || []);
+      })
+      .catch(e => notify(e instanceof Error ? e.message : 'Unable to load saved credentials', true));
+  }, [activeProjectClientId, credentialProviderKey, notify]);
 
   const saveProviderCredential = async () => {
     if (!activeProject?.clientId || !credentialProviderKey || !credentialValue.trim()) {
@@ -216,7 +219,7 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'store',
-          tenantId: activeProject.clientId,
+          tenantId: activeProject?.clientId || 'default-workspace',
           providerKey: credentialProviderKey,
           credentialType,
           label: credentialLabel.trim() || 'primary',
@@ -292,6 +295,58 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
     );
   }
 
+  const generateIdentityHandover = async () => {
+    if (!identityValue.trim()) { notify('Enter a Facebook Page URL, WhatsApp phone number, or account identifier.', true); return; }
+    setBusy(true);
+    setIdentityHandover(null);
+    try {
+      const res = await fetch('/api/onboarding/handover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: activeProject?.clientId || 'default-workspace',
+          providerKey: identityProviderKey,
+          identityKind,
+          identityValue: identityValue.trim(),
+          startOfficialPortal: identityPortal,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to generate integration handover.');
+      setIdentityHandover(data as Record<string, unknown>);
+      notify('Handover manifest generated. Provider-side app creation is not claimed.');
+    } catch (e) {
+      notify((e as Error).message, true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const discoverAuthorizedProviderAccounts = async () => {
+    setBusy(true);
+    setAccountDiscoveryResult(null);
+    try {
+      const res = await fetch('/api/onboarding/discovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'discover_accounts',
+          tenantId: activeProject?.clientId || 'default-workspace',
+          providerKey: identityProviderKey,
+          identityValue: identityValue.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Provider account discovery failed. Complete official OAuth first.');
+      setAccountDiscoveryResult(data.discovery as Record<string, unknown>);
+      notify(`Discovered ${(data.discovery?.discovered || []).length} provider account asset(s); provider-issued tokens are stored encrypted.`);
+    } catch (e) {
+      notify((e as Error).message, true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const runDiscovery = async () => {
     setBusy(true);
     try {
@@ -335,7 +390,7 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Provider preparation failed');
-      notify(`Prepared ${data.prepared.length} provider app(s), cryptographic credentials & verification checkpoints.`);
+      notify(`Prepared local configuration and owner checkpoints for ${data.prepared.length} provider(s). No third-party developer app was created.`);
       setSubTab('credentials');
       await reload();
     } catch (e) {
@@ -382,6 +437,40 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
           </button>
         </div>
       </div>
+
+      <section className="rounded-xl border border-cyan-500/30 bg-slate-900 p-4 space-y-3 text-xs">
+        <div>
+          <h3 className="text-sm font-semibold text-white">Account Identity → Integration Handover</h3>
+          <p className="text-slate-400">Start from a Facebook Page URL, WhatsApp number, or provider account ID. Generates a tenant-scoped manifest and optional official-portal owner checkpoint. Provider credentials are never fabricated.</p>
+        </div>
+        <div className="grid gap-2 md:grid-cols-4">
+          <select value={identityProviderKey} onChange={e => setIdentityProviderKey(e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-white">
+            {adapters.map(a => <option key={a.providerKey} value={a.providerKey}>{a.displayName}</option>)}
+          </select>
+          <select value={identityKind} onChange={e => setIdentityKind(e.target.value as typeof identityKind)} className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-white">
+            <option value="url">Page / Account URL</option>
+            <option value="phone">WhatsApp Phone (E.164)</option>
+            <option value="account">Account Identifier</option>
+          </select>
+          <input value={identityValue} onChange={e => setIdentityValue(e.target.value)} placeholder={identityKind === 'phone' ? '+8801XXXXXXXXX' : identityKind === 'url' ? 'https://facebook.com/your-page' : 'Provider account ID'} className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-white md:col-span-2" />
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-slate-300"><input type="checkbox" checked={identityPortal} onChange={e => setIdentityPortal(e.target.checked)} /> Create supervised official-portal checkpoint</label>
+          <button disabled={busy} onClick={() => void generateIdentityHandover()} className="rounded bg-cyan-500 px-3 py-2 font-semibold text-slate-950 disabled:opacity-50">{busy ? 'Preparing…' : 'Generate Real Handover Manifest'}</button>
+          <button disabled={busy} onClick={() => void discoverAuthorizedProviderAccounts()} className="rounded border border-emerald-500/40 px-3 py-2 font-semibold text-emerald-200 disabled:opacity-50">Discover Authorized Account IDs &amp; Tokens</button>
+          {!activeProject && <span className="text-slate-400">Using the default admin workspace until a client project is selected.</span>}
+        </div>
+        {accountDiscoveryResult && <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded border border-emerald-500/30 bg-slate-950 p-3 text-[11px] text-emerald-100">{JSON.stringify(accountDiscoveryResult, null, 2)}</pre>}
+        {identityHandover && (
+          <div className="space-y-2">
+            {(() => {
+              const session = identityHandover.browserSession as { officialUrl?: string; status?: string; executionMode?: string } | null;
+              return session?.officialUrl ? <a href={session.officialUrl} target="_blank" rel="noreferrer" className="inline-flex rounded border border-cyan-500/40 px-3 py-2 text-cyan-200 underline">Open official provider portal ({session.executionMode || session.status || 'owner checkpoint'})</a> : null;
+            })()}
+            <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-all rounded border border-slate-700 bg-slate-950 p-3 text-[11px] text-cyan-100">{JSON.stringify(identityHandover, null, 2)}</pre>
+          </div>
+        )}
+      </section>
 
       {/* Navigation Tabs */}
       <div className="flex flex-wrap gap-2 rounded-xl border border-slate-800 bg-slate-900/70 p-2 text-xs">
@@ -474,7 +563,7 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
               </a>
               {activeProject && (
                 <button disabled={busy} onClick={() => void prepareProviders()} className="rounded bg-cyan-500 px-3.5 py-1.5 font-semibold text-slate-950">
-                  Prepare Selected ({selectedProviders.length}) for {activeProject.name}
+                  Prepare Local Configurations ({selectedProviders.length}) for {activeProject.name}
                 </button>
               )}
             </div>

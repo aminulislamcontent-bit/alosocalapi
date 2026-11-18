@@ -1,6 +1,6 @@
 import { getProviderByKey } from '@/lib/intelligence/catalog';
 import { PLATFORM_SPECIFIC_PLAYBOOKS } from './recommendations';
-import { listVaultCredentialsMetadata } from './vault-service';
+import { listVaultCredentialsMetadata, resolveVaultSecretForServer } from './vault-service';
 import { db } from '@/lib/db';
 
 export type IntegrationIdentityInput =
@@ -31,17 +31,8 @@ export function normalizeIdentity(input: IntegrationIdentityInput) {
     return { kind: input.kind, value: parsed.toString(), hostname: parsed.hostname.toLowerCase() };
   }
   if (input.kind === 'phone') {
-    // Strip only human formatting (spaces, parentheses, dots and unicode dashes),
-    // then require an explicit international country code and emit true E.164.
-    const cleaned = value.replace(/[\s\u00A0().\-\u2010-\u2015]/g, '');
-    const phone = cleaned.startsWith('00')
-      ? `+${cleaned.slice(2)}`
-      : cleaned.startsWith('+')
-        ? cleaned
-        : `+${cleaned}`;
-    if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
-      throw new Error('Enter a phone number in international E.164 format with a country code, for example +8801712345678.');
-    }
+    const phone = value.replace(/[\s().-]/g, '');
+    if (!/^\+[1-9]\d{7,14}$/.test(phone)) throw new Error('Enter a phone number in international E.164 format, including the leading +.');
     return { kind: input.kind, value: phone };
   }
   return { kind: input.kind, value };
@@ -55,6 +46,7 @@ export async function buildIntegrationHandoverPackage(params: {
   tenantId: string;
   providerKey: string;
   identity: IntegrationIdentityInput;
+  actor: string;
 }) {
   const provider = getProviderByKey(params.providerKey);
   if (!provider) throw new Error('Unknown provider. Select a provider from the ALOAPI catalog.');
@@ -66,16 +58,32 @@ export async function buildIntegrationHandoverPackage(params: {
     }),
   ]);
   const playbook = PLATFORM_SPECIFIC_PLAYBOOKS.find(p => p.appliesToProviders.includes(provider.key));
+  const credentialTypeForEnvironmentVariable = (name: string, secret: boolean) => {
+    if (/CLIENT_ID|APP_ID|APPLICATION_ID|CLIENT_KEY/i.test(name)) return 'oauth_client_id';
+    if (/CLIENT_SECRET|APP_SECRET/i.test(name)) return 'oauth_client_secret';
+    if (/WABA_ID|WHATSAPP_BUSINESS_ACCOUNT_ID|BUSINESS_ACCOUNT_ID/i.test(name)) return 'business_identifier';
+    if (/PHONE_NUMBER_ID|PAGE_ID|ACCOUNT_ID/i.test(name)) return 'account_identifier';
+    if (/REFRESH_TOKEN/i.test(name)) return 'oauth_refresh_token';
+    if (/ACCESS_TOKEN/i.test(name)) return 'oauth_access_token';
+    if (/SERVICE_ACCOUNT/i.test(name)) return 'service_account';
+    if (/BOT_TOKEN/i.test(name)) return 'bot_token';
+    if (/WEBHOOK_VERIFY_TOKEN/i.test(name)) return 'webhook_verify_token';
+    if (/API_KEY|APIKEY/i.test(name)) return 'api_key';
+    return secret ? 'api_key' : 'config_value';
+  };
   const requiredCredentialTypes = Array.from(new Set([
-    ...provider.environmentVariables.filter(v => v.required).map(v => v.name),
+    ...provider.environmentVariables.filter(v => v.required).map(v => credentialTypeForEnvironmentVariable(v.name, v.secret)),
     ...(provider.oauthSupport ? ['oauth_client_id', 'oauth_client_secret', 'oauth_access_token'] : []),
-    ...(provider.webhookSupport.supported ? ['webhook_signing_secret', 'webhook_verify_token'] : []),
+    ...(provider.webhookSupport.supported ? ['webhook_signing_secret'] : []),
+    ...(provider.key === 'meta_facebook_pages' ? ['account_identifier', 'page_access_token'] : []),
+    ...(provider.key === 'whatsapp_cloud_api' ? ['business_identifier', 'account_identifier'] : []),
   ]));
   const credentialStatus = requiredCredentialTypes.map(type => {
-    const matching = credentials.filter(c => c.credentialType === type || c.credentialType.toLowerCase() === type.toLowerCase());
+    const matching = credentials.filter(c => c.credentialType === type);
+    const isConfiguration = type === 'config_value';
     return {
       credentialType: type,
-      status: matching.some(c => c.effectiveStatus === 'ACTIVE') ? 'COLLECTED_ENCRYPTED' : 'OWNER_OR_AGENT_ACTION_REQUIRED',
+      status: isConfiguration ? 'CONFIGURATION_REQUIRED' : matching.some(c => c.effectiveStatus === 'ACTIVE') ? 'COLLECTED_ENCRYPTED' : 'OWNER_OR_AGENT_ACTION_REQUIRED',
       records: matching.map(c => ({
         id: c.id,
         label: c.label,
@@ -85,11 +93,25 @@ export async function buildIntegrationHandoverPackage(params: {
       })),
     };
   });
-  const requiredOwnerActions = Array.from(new Set([
-    ...provider.accountPrerequisites,
-    ...provider.setupChecklist,
-    ...(playbook?.prerequisites ?? []),
-  ]));
+  const providerIssuedIdentifiers = await Promise.all(
+    credentials
+      .filter(c => ['account_identifier', 'business_identifier'].includes(c.credentialType) && c.effectiveStatus === 'ACTIVE')
+      .map(async credential => {
+        const resolved = await resolveVaultSecretForServer({
+          tenantId: params.tenantId,
+          providerKey: provider.key,
+          credentialType: credential.credentialType,
+          label: credential.label,
+          actor: params.actor,
+          reason: 'Include provider-issued non-secret account identifier in owner handover package',
+        });
+        return resolved ? {
+          credentialType: credential.credentialType,
+          label: credential.label,
+          value: resolved.plaintext,
+        } : null;
+      }),
+  );
   const approvals = [
     provider.developerAccountRequirements,
     provider.businessVerificationRequirements,
@@ -98,7 +120,8 @@ export async function buildIntegrationHandoverPackage(params: {
   ].filter(Boolean);
   const configuredCount = credentialStatus.filter(c => c.status === 'COLLECTED_ENCRYPTED').length;
   const allCredentialTypesPresent = credentialStatus.length > 0 && configuredCount === credentialStatus.length;
-  const verified = workflow?.state === 'VERIFIED';
+  const lastVerifiedCredential = credentials.find(c => Boolean(c.lastVerifiedAt));
+  const verified = workflow?.state === 'VERIFIED' && Boolean(lastVerifiedCredential);
 
   return {
     schemaVersion: 'aloapi.integration-handover.v1',
@@ -145,6 +168,7 @@ export async function buildIntegrationHandoverPackage(params: {
     },
     handover: {
       secretsIncluded: false,
+      providerIssuedIdentifiers: providerIssuedIdentifiers.filter(Boolean),
       vaultCredentialCount: credentials.length,
       credentialStatus,
       requiredOwnerActions,
@@ -160,7 +184,7 @@ export async function buildIntegrationHandoverPackage(params: {
     },
     verification: {
       verified,
-      lastVerifiedAt: workflow?.updatedAt?.toISOString() ?? null,
+      lastVerifiedAt: lastVerifiedCredential?.lastVerifiedAt?.toISOString() ?? null,
       claim: verified ? 'The onboarding workflow is marked VERIFIED.' : 'No live verification success is claimed by this package.',
     },
   };

@@ -159,6 +159,132 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     const { client } = await clientRes.json();
     assert.ok(client?.id);
 
+    // 6b. Identity-first integration handover: strict inputs, tenant scope, real DB snapshot, owner portal checkpoint.
+    const badPhoneHandover = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenantId: client.id,
+        providerKey: 'whatsapp_cloud_api',
+        identityKind: 'phone',
+        identityValue: '8801711000001',
+      }),
+    });
+    assert.equal(badPhoneHandover.status, 400, 'Phone handover must require an explicit E.164 + prefix.');
+
+    const badUrlHandover = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenantId: client.id,
+        providerKey: 'meta_facebook_pages',
+        identityKind: 'url',
+        identityValue: 'http://facebook.com/example',
+      }),
+    });
+    assert.equal(badUrlHandover.status, 400, 'Provider account URLs must use HTTPS.');
+
+    const whatsappHandover = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenantId: client.id,
+        providerKey: 'whatsapp_cloud_api',
+        identityKind: 'phone',
+        identityValue: '+8801711000001',
+      }),
+    });
+    assert.equal(whatsappHandover.status, 200, `WhatsApp handover failed: ${await whatsappHandover.clone().text()}`);
+    const whatsappPackage = await whatsappHandover.json();
+    assert.equal(whatsappPackage.handover.suppliedIdentity.value, '+8801711000001');
+    assert.equal(whatsappPackage.handover.handover.secretsIncluded, false);
+    assert.equal(whatsappPackage.handover.verification.verified, false);
+    assert.equal(whatsappPackage.discovery.fetchStatus, 'SNAPSHOT_CATALOG_SYNCED');
+
+    const noTokenAssetDiscovery = await api('/api/onboarding/discovery', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'discover_accounts',
+        tenantId: client.id,
+        providerKey: 'whatsapp_cloud_api',
+        identityValue: '+8801711000001',
+      }),
+    });
+    assert.equal(noTokenAssetDiscovery.status, 400, 'Account discovery must require an actual provider-issued OAuth token.');
+
+    // Provider-issued identifiers may be included in owner handover; access tokens must remain encrypted and absent.
+    for (const credential of [
+      { providerKey: 'meta_facebook_pages', credentialType: 'account_identifier', label: 'page_primary', value: '123456' },
+      { providerKey: 'meta_facebook_pages', credentialType: 'page_access_token', label: '123456', value: 'PAGE_ACCESS_TOKEN_SENTINEL_778899' },
+      { providerKey: 'whatsapp_cloud_api', credentialType: 'business_identifier', label: 'primary', value: 'WABA_123456' },
+      { providerKey: 'whatsapp_cloud_api', credentialType: 'account_identifier', label: 'primary', value: 'PHONE_ID_98765' },
+    ]) {
+      const storedIdentifier = await api('/api/onboarding/vault', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'store',
+          tenantId: client.id,
+          providerKey: credential.providerKey,
+          credentialType: credential.credentialType,
+          label: credential.label,
+          value: credential.value,
+        }),
+      });
+      assert.equal(storedIdentifier.status, 200);
+      assert.equal(JSON.stringify(await storedIdentifier.json()).includes(credential.value), false);
+    }
+    const idHandover = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenantId: client.id,
+        providerKey: 'whatsapp_cloud_api',
+        identityKind: 'phone',
+        identityValue: '+8801711000001',
+      }),
+    });
+    assert.equal(idHandover.status, 200);
+    const idHandoverData = await idHandover.json();
+    const issuedIds = idHandoverData.handover.handover.providerIssuedIdentifiers.map(item => item.value);
+    assert.ok(issuedIds.includes('WABA_123456'));
+    assert.ok(issuedIds.includes('PHONE_ID_98765'));
+    assert.equal(JSON.stringify(idHandoverData).includes('PAGE_ACCESS_TOKEN_SENTINEL_778899'), false, 'Handover must never expose provider access tokens.');
+
+    const accessOnlyVault = await api('/api/onboarding/vault', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'store',
+        tenantId: client.id,
+        providerKey: 'hubspot_crm_api',
+        credentialType: 'api_key',
+        label: 'access_only_test',
+        value: 'HUBSPOT_ACCESS_ONLY_SENTINEL',
+      }),
+    });
+    assert.equal(accessOnlyVault.status, 200);
+    const honestProbe = await api('/api/onboarding/discovery', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'verify_live', tenantId: client.id, providerKey: 'hubspot_crm_api' }),
+    });
+    assert.equal(honestProbe.status, 200);
+    assert.equal((await honestProbe.json()).verification.verified, false);
+    const accessOnlyMetadata = await api(`/api/onboarding/vault?tenantId=${encodeURIComponent(client.id)}&providerKey=hubspot_crm_api`);
+    const accessOnlyRows = (await accessOnlyMetadata.json()).credentials;
+    assert.equal(accessOnlyRows.find(row => row.credentialType === 'api_key')?.lastVerifiedAt, null, 'Reading/decrypting a credential must not mark it API-verified.');
+
+    const facebookHandover = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenantId: client.id,
+        providerKey: 'meta_facebook_pages',
+        identityKind: 'url',
+        identityValue: 'https://www.facebook.com/alo.education',
+        startOfficialPortal: true,
+      }),
+    });
+    assert.equal(facebookHandover.status, 200, `Facebook handover failed: ${await facebookHandover.clone().text()}`);
+    const facebookPackage = await facebookHandover.json();
+    assert.equal(facebookPackage.handover.suppliedIdentity.hostname, 'www.facebook.com');
+    assert.equal(facebookPackage.browserSession.status, 'WAITING_FOR_OWNER');
+    assert.match(facebookPackage.browserSession.officialUrl, /^https:\/\//);
+    assert.equal(facebookPackage.handover.handover.secretsIncluded, false);
+
     // 7. Submit Requirements + Recommendations
     const reqRes = await api('/api/onboarding/requirements', {
       method: 'POST',
