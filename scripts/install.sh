@@ -181,5 +181,5 @@ if ! path_contains "$INSTALL_DIR"; then
   fi
 else
   echo ""
-  echo "Run `aloapi` from any directory to start ALOAPI and open http://localhost:47831."
+  echo 'Run `aloapi` from any directory to start ALOAPI and open http://localhost:47831.'
 fi
