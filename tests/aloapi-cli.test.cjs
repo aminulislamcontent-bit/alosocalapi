@@ -576,3 +576,83 @@ test('admin:reset-password rotates the existing admin password and revokes admin
   assert.deepEqual(sessions, ['client-session'], 'only administrator sessions are revoked');
   assert.match(fs.readFileSync(envFile, 'utf8'), new RegExp(vaultKey), 'vault key remains unchanged');
 });
+test('aloapi setup persists and prints operator-supplied bootstrap credentials and vault key', t => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aloapi-setup-env-'));
+  t.after(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(tmpDir, 'scripts'), { recursive: true });
+  fs.mkdirSync(path.join(tmpDir, 'prisma'), { recursive: true });
+  for (const file of ['aloapi.mjs', 'migrations.mjs', 'version.mjs']) {
+    fs.copyFileSync(path.join(REPO_ROOT, 'scripts', file), path.join(tmpDir, 'scripts', file));
+  }
+  fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ name: 'aloapi-setup-fixture', version: '0.0.0' }));
+  fs.writeFileSync(path.join(tmpDir, 'prisma', 'schema.prisma'), '// fixture\n');
+
+  const username = 'owner-admin';
+  const password = 'OwnerPasswordFromEnv2026!';
+  const vaultKey = '0123456789abcdef0123456789abcdef';
+  const env = {
+    ...process.env,
+    ALOAPI_ROOT: tmpDir,
+    ALOAPI_STATE_DIR: path.join(tmpDir, 'state'),
+    ADMIN_BOOTSTRAP_USERNAME: username,
+    ADMIN_BOOTSTRAP_PASSWORD: password,
+    ALOAPI_VAULT_KEY: vaultKey,
+  };
+  delete env.ALOAPI_HOST;
+  delete env.ALOAPI_PORT;
+
+  const res = spawnSync(process.execPath, [path.join(tmpDir, 'scripts', 'aloapi.mjs'), 'setup'], {
+    cwd: tmpDir, env, encoding: 'utf8',
+  });
+  assert.equal(res.status, 0, res.stderr || res.stdout);
+  assert.match(res.stdout, new RegExp(`One-time administrator username: ${username}`));
+  assert.match(res.stdout, new RegExp(`One-time administrator password: ${password.replace(/!/g, '\\!')}`));
+  assert.match(res.stdout, /came from ADMIN_BOOTSTRAP_USERNAME\/ADMIN_BOOTSTRAP_PASSWORD/);
+  assert.match(res.stdout, /ALOAPI_VAULT_KEY came from the environment/);
+
+  const envText = fs.readFileSync(path.join(tmpDir, '.env'), 'utf8');
+  assert.match(envText, new RegExp(`ADMIN_BOOTSTRAP_USERNAME="${username}"`));
+  assert.match(envText, new RegExp(`ADMIN_BOOTSTRAP_PASSWORD="${password.replace(/!/g, '\\!')}"`));
+  assert.match(envText, new RegExp(`ALOAPI_VAULT_KEY="${vaultKey}"`));
+
+  // A second run must not overwrite the now-consistent .env.
+  const second = spawnSync(process.execPath, [path.join(tmpDir, 'scripts', 'aloapi.mjs'), 'setup'], {
+    cwd: tmpDir, env, encoding: 'utf8',
+  });
+  assert.equal(second.status, 0, second.stderr || second.stdout);
+  assert.match(second.stdout, /already exists; it was left unchanged/);
+  assert.equal(fs.readFileSync(path.join(tmpDir, '.env'), 'utf8'), envText);
+});
+
+test('standalone asset copier strips private .env files but keeps the public template', t => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aloapi-standalone-env-'));
+  t.after(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
+  const dirs = [
+    path.join(tmpDir, '.next', 'static'),
+    path.join(tmpDir, '.next', 'standalone', '.next', 'static'),
+    path.join(tmpDir, '.next', 'standalone', 'public'),
+    path.join(tmpDir, '.next', 'standalone', 'nested'),
+    path.join(tmpDir, 'public'),
+  ];
+  for (const d of dirs) fs.mkdirSync(d, { recursive: true });
+  fs.writeFileSync(path.join(tmpDir, 'public', 'logo.svg'), '<svg/>');
+  fs.writeFileSync(path.join(tmpDir, '.next', 'static', 'chunk.js'), 'console.log(1)');
+  const template = '# ALOAPI template — placeholders only\nALOAPI_VAULT_KEY=""\n';
+  fs.writeFileSync(path.join(tmpDir, '.env.example'), template);
+  fs.writeFileSync(path.join(tmpDir, '.next', 'standalone', '.env'), 'ALOAPI_VAULT_KEY="REAL_SECRET_MUST_NOT_SHIP"\n');
+  fs.writeFileSync(path.join(tmpDir, '.next', 'standalone', '.env.production'), 'ADMIN_BOOTSTRAP_PASSWORD="REAL_SECRET"\n');
+  fs.writeFileSync(path.join(tmpDir, '.next', 'standalone', 'nested', '.env.local'), 'SECRET="nested"\n');
+  fs.writeFileSync(path.join(tmpDir, '.next', 'standalone', '.env.example'), '# stale\n');
+
+  const res = spawnSync(process.execPath, [path.join(REPO_ROOT, 'scripts', 'copy-standalone-assets.mjs')], {
+    cwd: tmpDir, encoding: 'utf8',
+  });
+  assert.equal(res.status, 0, res.stderr || res.stdout);
+  assert.equal(fs.existsSync(path.join(tmpDir, '.next', 'standalone', '.env')), false, 'private .env must not ship');
+  assert.equal(fs.existsSync(path.join(tmpDir, '.next', 'standalone', '.env.production')), false);
+  assert.equal(fs.existsSync(path.join(tmpDir, '.next', 'standalone', 'nested', '.env.local')), false);
+  assert.equal(fs.readFileSync(path.join(tmpDir, '.next', 'standalone', '.env.example'), 'utf8'), template);
+  assert.equal(fs.readFileSync(path.join(tmpDir, '.next', 'standalone', 'public', 'logo.svg'), 'utf8'), '<svg/>');
+  assert.equal(fs.readFileSync(path.join(tmpDir, '.next', 'standalone', '.next', 'static', 'chunk.js'), 'utf8'), 'console.log(1)');
+  assert.ok(!fs.readFileSync(path.join(tmpDir, '.next', 'standalone', '.env.example'), 'utf8').includes('REAL_SECRET'));
+});

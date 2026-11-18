@@ -271,3 +271,24 @@ Stage Summary:
 - Deliverable: entire repository green on both CI Node lanes — 0 TypeScript errors, 0 ESLint findings, 47/47 unit + 1/1 package + 5/5 runtime/browser tests on each lane; production build and standalone bundle verified
 - Newest integration-handover feature is now genuinely functional, security-honest, and covered by unit + production HTTP tests instead of being an untested, broken slice
 - Remaining work is explicitly owner-gated (real provider credentials, OAuth/KYC/app review, DNS, carrier/SMTP/SIP delivery); no third-party authorization was simulated
+
+---
+Task ID: 13
+Agent: Arena Agent Mode
+Task: "if i am command at tarminal aloapi then brousing open the project snd all request then done done real work" — prove the real terminal → browser → every-request workflow
+
+Work Log:
+- Reinstalled locked deps and launched the actual `aloapi` CLI as a live service (`aloapi start --foreground`, 0.0.0.0:47831, public-bind + trusted-proxy env for the hosted preview). CLI created private `.env`, applied 5 reviewed migrations, generated Prisma Client, migrated vault, built standalone, started server
+- Verified `/api/health` (`database: reachable`), `/api` (`0.2.1`), and that plain `aloapi` reuses the running service and invokes the browser launcher (`xdg-open` absent in headless sandbox → honest "Open http://localhost:47831 in your browser" plus hosted live preview)
+- Verified preview-origin POSTs with matching Host/Origin and X-Forwarded-Host/Proto return 200; genuine evil-origin POST returns 403
+- Ran a full 77-request HTTP sweep across every GET route + 10 real write actions: 0×5xx, 0 unexpected 401 (only client-portal route correctly refuses an admin cookie)
+- Ran real Playwright/Chromium: opened project, logged in through UI, clicked all 19 admin tabs and 4 standalone routes → 95 API responses, 0×5xx, 0 uncaught page errors
+- Found + fixed 3 more real defects: (1) printed bootstrap credentials were unusable when ADMIN_BOOTSTRAP_* env overrides existed; (2) `next build` leaked private `.env` (vault key + admin password) into `.next/standalone`, also breaking the no-vault-key e2e test; (3) flaky fixed-100ms browser assertion
+- Fixes: `writeInitialEnv()` honours env-provided bootstrap creds/vault key and persists them; `next.config.ts` `outputFileTracingExcludes` + `copy-standalone-assets.mjs` defensive private `.env*` stripping with `.env.example` restore; CI asserts no private `.env` in standalone; browser test uses `waitForFunction` on rendered content
+- Added 2 regression tests (`aloapi setup` env credentials, standalone `.env` cleanup); re-ran full chain on Node 22.22.3 and 24.22.3 → 49/49 unit + 1/1 package + 5/5 e2e per lane (55 tests), typecheck/lint/build/standalone checks all pass
+- Documented in `docs/CLI_LAUNCHER.md`, `docs/audit/ALOAPI_FULL_VERIFICATION_2026-11-18.md` (§7 addendum), and this worklog
+
+Stage Summary:
+- Deliverable: `aloapi` genuinely starts the service, opens the dashboard (hosted live preview / default browser launcher), and all browser + API requests complete with zero 5xx and zero page errors
+- First-run credentials now always match what the service accepts; private `.env` never ships in the production standalone bundle
+- PR #19 updated with the additional commit; live preview remains running on port 47831

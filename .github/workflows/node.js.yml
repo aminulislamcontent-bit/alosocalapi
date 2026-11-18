@@ -64,6 +64,8 @@ jobs:
         run: |
           cmp VERSION .next/standalone/VERSION
           test ! -e .next/standalone/.git
+          test ! -e .next/standalone/.env
+          test -f .next/standalone/.env.example
 
       - name: End-to-end runtime and browser tests
         run: npm run test:e2e

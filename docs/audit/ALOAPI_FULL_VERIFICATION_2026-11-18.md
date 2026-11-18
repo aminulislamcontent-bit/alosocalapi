@@ -103,3 +103,34 @@ A fresh migrated SQLite database and real standalone server were used: admin log
 | `docs/AUTONOMOUS_INTEGRATION_HANDOVER.md` | Implementation status, evidence and honest boundary |
 | `docs/audit/ALOAPI_FULL_VERIFICATION_2026-11-18.md` | This report |
 | `worklog.md` | Task 12 record |
+
+
+---
+
+## 7. Addendum — live `aloapi` launcher verification (same day, after PR #19)
+
+The user asked to confirm the real terminal workflow: run `aloapi`, open the project in a browser, and have every request actually work. This was executed rather than assumed.
+
+### Live service
+- Ran the actual CLI: `aloapi start --foreground` with `ALOAPI_HOST=0.0.0.0`, `ALOAPI_ALLOW_PUBLIC_BIND=true`, `ALOAPI_TRUST_PROXY=true` so the hosted preview can reach it. The CLI created `.env`, applied all 5 reviewed SQLite migrations, generated Prisma Client, ran the idempotent credential-vault migration, built the standalone app and started it on `0.0.0.0:47831`.
+- `/api/health` → `{"status":"ok","database":"reachable"}`; `GET /api` → `version 0.2.1`.
+- Plain `aloapi` (no flags) correctly detected the running service, reused it, and attempted `xdg-open http://localhost:47831`. In this headless Linux sandbox no `xdg-open` exists, so it honestly printed `Open http://localhost:47831 in your browser.`; the hosted live preview supplies the browser view.
+- Simulated preview-origin POSTs (`Host: 47831-…e2b.app` + matching `Origin`, and `X-Forwarded-Host`/`X-Forwarded-Proto`) → **200**. A genuine `Origin: https://evil.example.com` → **403** `Cross-origin request rejected.`
+
+### Three more real defects found and fixed
+| # | Defect | Evidence | Fix |
+| :-: | :--- | :--- | :--- |
+| 8 | `aloapi` printed bootstrap credentials that **did not work** when `ADMIN_BOOTSTRAP_USERNAME`/`PASSWORD` were set in the environment | First run printed `aloapi-admin` / random password; login with them returned `401`, while env-supplied credentials returned `200` | `writeInitialEnv()` now honours `ADMIN_BOOTSTRAP_*` and `ALOAPI_VAULT_KEY` from the environment, writes the same values to `.env`, prints them, and explains their source. Added `aloapi setup` regression test. |
+| 9 | `next build` copied the private `.env` (vault key + admin password) into `.next/standalone/.env` | Confirmed the live vault key was present in the build artifact; this also made the "missing vault key → DEGRADED" e2e test fail (`vaultReady: true` instead of `false`) | `next.config.ts` `outputFileTracingExcludes` for `.env*`; `scripts/copy-standalone-assets.mjs` defensively strips every private `.env*` from the standalone tree and restores only `.env.example`; CI now asserts `! -e .next/standalone/.env` and `-f .next/standalone/.env.example`; added a unit test for the cleanup. |
+| 10 | Browser acceptance test used a fixed 100 ms wait before asserting tab content | Failed once with `Admin view should render after navigation: অটোমেশন ও নলেজ বেস` under concurrent load; passed when re-run alone | Replaced the timer with `page.waitForFunction()` on real `main` content (10 s timeout). |
+
+### Live request proof (final build)
+| Check | Result |
+| :--- | :--- |
+| Fresh first-run login using the credentials `aloapi` printed | **200** (`initialization.overallStatus: READY_WITH_NOTICES`, 12/13 init steps passed, 131 catalog providers) |
+| Full HTTP sweep of **77** API requests (all GET routes + 10 real write actions incl. tenant creation, onboarding, E.164 handover with portal checkpoint + live probe, website discovery, factory workspace/AI, CRM contact, taxonomy, SetupBot validation) | **0 × 5xx**, 0 unexpected `401`; only `/api/portal/entries` refuses an admin cookie by design (client-session-only). Other 4xx are honest guards: missing webhook token, duplicate slug, nonexistent lead id, missing OAuth callback params, client-only SetupBot context. |
+| Real Playwright/Chromium browser: open project → admin login → **19** admin tabs → `/engineering`, `/factory`, `/factory/email_marketing`, `/factory/voice_call_center` | **95 API responses**, **0 × 5xx**, **0 uncaught page errors** |
+| Complete CI chain re-run on Node.js 22.22.3 **and** Node.js 24.22.3 | `db:validate` PASS · `typecheck` 0 errors · `lint` 0 findings · `npm test` **49/49 + 1/1** · `build` PASS · standalone `VERSION`/`.git`/no-private-`.env`/`.env.example` PASS · `test:e2e` **5/5** (55 tests per lane) |
+
+### Additional files in this addendum
+`scripts/aloapi.mjs`, `next.config.ts`, `scripts/copy-standalone-assets.mjs`, `tests/aloapi-cli.test.cjs`, `tests/e2e-browser-playwright.test.cjs`, `.github/workflows/node.js.yml`, `docs/CLI_LAUNCHER.md`, `worklog.md` (Task 13), and this report.
