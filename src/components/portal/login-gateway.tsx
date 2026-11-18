@@ -263,9 +263,12 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
                       {loading === 'admin' ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
                       অ্যাডমিন কনসোলে প্রবেশ
                     </Button>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      অ্যাডমিন অ্যাকাউন্ট ডেমো বা নমুনা credential দিয়ে seed করা হয় না। ইনস্টলেশনের সময় তৈরি করা administrator account ব্যবহার করুন; প্রথম লগইনের পর Security ট্যাবে MFA চালু করুন।
-                    </p>
+                    <div className="rounded-lg border border-cyan-900/70 bg-cyan-950/30 p-3 text-xs leading-relaxed text-slate-300">
+                      <p className="font-semibold text-cyan-300">প্রথমবার Admin Login</p>
+                      <p className="mt-1">ইউজারনেম: <code className="font-mono text-white">aloapi-admin</code>। প্রথমবার চালুর সময় Terminal-এ দেখানো one-time password ব্যবহার করুন। Password হারিয়ে গেলে বা আর নিরাপদ না থাকলে ALOAPI repository-র Terminal-এ চালান:</p>
+                      <code className="mt-2 block rounded bg-slate-950 px-2 py-1.5 font-mono text-cyan-200">aloapi admin:reset-password</code>
+                      <p className="mt-1 text-slate-400">এটি নতুন password একবার দেখাবে, পুরোনো admin session বাতিল করবে এবং database/vault key অক্ষত রাখবে। এরপর Security ট্যাবে MFA চালু করুন।</p>
+                    </div>
                   </TabsContent>
                 </Tabs>
               </CardContent>
