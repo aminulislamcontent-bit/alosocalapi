@@ -43,16 +43,28 @@ export async function buildIntegrationHandoverPackage(params: {
     }),
   ]);
   const playbook = PLATFORM_SPECIFIC_PLAYBOOKS.find(p => p.appliesToProviders.includes(provider.key));
+  const credentialTypeForEnvironmentVariable = (name: string, secret: boolean) => {
+    if (!secret) return 'config_value';
+    if (/CLIENT_ID|APP_ID|APPLICATION_ID|CLIENT_KEY/i.test(name)) return 'oauth_client_id';
+    if (/CLIENT_SECRET|APP_SECRET/i.test(name)) return 'oauth_client_secret';
+    if (/REFRESH_TOKEN/i.test(name)) return 'oauth_refresh_token';
+    if (/ACCESS_TOKEN/i.test(name)) return 'oauth_access_token';
+    if (/SERVICE_ACCOUNT/i.test(name)) return 'service_account';
+    if (/BOT_TOKEN/i.test(name)) return 'bot_token';
+    if (/API_KEY|APIKEY/i.test(name)) return 'api_key';
+    return 'api_key';
+  };
   const requiredCredentialTypes = Array.from(new Set([
-    ...provider.environmentVariables.filter(v => v.required).map(v => v.name),
+    ...provider.environmentVariables.filter(v => v.required).map(v => credentialTypeForEnvironmentVariable(v.name, v.secret)),
     ...(provider.oauthSupport ? ['oauth_client_id', 'oauth_client_secret', 'oauth_access_token'] : []),
-    ...(provider.webhookSupport.supported ? ['webhook_signing_secret', 'webhook_verify_token'] : []),
+    ...(provider.webhookSupport.supported ? ['webhook_signing_secret'] : []),
   ]));
   const credentialStatus = requiredCredentialTypes.map(type => {
-    const matching = credentials.filter(c => c.credentialType === type || c.credentialType.toLowerCase() === type.toLowerCase());
+    const matching = credentials.filter(c => c.credentialType === type);
+    const isConfiguration = type === 'config_value';
     return {
       credentialType: type,
-      status: matching.some(c => c.effectiveStatus === 'ACTIVE') ? 'COLLECTED_ENCRYPTED' : 'OWNER_OR_AGENT_ACTION_REQUIRED',
+      status: isConfiguration ? 'CONFIGURATION_REQUIRED' : matching.some(c => c.effectiveStatus === 'ACTIVE') ? 'COLLECTED_ENCRYPTED' : 'OWNER_OR_AGENT_ACTION_REQUIRED',
       records: matching.map(c => ({
         id: c.id,
         label: c.label,
@@ -62,11 +74,6 @@ export async function buildIntegrationHandoverPackage(params: {
       })),
     };
   });
-  const requiredOwnerActions = [
-    ...provider.accountPrerequisites,
-    ...provider.setupChecklist,
-    ...(playbook?.prerequisites ?? []),
-  ];
   const approvals = [
     provider.developerAccountRequirements,
     provider.businessVerificationRequirements,
@@ -133,7 +140,7 @@ export async function buildIntegrationHandoverPackage(params: {
     },
     verification: {
       verified,
-      lastVerifiedAt: workflow?.updatedAt?.toISOString() ?? null,
+      lastVerifiedAt: credentials.find(c => c.lastVerifiedAt)?.lastVerifiedAt?.toISOString() ?? null,
       claim: verified ? 'The onboarding workflow is marked VERIFIED.' : 'No live verification success is claimed by this package.',
     },
   };
