@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, KeyRound } from 'lucide-react';
 import type { CatalogProviderItem, OverviewPayload } from './types';
 import { OverviewAndCatalogViews } from './panels-core';
 import { OnboardingExecutionViews } from './panels-ops';
@@ -128,6 +128,12 @@ export default function OnboardingHub({ onToast }: { onToast?: (msg: string, typ
               <option key={p.key} value={p.key}>{p.displayName}</option>
             ))}
           </select>
+          <button
+            onClick={() => setView('v8_vault')}
+            className="inline-flex items-center gap-1 rounded-lg bg-cyan-500 px-3 py-1.5 font-semibold text-slate-950 hover:bg-cyan-400"
+          >
+            <KeyRound className="w-3.5 h-3.5" /> Add API Credentials
+          </button>
           <button
             onClick={() => void loadAll()}
             className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-slate-200 hover:border-cyan-400"
