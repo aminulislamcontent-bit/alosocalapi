@@ -187,10 +187,6 @@ export async function resolveVaultSecretForServer(params: {
     throw new Error(`Credential ${row.label} for ${row.providerKey} has expired.`);
   }
   const plaintext = decryptVaultValue(row.ciphertext);
-  await db.vaultCredential.update({
-    where: { id: row.id },
-    data: { lastVerifiedAt: new Date() },
-  });
   await auditEvent({
     actor: params.actor,
     action: 'vault.credential.access',
