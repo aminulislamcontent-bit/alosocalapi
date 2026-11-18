@@ -170,7 +170,6 @@ export async function runLiveReadOnlyVerification(params: {
   }
 
   let probeUrl: string;
-  let expectedResponse: 'meta_pages' | 'whatsapp_phone_numbers';
   if (params.providerKey === 'meta_facebook_pages') {
     const probeSpec = provider.apiSpecs.find(spec => spec.method === 'GET' && spec.path === '/me/accounts');
     if (!probeSpec) {
@@ -181,7 +180,6 @@ export async function runLiveReadOnlyVerification(params: {
       };
     }
     probeUrl = `${baseUrl.replace(/\/$/, '')}/me/accounts?fields=id,name`;
-    expectedResponse = 'meta_pages';
   } else if (params.providerKey === 'whatsapp_cloud_api') {
     const wabaCredential = await resolveVaultSecretForServer({
       tenantId: params.tenantId,
@@ -204,7 +202,6 @@ export async function runLiveReadOnlyVerification(params: {
       };
     }
     probeUrl = `${baseUrl.replace(/\/$/, '')}/${encodeURIComponent(wabaCredential.plaintext)}/phone_numbers?fields=id,display_phone_number,verified_name`;
-    expectedResponse = 'whatsapp_phone_numbers';
   } else {
     return {
       providerKey: params.providerKey, tenantId: params.tenantId, executed: false, verified: false,
