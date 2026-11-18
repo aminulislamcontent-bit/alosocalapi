@@ -1,6 +1,6 @@
 import { getProviderByKey } from '@/lib/intelligence/catalog';
 import { PLATFORM_SPECIFIC_PLAYBOOKS } from './recommendations';
-import { listVaultCredentialsMetadata } from './vault-service';
+import { listVaultCredentialsMetadata, resolveVaultSecretForServer } from './vault-service';
 import { db } from '@/lib/db';
 
 export type IntegrationIdentityInput =
@@ -60,6 +60,8 @@ export async function buildIntegrationHandoverPackage(params: {
     ...provider.environmentVariables.filter(v => v.required).map(v => credentialTypeForEnvironmentVariable(v.name, v.secret)),
     ...(provider.oauthSupport ? ['oauth_client_id', 'oauth_client_secret', 'oauth_access_token'] : []),
     ...(provider.webhookSupport.supported ? ['webhook_signing_secret'] : []),
+    ...(provider.key === 'meta_facebook_pages' ? ['account_identifier', 'page_access_token'] : []),
+    ...(provider.key === 'whatsapp_cloud_api' ? ['business_identifier', 'account_identifier'] : []),
   ]));
   const credentialStatus = requiredCredentialTypes.map(type => {
     const matching = credentials.filter(c => c.credentialType === type);
@@ -76,6 +78,25 @@ export async function buildIntegrationHandoverPackage(params: {
       })),
     };
   });
+  const providerIssuedIdentifiers = await Promise.all(
+    credentials
+      .filter(c => ['account_identifier', 'business_identifier'].includes(c.credentialType) && c.effectiveStatus === 'ACTIVE')
+      .map(async credential => {
+        const resolved = await resolveVaultSecretForServer({
+          tenantId: params.tenantId,
+          providerKey: provider.key,
+          credentialType: credential.credentialType,
+          label: credential.label,
+          actor: 'handover_manifest',
+          reason: 'Include provider-issued non-secret account identifier in owner handover package',
+        });
+        return resolved ? {
+          credentialType: credential.credentialType,
+          label: credential.label,
+          value: resolved.plaintext,
+        } : null;
+      }),
+  );
   const approvals = [
     provider.developerAccountRequirements,
     provider.businessVerificationRequirements,
@@ -130,6 +151,7 @@ export async function buildIntegrationHandoverPackage(params: {
     },
     handover: {
       secretsIncluded: false,
+      providerIssuedIdentifiers: providerIssuedIdentifiers.filter(Boolean),
       vaultCredentialCount: credentials.length,
       credentialStatus,
       nextSteps: [
