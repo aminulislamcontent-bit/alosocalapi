@@ -164,7 +164,7 @@ test('Real Playwright Chromium click-through acceptance across login, discovery,
     assert.match(handoverText, /false/);
     const officialPortalHref = await page.getByRole('link', { name: /Open official provider portal/ }).getAttribute('href');
     assert.match(officialPortalHref, /^https:\/\/developers\.facebook\.com\//);
-    await page.screenshot({ path: path.join(shotsDir, '03-identity-handover.png') });
+    await page.screenshot({ path: path.join(shotsDir, '02b-identity-handover.png') });
 
     // 3. Universal Adapters (131) & Prepare Selected
     await page.getByRole('button', { name: /2\. Universal Adapters \(131\)/ }).click();
