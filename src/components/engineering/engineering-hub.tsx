@@ -225,6 +225,26 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
     }
   };
 
+  const prepareSelectedProvider = async () => {
+    if (!activeProject) return;
+    setBusy(true);
+    try {
+      const res = await fetch('/api/engineering/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'prepare_providers', projectId: activeProject.id, providerKeys: [credentialProviderKey] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Provider preparation failed');
+      notify(`Prepared ${credentialProviderKey}: redirect URI, webhook and credential requirements are ready.`);
+      await reload();
+    } catch (e) {
+      notify((e as Error).message, true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const startProviderOAuth = async () => {
     if (!activeProject?.clientId) return;
     try {
@@ -522,6 +542,7 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
                 </label>
                 <div className="flex flex-wrap gap-2">
                   <button disabled={savingCredential || !credentialValue.trim()} onClick={() => void saveProviderCredential()} className="rounded bg-cyan-500 px-3.5 py-2 text-xs font-semibold text-slate-950 disabled:opacity-50">{savingCredential ? 'Encrypting…' : 'Save Credential Securely'}</button>
+                  <button disabled={busy} onClick={() => void prepareSelectedProvider()} className="rounded border border-cyan-500/40 px-3.5 py-2 text-xs font-semibold text-cyan-200">Prepare This Provider</button>
                   <button onClick={() => void startProviderOAuth()} className="rounded border border-emerald-500/40 px-3.5 py-2 text-xs font-semibold text-emerald-200">Continue with Official OAuth</button>
                   {adapters.find(a => a.providerKey === credentialProviderKey) && <a className="rounded border border-slate-700 px-3.5 py-2 text-xs text-cyan-200" href={`/api/engineering/providers?providerKey=${encodeURIComponent(credentialProviderKey)}`} target="_blank" rel="noreferrer">View Provider Setup Profile</a>}
                 </div>
@@ -588,6 +609,9 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
                         </div>
                       </div>
                       <div className="text-[11px] text-slate-400">Webhook: {app.webhookUrl} ({app.webhookSignatureAlgorithm}) · API {app.apiVersion}</div>
+                      <div className="text-[11px] text-slate-300">OAuth Redirect URI(s): <code className="break-all text-cyan-200">{(() => { try { return (JSON.parse(app.redirectUrisJson) as string[]).join(' · ') || 'Not applicable'; } catch { return 'Not configured'; } })()}</code></div>
+                      <div className="text-[11px] text-slate-300">Required scopes: <code className="break-all text-cyan-200">{app.scopesJson}</code></div>
+                      <a className="text-[11px] text-cyan-300 underline" href={app.developerPortalUrl} target="_blank" rel="noreferrer">Open official {app.providerKey} developer portal</a>
                     </div>
                   ))}
                 </div>
