@@ -82,6 +82,7 @@ export async function storeVaultCredential(params: {
           revokedAt: null,
           revokedReason: null,
           status: 'active',
+          lastVerifiedAt: null,
           keyVersion: existing.keyVersion + 1,
         },
       })
