@@ -32,6 +32,7 @@ export async function buildIntegrationHandoverPackage(params: {
   tenantId: string;
   providerKey: string;
   identity: IntegrationIdentityInput;
+  actor: string;
 }) {
   const provider = getProviderByKey(params.providerKey);
   if (!provider) throw new Error('Unknown provider. Select a provider from the ALOAPI catalog.');
@@ -87,7 +88,7 @@ export async function buildIntegrationHandoverPackage(params: {
           providerKey: provider.key,
           credentialType: credential.credentialType,
           label: credential.label,
-          actor: 'handover_manifest',
+          actor: params.actor,
           reason: 'Include provider-issued non-secret account identifier in owner handover package',
         });
         return resolved ? {
