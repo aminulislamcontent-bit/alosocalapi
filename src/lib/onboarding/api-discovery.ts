@@ -154,8 +154,7 @@ export async function runLiveReadOnlyVerification(params: {
   }
 
   const baseUrl = provider.apiBaseUrls.find(u => !u.includes('{') && isSafeHttpsProbeUrl(u));
-  const probeSpec = provider.apiSpecs.find(spec => spec.method === 'GET' && !spec.path.includes('{'));
-  if (!baseUrl || !probeSpec) {
+  if (!baseUrl) {
     return {
       providerKey: params.providerKey,
       tenantId: params.tenantId,
@@ -166,14 +165,54 @@ export async function runLiveReadOnlyVerification(params: {
       latencyMs: null,
       checkedEndpoint: null,
       testedAt,
-      message: 'No static read-only GET probe endpoint without tenant host/path placeholders is available; supply tenant endpoint parameters or verify interactively.',
+      message: 'No verified HTTPS API base URL is configured for this provider.',
     };
   }
 
-  const probeUrl = `${baseUrl.replace(/\/$/, '')}${probeSpec.path.startsWith('/') ? '' : '/'}${probeSpec.path}`;
-  if (!isSafeHttpsProbeUrl(probeUrl)) {
-    throw new Error('Blocked unsafe probe URL.');
+  let probeUrl: string;
+  let expectedResponse: 'meta_pages' | 'whatsapp_phone_numbers';
+  if (params.providerKey === 'meta_facebook_pages') {
+    const probeSpec = provider.apiSpecs.find(spec => spec.method === 'GET' && spec.path === '/me/accounts');
+    if (!probeSpec) {
+      return {
+        providerKey: params.providerKey, tenantId: params.tenantId, executed: false, verified: false,
+        status: 'NOT_VERIFIED', httpStatus: null, latencyMs: null, checkedEndpoint: null, testedAt,
+        message: 'Meta Pages verification requires the documented GET /me/accounts read-only endpoint.',
+      };
+    }
+    probeUrl = `${baseUrl.replace(/\/$/, '')}/me/accounts?fields=id,name`;
+    expectedResponse = 'meta_pages';
+  } else if (params.providerKey === 'whatsapp_cloud_api') {
+    const wabaCredential = await resolveVaultSecretForServer({
+      tenantId: params.tenantId,
+      providerKey: params.providerKey,
+      credentialType: 'business_identifier',
+      actor: params.actor,
+      reason: 'Resolve WhatsApp Business Account ID for read-only verification',
+    }) ?? await resolveVaultSecretForServer({
+      tenantId: params.tenantId,
+      providerKey: params.providerKey,
+      credentialType: 'account_identifier',
+      actor: params.actor,
+      reason: 'Resolve WhatsApp Business Account ID for read-only verification',
+    });
+    if (!wabaCredential?.plaintext) {
+      return {
+        providerKey: params.providerKey, tenantId: params.tenantId, executed: false, verified: false,
+        status: 'OWNER_ACTION_REQUIRED', httpStatus: null, latencyMs: null, checkedEndpoint: null, testedAt,
+        message: 'Store the provider-issued WhatsApp Business Account ID (WABA ID) in the tenant Vault before verifying phone-number access.',
+      };
+    }
+    probeUrl = `${baseUrl.replace(/\/$/, '')}/${encodeURIComponent(wabaCredential.plaintext)}/phone_numbers?fields=id,display_phone_number,verified_name`;
+    expectedResponse = 'whatsapp_phone_numbers';
+  } else {
+    return {
+      providerKey: params.providerKey, tenantId: params.tenantId, executed: false, verified: false,
+      status: 'NOT_VERIFIED', httpStatus: null, latencyMs: null, checkedEndpoint: null, testedAt,
+      message: 'A provider-specific response validator is not implemented yet. A generic HTTP 200 is not accepted as proof of integration.',
+    };
   }
+  if (!isSafeHttpsProbeUrl(probeUrl)) throw new Error('Blocked unsafe probe URL.');
 
   const started = Date.now();
   const controller = new AbortController();
@@ -188,14 +227,32 @@ export async function runLiveReadOnlyVerification(params: {
       signal: controller.signal,
     });
     const latencyMs = Date.now() - started;
-    const verified = res.ok;
+    const rawBody = await res.text();
+    let payload: Record<string, unknown> | null = null;
+    try {
+      const parsed: unknown = JSON.parse(rawBody);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) payload = parsed as Record<string, unknown>;
+    } catch {
+      payload = null;
+    }
+    const data = payload && Array.isArray(payload.data) ? payload.data : [];
+    const hasAccountRecords = data.some(item => item && typeof item === 'object' && typeof (item as Record<string, unknown>).id === 'string');
+    const hasProviderError = Boolean(payload && payload.error);
+    const verified = res.ok && !hasProviderError && hasAccountRecords;
+
+    if (verified) {
+      await db.vaultCredential.update({
+        where: { id: activeSecret.id },
+        data: { lastVerifiedAt: new Date(testedAt) },
+      });
+    }
 
     await auditEvent({
       actor: params.actor,
       action: 'provider.live_probe',
       target: `${params.tenantId}:${params.providerKey}`,
       providerKey: params.providerKey,
-      metadata: { verified, httpStatus: res.status, latencyMs, endpoint: probeUrl },
+      metadata: { verified, httpStatus: res.status, latencyMs, endpoint: probeUrl, responseHasAccountRecords: hasAccountRecords },
     });
 
     return {
@@ -203,14 +260,16 @@ export async function runLiveReadOnlyVerification(params: {
       tenantId: params.tenantId,
       executed: true,
       verified,
-      status: verified ? 'VERIFIED' : 'FAILED',
+      status: verified ? 'VERIFIED' : res.ok ? 'NOT_VERIFIED' : 'FAILED',
       httpStatus: res.status,
       latencyMs,
       checkedEndpoint: probeUrl,
       testedAt,
       message: verified
-        ? `Read-only API verification succeeded (HTTP ${res.status} in ${latencyMs}ms).`
-        : `Live read-only API call returned HTTP ${res.status}. Re-check token scopes or account status.`,
+        ? `Provider-specific read-only account verification succeeded (HTTP ${res.status} in ${latencyMs}ms).`
+        : res.ok
+          ? 'Provider returned HTTP success but no valid account identity records; integration remains NOT_VERIFIED.'
+          : `Live read-only API call returned HTTP ${res.status}. Re-check token scopes or account status.`,
     };
   } catch (err) {
     const latencyMs = Date.now() - started;
