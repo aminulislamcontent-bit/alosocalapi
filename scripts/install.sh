@@ -166,7 +166,8 @@ echo "ALOAPI CLI installed successfully."
 echo "  Executable:   $TARGET_BIN"
 echo "  Project root: $REPO_ROOT"
 echo "  Dashboard:    http://localhost:47831"
-"$TARGET_BIN" version
+PACKAGE_VERSION="$(node -e 'const fs = require("node:fs"); const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(pkg.version || "0.0.0");' "$REPO_ROOT/package.json")"
+echo "  Version:     v$PACKAGE_VERSION"
 
 if ! path_contains "$INSTALL_DIR"; then
   echo ""
