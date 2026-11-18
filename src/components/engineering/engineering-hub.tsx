@@ -259,8 +259,8 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unable to start OAuth');
-      if (!data.clientIdConfigured) {
-        notify(data.warning || 'Save the official OAuth Client ID first, then start authorization.', true);
+      if (!data.clientIdConfigured || !data.clientSecretConfigured) {
+        notify(data.warning || 'Save both the official OAuth Client ID and Client Secret first.', true);
         return;
       }
       if (!data.authorizationUrl) throw new Error('Provider did not return an authorization URL.');
