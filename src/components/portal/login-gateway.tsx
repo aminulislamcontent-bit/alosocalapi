@@ -42,7 +42,7 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
   const { toast } = useToast();
   const router = useRouter();
   const [clientForm, setClientForm] = useState({ username: '', password: '' });
-  const [adminForm, setAdminForm] = useState({ username: '', password: '', mfaCode: '' });
+  const [adminForm, setAdminForm] = useState({ username: 'aloapi-admin', password: '', mfaCode: '' });
   const [showPw, setShowPw] = useState<{ client: boolean; admin: boolean }>({ client: false, admin: false });
   const [loading, setLoading] = useState<'client' | 'admin' | null>(null);
 
@@ -144,7 +144,7 @@ export default function LoginGateway({ onLoggedIn }: { onLoggedIn: () => void })
                 </div>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="client" className="w-full">
+                <Tabs defaultValue="admin" className="w-full">
                   <TabsList className="grid grid-cols-2 w-full bg-slate-950 border border-slate-800">
                     <TabsTrigger value="client" className="data-[state=active]:bg-cyan-500/10 data-[state=active]:text-cyan-300 gap-2">
                       <UserRound className="w-4 h-4" /> ক্লায়েন্ট
