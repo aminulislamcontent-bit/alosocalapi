@@ -51,6 +51,7 @@ export async function buildIntegrationHandoverPackage(params: {
     if (/ACCESS_TOKEN/i.test(name)) return 'oauth_access_token';
     if (/SERVICE_ACCOUNT/i.test(name)) return 'service_account';
     if (/BOT_TOKEN/i.test(name)) return 'bot_token';
+    if (/WEBHOOK_VERIFY_TOKEN/i.test(name)) return 'webhook_verify_token';
     if (/API_KEY|APIKEY/i.test(name)) return 'api_key';
     return 'api_key';
   };
@@ -82,7 +83,8 @@ export async function buildIntegrationHandoverPackage(params: {
   ].filter(Boolean);
   const configuredCount = credentialStatus.filter(c => c.status === 'COLLECTED_ENCRYPTED').length;
   const allCredentialTypesPresent = credentialStatus.length > 0 && configuredCount === credentialStatus.length;
-  const verified = workflow?.state === 'VERIFIED';
+  const lastVerifiedCredential = credentials.find(c => Boolean(c.lastVerifiedAt));
+  const verified = workflow?.state === 'VERIFIED' && Boolean(lastVerifiedCredential);
 
   return {
     schemaVersion: 'aloapi.integration-handover.v1',
@@ -140,7 +142,7 @@ export async function buildIntegrationHandoverPackage(params: {
     },
     verification: {
       verified,
-      lastVerifiedAt: credentials.find(c => c.lastVerifiedAt)?.lastVerifiedAt?.toISOString() ?? null,
+      lastVerifiedAt: lastVerifiedCredential?.lastVerifiedAt?.toISOString() ?? null,
       claim: verified ? 'The onboarding workflow is marked VERIFIED.' : 'No live verification success is claimed by this package.',
     },
   };
