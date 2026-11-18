@@ -105,6 +105,7 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
   const [identityValue, setIdentityValue] = useState('');
   const [identityProviderKey, setIdentityProviderKey] = useState('meta_facebook_pages');
   const [identityHandover, setIdentityHandover] = useState<Record<string, unknown> | null>(null);
+  const [accountDiscoveryResult, setAccountDiscoveryResult] = useState<Record<string, unknown> | null>(null);
   const [identityPortal, setIdentityPortal] = useState(false);
 
   const [projectName, setProjectName] = useState('');
@@ -310,6 +311,31 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
     }
   };
 
+  const discoverAuthorizedProviderAccounts = async () => {
+    setBusy(true);
+    setAccountDiscoveryResult(null);
+    try {
+      const res = await fetch('/api/onboarding/discovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'discover_accounts',
+          tenantId: activeProject?.clientId || 'default-workspace',
+          providerKey: identityProviderKey,
+          identityValue: identityValue.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Provider account discovery failed. Complete official OAuth first.');
+      setAccountDiscoveryResult(data.discovery as Record<string, unknown>);
+      notify(`Discovered ${(data.discovery?.discovered || []).length} provider account asset(s); provider-issued tokens are stored encrypted.`);
+    } catch (e) {
+      notify((e as Error).message, true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const runDiscovery = async () => {
     setBusy(true);
     try {
@@ -420,8 +446,10 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-slate-300"><input type="checkbox" checked={identityPortal} onChange={e => setIdentityPortal(e.target.checked)} /> Create supervised official-portal checkpoint</label>
           <button disabled={busy} onClick={() => void generateIdentityHandover()} className="rounded bg-cyan-500 px-3 py-2 font-semibold text-slate-950 disabled:opacity-50">{busy ? 'Preparing…' : 'Generate Real Handover Manifest'}</button>
+          <button disabled={busy} onClick={() => void discoverAuthorizedProviderAccounts()} className="rounded border border-emerald-500/40 px-3 py-2 font-semibold text-emerald-200 disabled:opacity-50">Discover Authorized Account IDs &amp; Tokens</button>
           {!activeProject && <span className="text-slate-400">Using the default admin workspace until a client project is selected.</span>}
         </div>
+        {accountDiscoveryResult && <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded border border-emerald-500/30 bg-slate-950 p-3 text-[11px] text-emerald-100">{JSON.stringify(accountDiscoveryResult, null, 2)}</pre>}
         {identityHandover && (
           <div className="space-y-2">
             {(() => {
