@@ -18,7 +18,7 @@ function normalizeIdentity(input: IntegrationIdentityInput) {
   }
   if (input.kind === 'phone') {
     const phone = value.replace(/[\\s().-]/g, '');
-    if (!/^\\+?[1-9]\\d{7,14}$/.test(phone)) throw new Error('Enter a phone number in international E.164 format.');
+    if (!/^\\+[1-9]\\d{7,14}$/.test(phone)) throw new Error('Enter a phone number in international E.164 format, including the leading +.');
     return { kind: input.kind, value: phone };
   }
   return { kind: input.kind, value };
