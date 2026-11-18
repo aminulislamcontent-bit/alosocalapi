@@ -277,8 +277,14 @@ export function OnboardingExecutionViews({
             onClick={async () => {
               try {
                 const flow = await postJson('/api/onboarding/oauth', { action: 'create_flow', tenantId: selectedTenant, providerKey: selectedProviderKey });
-                onNotify(flow.warning || `OAuth state created (${flow.pkceEnabled ? 'PKCE S256' : 'OAuth2'})`);
-                onRefresh();
+                if (!flow.clientIdConfigured) {
+                  onNotify(flow.warning || 'Save the provider OAuth Client ID in Credential Vault before continuing.', true);
+                  onRefresh();
+                  return;
+                }
+                if (!flow.authorizationUrl) throw new Error('Provider did not return an authorization URL.');
+                onNotify(`Opening official ${selectedProviderKey} authorization (${flow.pkceEnabled ? 'PKCE S256' : 'OAuth2'}).`);
+                window.location.assign(flow.authorizationUrl);
               } catch (e) { onNotify((e as Error).message, true); }
             }}
             className="rounded-lg bg-cyan-500 px-3 py-2 text-xs font-semibold text-slate-950"
