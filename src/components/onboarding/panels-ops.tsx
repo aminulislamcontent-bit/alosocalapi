@@ -277,8 +277,8 @@ export function OnboardingExecutionViews({
             onClick={async () => {
               try {
                 const flow = await postJson('/api/onboarding/oauth', { action: 'create_flow', tenantId: selectedTenant, providerKey: selectedProviderKey });
-                if (!flow.clientIdConfigured) {
-                  onNotify(flow.warning || 'Save the provider OAuth Client ID in Credential Vault before continuing.', true);
+                if (!flow.clientIdConfigured || !flow.clientSecretConfigured) {
+                  onNotify(flow.warning || 'Save both provider OAuth Client ID and Client Secret in Credential Vault before continuing.', true);
                   onRefresh();
                   return;
                 }
