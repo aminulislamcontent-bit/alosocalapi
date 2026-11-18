@@ -537,6 +537,7 @@ test('admin:reset-password rotates the existing admin password and revokes admin
   fs.mkdirSync(dbDir, { recursive: true });
   fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'aloapi.mjs'), path.join(repoDir, 'scripts', 'aloapi.mjs'));
   fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'migrations.mjs'), path.join(repoDir, 'scripts', 'migrations.mjs'));
+  fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'version.mjs'), path.join(repoDir, 'scripts', 'version.mjs'));
   fs.writeFileSync(path.join(repoDir, 'package.json'), '{}');
   fs.writeFileSync(path.join(repoDir, 'prisma', 'schema.prisma'), '// fixture');
   const envFile = path.join(repoDir, '.env');
