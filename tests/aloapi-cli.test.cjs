@@ -535,8 +535,19 @@ test('admin:reset-password rotates the existing admin password and revokes admin
   fs.mkdirSync(path.join(repoDir, 'scripts'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, 'prisma'), { recursive: true });
   fs.mkdirSync(dbDir, { recursive: true });
-  fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'aloapi.mjs'), path.join(repoDir, 'scripts', 'aloapi.mjs'));
-  fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'migrations.mjs'), path.join(repoDir, 'scripts', 'migrations.mjs'));
+  // Copy every runtime script the CLI imports; a new relative import must not
+  // leave this fixture silently incomplete (see the assertion below).
+  const runtimeScripts = ['aloapi.mjs', 'migrations.mjs', 'version.mjs'];
+  for (const file of runtimeScripts) {
+    fs.copyFileSync(path.join(REPO_ROOT, 'scripts', file), path.join(repoDir, 'scripts', file));
+  }
+  const cliSource = fs.readFileSync(path.join(repoDir, 'scripts', 'aloapi.mjs'), 'utf8');
+  const relativeImports = [...cliSource.matchAll(/from\s+['"](\.\.?\/[^'"]+)['"]/g)].map(m => m[1]);
+  assert.ok(relativeImports.length >= 2, 'the CLI fixture must expose its relative script imports');
+  for (const spec of relativeImports) {
+    const imported = path.resolve(repoDir, 'scripts', spec);
+    assert.ok(fs.existsSync(imported), `missing CLI runtime dependency in fixture: ${spec}`);
+  }
   fs.writeFileSync(path.join(repoDir, 'package.json'), '{}');
   fs.writeFileSync(path.join(repoDir, 'prisma', 'schema.prisma'), '// fixture');
   const envFile = path.join(repoDir, '.env');

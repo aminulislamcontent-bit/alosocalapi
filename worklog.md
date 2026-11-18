@@ -249,3 +249,25 @@ Work Log:
 
 Stage Summary:
 - integrations/{socaliseit,overseek,personaliseit,true-video-product-gallery} now carry complete git history + tags; full-log, diff, blame all available for future integration work
+
+---
+Task ID: 12
+Agent: Arena Agent Mode
+Task: "full check and make real work not miss any single work" — full repository verification, repair of every failing check, and completion of the newest integration-handover feature
+
+Work Log:
+- Full baseline inspection: git/branch state, README, all 79 API route guards, docs/audit trail, package scripts, worklog, PR #16/#17/#18 history, 131-provider catalog, 20 first-party modules, 75 Prisma models
+- Installed locked dependencies (`npm ci`, 899 packages), generated Prisma Client; ran the complete CI chain on Node 22.22.3 and again on Node 24.22.3
+- Found and fixed 3 real baseline CI failures: TS2322/TS2339 in `src/app/api/onboarding/handover/route.ts` (un-typed `browserSession`), 2 React Compiler ESLint errors in `src/components/engineering/engineering-hub.tsx`, and `ERR_MODULE_NOT_FOUND: scripts/version.mjs` in the `admin:reset-password` CLI fixture
+- Hardened the CLI fixture to assert every relative import of `aloapi.mjs` exists, preventing future silent fixture drift
+- Found and fixed undetected broken logic in `src/lib/onboarding/handover-package.ts`: double-escaped E.164 regexes (no phone could ever validate); now real `+8801712345678` normalization, HTTPS-only URL validation, embedded-credential rejection, deduplicated `requiredOwnerActions` and 4 explicit `OWNER_CHECKPOINTS` surfaced in the manifest
+- Completed handover contract step 8: optional `runLiveProbe` invokes the existing real least-privilege read-only verifier and reports actual `executed/verified/status/httpStatus/checkedEndpoint/testedAt/message`; never fabricates VERIFIED
+- Added real coverage: `tests/integration-handover.test.cjs` (2 tests, wired into `test:unit`) and §11c of `tests/e2e-onboarding-runtime.test.cjs` (401/403/400 guards, E.164, secret-free response, discovery snapshot, supervised portal checkpoint in admin overview, honest live probe)
+- Exercised `/api/onboarding/handover` against a fresh migrated SQLite DB and real standalone production server before automating it; verified 200/400 paths
+- Additional checks: `aloapi doctor --json` (`ok: true`, `failures: 0`), `aloapi version`, `aloapi status`, standalone bundle `VERSION`/`.git` CI checks, `npm run matrix:generate` sync (131 adapters + 20 modules), 79-route authorization sweep
+- Documented everything in `docs/AUTONOMOUS_INTEGRATION_HANDOVER.md` and `docs/audit/ALOAPI_FULL_VERIFICATION_2026-11-18.md`
+
+Stage Summary:
+- Deliverable: entire repository green on both CI Node lanes — 0 TypeScript errors, 0 ESLint findings, 47/47 unit + 1/1 package + 5/5 runtime/browser tests on each lane; production build and standalone bundle verified
+- Newest integration-handover feature is now genuinely functional, security-honest, and covered by unit + production HTTP tests instead of being an untested, broken slice
+- Remaining work is explicitly owner-gated (real provider credentials, OAuth/KYC/app review, DNS, carrier/SMTP/SIP delivery); no third-party authorization was simulated

@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminApi } from '@/lib/security/admin-guard';
 import { buildIntegrationHandoverPackage, type IntegrationIdentityInput } from '@/lib/onboarding/handover-package';
-import { generateApiDiscoverySnapshot } from '@/lib/onboarding/api-discovery';
+import { generateApiDiscoverySnapshot, runLiveReadOnlyVerification } from '@/lib/onboarding/api-discovery';
 import { startBrowserWorkflowSession } from '@/lib/onboarding/browser-orchestrator';
 import { auditEvent } from '@/lib/security/audit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+type BrowserSessionSummary = {
+  id: string;
+  officialUrl: string;
+  status: string;
+  executionMode: 'isolated_browser' | 'guided_official_handoff';
+  note: string;
+};
 
 export async function POST(req: NextRequest) {
   const guard = await requireAdminApi(req, true);
@@ -26,7 +34,8 @@ export async function POST(req: NextRequest) {
     const identity: IntegrationIdentityInput = { kind: kind as IntegrationIdentityInput['kind'], value };
     const handover = await buildIntegrationHandoverPackage({ tenantId, providerKey, identity });
     const discovery = await generateApiDiscoverySnapshot({ providerKey, actor: guard.user.username });
-    let browserSession = null;
+    let browserSession: BrowserSessionSummary | null = null;
+    let liveVerification: Awaited<ReturnType<typeof runLiveReadOnlyVerification>> | null = null;
     if (body.startOfficialPortal === true) {
       const session = await startBrowserWorkflowSession({
         tenantId,
@@ -44,18 +53,30 @@ export async function POST(req: NextRequest) {
         note: 'This creates a supervised portal checkpoint. It does not automate login or claim that provider app creation has completed.',
       };
     }
+    // Step 8 of the handover contract: an explicit, least-privilege, read-only
+    // probe that reports the real result. It never marks an integration VERIFIED
+    // on its own and never substitutes a saved credential for a live API check.
+    if (body.runLiveProbe === true) {
+      liveVerification = await runLiveReadOnlyVerification({
+        tenantId,
+        providerKey,
+        actor: guard.user.username,
+      });
+    }
+
     await auditEvent({
       actor: guard.user.username,
       action: 'onboarding.handover.package.generated',
       target: `${tenantId}:${providerKey}`,
       providerKey,
       ip: guard.ip,
-      metadata: { identityKind: kind, discoverySnapshotId: discovery.snapshot.id, browserSessionId: browserSession?.id ?? null },
+      metadata: { identityKind: kind, discoverySnapshotId: discovery.snapshot.id, browserSessionId: browserSession?.id ?? null, liveProbeStatus: liveVerification?.status ?? null },
     });
     return NextResponse.json({
       handover,
       discovery: { snapshotId: discovery.snapshot.id, docHash: discovery.snapshot.docHash, fetchStatus: discovery.snapshot.fetchStatus },
       browserSession,
+      liveVerification,
     });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to generate integration handover package.' }, { status: 400 });

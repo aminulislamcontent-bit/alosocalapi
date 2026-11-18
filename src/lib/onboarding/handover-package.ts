@@ -8,17 +8,40 @@ export type IntegrationIdentityInput =
   | { kind: 'phone'; value: string }
   | { kind: 'account'; value: string };
 
-function normalizeIdentity(input: IntegrationIdentityInput) {
+/** Owner checkpoints that automation must never bypass or silently satisfy. */
+export const OWNER_CHECKPOINTS = [
+  'Sign in and verify the account directly on the provider official origin; ALOAPI never collects passwords, OTPs, MFA codes, recovery codes or session cookies.',
+  'Complete CAPTCHA, business verification, developer-app review, legal acceptance, billing and scope elevation manually.',
+  'Approve publishing, messaging consent, sending, payment and other irreversible actions explicitly.',
+  'Approve any encrypted credential transfer through an owner-authorized secure channel.',
+] as const;
+
+export function normalizeIdentity(input: IntegrationIdentityInput) {
   const value = input.value.trim();
   if (!value || value.length > 2048) throw new Error('A valid account URL, phone number, or account identifier is required.');
   if (input.kind === 'url') {
-    const parsed = new URL(value);
+    let parsed: URL;
+    try {
+      parsed = new URL(value);
+    } catch {
+      throw new Error('Enter a valid HTTPS account/page URL.');
+    }
     if (parsed.protocol !== 'https:') throw new Error('Only HTTPS account/page URLs are accepted.');
+    if (parsed.username || parsed.password) throw new Error('Account URLs must not contain embedded credentials.');
     return { kind: input.kind, value: parsed.toString(), hostname: parsed.hostname.toLowerCase() };
   }
   if (input.kind === 'phone') {
-    const phone = value.replace(/[\\s().-]/g, '');
-    if (!/^\\+?[1-9]\\d{7,14}$/.test(phone)) throw new Error('Enter a phone number in international E.164 format.');
+    // Strip only human formatting (spaces, parentheses, dots and unicode dashes),
+    // then require an explicit international country code and emit true E.164.
+    const cleaned = value.replace(/[\s\u00A0().\-\u2010-\u2015]/g, '');
+    const phone = cleaned.startsWith('00')
+      ? `+${cleaned.slice(2)}`
+      : cleaned.startsWith('+')
+        ? cleaned
+        : `+${cleaned}`;
+    if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+      throw new Error('Enter a phone number in international E.164 format with a country code, for example +8801712345678.');
+    }
     return { kind: input.kind, value: phone };
   }
   return { kind: input.kind, value };
@@ -62,11 +85,11 @@ export async function buildIntegrationHandoverPackage(params: {
       })),
     };
   });
-  const requiredOwnerActions = [
+  const requiredOwnerActions = Array.from(new Set([
     ...provider.accountPrerequisites,
     ...provider.setupChecklist,
     ...(playbook?.prerequisites ?? []),
-  ];
+  ]));
   const approvals = [
     provider.developerAccountRequirements,
     provider.businessVerificationRequirements,
@@ -117,11 +140,15 @@ export async function buildIntegrationHandoverPackage(params: {
       supportedOperations: provider.supportedOperations,
       knownLimitations: provider.knownLimitations,
       ownerApprovalsAndRestrictions: approvals,
+      requiredOwnerActions,
+      ownerCheckpoints: OWNER_CHECKPOINTS,
     },
     handover: {
       secretsIncluded: false,
       vaultCredentialCount: credentials.length,
       credentialStatus,
+      requiredOwnerActions,
+      ownerCheckpoints: OWNER_CHECKPOINTS,
       nextSteps: [
         'Complete login and verification directly on the provider official website; never submit passwords or OTPs to ALOAPI.',
         'Complete any provider-required business, developer, app-review, or permission approvals.',
