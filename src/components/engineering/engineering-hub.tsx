@@ -353,7 +353,7 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Provider preparation failed');
-      notify(`Prepared ${data.prepared.length} provider app(s), cryptographic credentials & verification checkpoints.`);
+      notify(`Prepared local configuration and owner checkpoints for ${data.prepared.length} provider(s). No third-party developer app was created.`);
       setSubTab('credentials');
       await reload();
     } catch (e) {
@@ -524,7 +524,7 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
               </a>
               {activeProject && (
                 <button disabled={busy} onClick={() => void prepareProviders()} className="rounded bg-cyan-500 px-3.5 py-1.5 font-semibold text-slate-950">
-                  Prepare Selected ({selectedProviders.length}) for {activeProject.name}
+                  Prepare Local Configurations ({selectedProviders.length}) for {activeProject.name}
                 </button>
               )}
             </div>
