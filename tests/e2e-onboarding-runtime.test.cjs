@@ -198,6 +198,17 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     assert.equal(whatsappPackage.handover.verification.verified, false);
     assert.equal(whatsappPackage.discovery.fetchStatus, 'SNAPSHOT_CATALOG_SYNCED');
 
+    const noTokenAssetDiscovery = await api('/api/onboarding/discovery', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'discover_accounts',
+        tenantId: client.id,
+        providerKey: 'whatsapp_cloud_api',
+        identityValue: '+8801711000001',
+      }),
+    });
+    assert.equal(noTokenAssetDiscovery.status, 400, 'Account discovery must require an actual provider-issued OAuth token.');
+
     const facebookHandover = await api('/api/onboarding/handover', {
       method: 'POST',
       body: JSON.stringify({
