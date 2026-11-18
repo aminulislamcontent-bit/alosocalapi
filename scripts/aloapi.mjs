@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { DatabaseSync } from 'node:sqlite';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, scryptSync } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import {
   chmodSync,
@@ -1151,6 +1151,40 @@ function setup() {
   console.log('Run `aloapi` or `aloapi start` to apply migrations, build, start the service, and open the browser.');
 }
 
+function resetAdminPassword(usernameArg = '') {
+  const root = resolveProjectRoot();
+  loadLocalEnv(root);
+  const databaseUrl = process.env.DATABASE_URL || 'file:./db/custom.db';
+  const databasePath = sqliteFileFromDatabaseUrl(databaseUrl, path.join(root, 'prisma'));
+  if (!existsSync(databasePath)) throw new Error('ALOAPI database not found. Start ALOAPI once so migrations can run, then retry.');
+  const sqlite = new DatabaseSync(databasePath);
+  try {
+    const tables = new Set(sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row => row.name.toLowerCase()));
+    if (!tables.has('adminuser') || !tables.has('portalsession')) throw new Error('Admin/session tables are missing. Run `aloapi` to apply migrations first.');
+    const admins = usernameArg
+      ? sqlite.prepare('SELECT id, username FROM "AdminUser" WHERE username = ? COLLATE NOCASE').all(usernameArg)
+      : sqlite.prepare('SELECT id, username FROM "AdminUser" ORDER BY "createdAt"').all();
+    if (admins.length === 0) throw new Error(usernameArg ? 'Administrator was not found.' : 'No administrator exists yet. Run `aloapi` once to create the bootstrap administrator.');
+    if (admins.length > 1) throw new Error('More than one administrator exists. Specify the exact username: aloapi admin:reset-password <username>.');
+    const admin = admins[0];
+    const password = randomBytes(24).toString('base64url');
+    const salt = randomBytes(16).toString('hex');
+    const passwordHash = salt + ':' + scryptSync(password, salt, 64).toString('hex');
+    sqlite.exec('BEGIN IMMEDIATE');
+    try {
+      const updated = sqlite.prepare('UPDATE "AdminUser" SET "passwordHash" = ? WHERE id = ?').run(passwordHash, admin.id);
+      if (Number(updated.changes) !== 1) throw new Error('Administrator password was not updated; no credentials were issued.');
+      sqlite.prepare('DELETE FROM "PortalSession" WHERE role = ? AND "adminId" = ?').run('admin', admin.id);
+      sqlite.exec('COMMIT');
+    } catch (error) { sqlite.exec('ROLLBACK'); throw error; }
+    console.log('Administrator password reset successfully.');
+    console.log('Administrator username: ' + admin.username);
+    console.log('New one-time password: ' + password);
+    console.log('Save it in your password manager. This password is shown only once; it is not written to logs or .env.');
+    console.log('All existing administrator sessions have been revoked. Your database and ALOAPI_VAULT_KEY were left unchanged.');
+  } finally { sqlite.close(); }
+}
+
 function showVersion() {
   try {
     const root = resolveProjectRoot();
@@ -1346,6 +1380,7 @@ Usage:
   aloapi import-validate FILE   Validate a secret-free aloapi-client-import-v1 manifest
   aloapi open                   Open http://localhost:${DEFAULT_PORT} in default browser
   aloapi setup                  Create private .env and one-time admin credentials
+  aloapi admin:reset-password [username]  Rotate admin password and revoke admin sessions
   aloapi baseline-existing      Strictly verify a legacy SQLite schema, then record baseline
   aloapi version                Print CLI version and detected project root
   aloapi help                   Show this help message
@@ -1424,6 +1459,7 @@ async function main() {
   if (command === 'help') return help();
   if (command === 'version') return showVersion();
   if (command === 'setup') return setup();
+  if (command === 'admin:reset-password') return resetAdminPassword(options.filePath);
   if (command === 'run-server') return runServerForeground(false, runtimeConfig(resolveProjectRoot()));
   if (command === 'start') return startBackground(options);
   if (command === 'stop') return stopService();
