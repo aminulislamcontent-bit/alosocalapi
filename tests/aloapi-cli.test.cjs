@@ -34,7 +34,10 @@ function isPidAlive(pid) {
 async function waitForBrowserCalls(browserLog, count) {
   const deadline = Date.now() + 2000;
   while (Date.now() < deadline) {
-    if (fs.existsSync(browserLog) && fs.readFileSync(browserLog, 'utf8').trim().split('\n').length >= count) return;
+    if (fs.existsSync(browserLog)) {
+      const content = fs.readFileSync(browserLog, 'utf8').trim();
+      if (content && content.split('\n').length >= count) return;
+    }
     await new Promise(resolve => setTimeout(resolve, 25));
   }
 }
@@ -416,10 +419,7 @@ test('WSL2 environment triggers Windows browser integration and resolveProjectRo
     timeout: 20_000,
   });
   assert.equal(startRes.status, 0, `${startRes.stdout}\n${startRes.stderr}`);
-  const deadline = Date.now() + 2000;
-  while (!fs.existsSync(fx.browserLog) && Date.now() < deadline) {
-    await new Promise(resolve => setTimeout(resolve, 25));
-  }
+  await waitForBrowserCalls(fx.browserLog, 1);
   const calls = fs.readFileSync(fx.browserLog, 'utf8').trim().split('\n');
   assert.equal(calls.length, 1);
   assert.match(calls[0], new RegExp(`^(wslview|cmd\\.exe)\\|.*http://localhost:${port}`));

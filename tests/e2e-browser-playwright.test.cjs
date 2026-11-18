@@ -186,7 +186,23 @@ test('Real Playwright Chromium click-through acceptance across login, discovery,
     await page.waitForSelector('text="originalCrmModified":false', { timeout: 10_000 });
     await page.screenshot({ path: path.join(shotsDir, '06-handover.png') });
 
-    // 7. Navigate standalone /engineering & /factory pages
+    // 7. Smoke every administrator top-level navigation view in an isolated test database.
+    const adminViews = [
+      'Integration Engineering', 'Platform Factory (20)', 'Onboarding Hub (19 Views)',
+      'ক্লায়েন্ট অ্যাক্সেস', 'CRM পাইপলাইন', 'ফলো-আপ টাস্ক', 'অটোমেশন ও নলেজ বেস',
+      'SetupBot Pro', 'গ্রোথ ইঞ্জিন', 'API Intelligence', 'Security', 'Ops Dashboard',
+      'Channel Matrix', 'Launch Planner', 'Access Workflow', 'Official setup references',
+      'Provider MFA guidance', 'Provider account security', 'Blank .env template',
+    ];
+    for (const label of adminViews) {
+      const navButton = page.locator('header button').filter({ hasText: label }).first();
+      await navButton.click();
+      await page.waitForTimeout(100);
+      const mainText = (await page.locator('main').innerText()).trim();
+      assert.ok(mainText.length > 20, 'Admin view should render after navigation: ' + label);
+    }
+
+    // 8. Navigate standalone /engineering & /factory pages
     await page.goto(`${baseUrl}/engineering`, { waitUntil: 'networkidle' });
     await page.waitForSelector('text=ALOAPI Autonomous Integration Engineering', { timeout: 15_000 });
     await page.goto(`${baseUrl}/factory/email_marketing`, { waitUntil: 'networkidle' });
