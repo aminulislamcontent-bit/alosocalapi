@@ -159,6 +159,62 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     const { client } = await clientRes.json();
     assert.ok(client?.id);
 
+    // 6b. Identity-first integration handover: strict inputs, tenant scope, real DB snapshot, owner portal checkpoint.
+    const badPhoneHandover = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenantId: client.id,
+        providerKey: 'whatsapp_cloud_api',
+        identityKind: 'phone',
+        identityValue: '8801711000001',
+      }),
+    });
+    assert.equal(badPhoneHandover.status, 400, 'Phone handover must require an explicit E.164 + prefix.');
+
+    const badUrlHandover = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenantId: client.id,
+        providerKey: 'meta_facebook_pages',
+        identityKind: 'url',
+        identityValue: 'http://facebook.com/example',
+      }),
+    });
+    assert.equal(badUrlHandover.status, 400, 'Provider account URLs must use HTTPS.');
+
+    const whatsappHandover = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenantId: client.id,
+        providerKey: 'whatsapp_cloud_api',
+        identityKind: 'phone',
+        identityValue: '+8801711000001',
+      }),
+    });
+    assert.equal(whatsappHandover.status, 200, `WhatsApp handover failed: ${await whatsappHandover.clone().text()}`);
+    const whatsappPackage = await whatsappHandover.json();
+    assert.equal(whatsappPackage.handover.suppliedIdentity.value, '+8801711000001');
+    assert.equal(whatsappPackage.handover.handover.secretsIncluded, false);
+    assert.equal(whatsappPackage.handover.verification.verified, false);
+    assert.equal(whatsappPackage.discovery.fetchStatus, 'SNAPSHOT_CATALOG_SYNCED');
+
+    const facebookHandover = await api('/api/onboarding/handover', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenantId: client.id,
+        providerKey: 'meta_facebook_pages',
+        identityKind: 'url',
+        identityValue: 'https://www.facebook.com/alo.education',
+        startOfficialPortal: true,
+      }),
+    });
+    assert.equal(facebookHandover.status, 200, `Facebook handover failed: ${await facebookHandover.clone().text()}`);
+    const facebookPackage = await facebookHandover.json();
+    assert.equal(facebookPackage.handover.suppliedIdentity.hostname, 'www.facebook.com');
+    assert.equal(facebookPackage.browserSession.status, 'WAITING_FOR_OWNER');
+    assert.match(facebookPackage.browserSession.officialUrl, /^https:\/\//);
+    assert.equal(facebookPackage.handover.handover.secretsIncluded, false);
+
     // 7. Submit Requirements + Recommendations
     const reqRes = await api('/api/onboarding/requirements', {
       method: 'POST',
