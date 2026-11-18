@@ -365,23 +365,26 @@ export async function runLiveReadOnlyVerification(params: {
       tenantId: params.tenantId,
       providerKey: params.providerKey,
       credentialType: 'business_identifier',
+      label: 'primary',
       actor: params.actor,
-      reason: 'Resolve WhatsApp Business Account ID for read-only verification',
-    }) ?? await resolveVaultSecretForServer({
+      reason: 'Resolve selected WhatsApp Business Account ID for read-only verification',
+    });
+    const phoneCredential = await resolveVaultSecretForServer({
       tenantId: params.tenantId,
       providerKey: params.providerKey,
       credentialType: 'account_identifier',
+      label: 'primary',
       actor: params.actor,
-      reason: 'Resolve WhatsApp Business Account ID for read-only verification',
+      reason: 'Resolve selected WhatsApp Phone Number ID for read-only verification',
     });
-    if (!wabaCredential?.plaintext) {
+    if (!wabaCredential?.plaintext || !phoneCredential?.plaintext) {
       return {
         providerKey: params.providerKey, tenantId: params.tenantId, executed: false, verified: false,
         status: 'OWNER_ACTION_REQUIRED', httpStatus: null, latencyMs: null, checkedEndpoint: null, testedAt,
-        message: 'Store the provider-issued WhatsApp Business Account ID (WABA ID) in the tenant Vault before verifying phone-number access.',
+        message: 'Run authorized WhatsApp asset discovery with the exact E.164 phone number and select the matching provider-issued Phone Number ID/WABA before verification.',
       };
     }
-    probeUrl = `${baseUrl.replace(/\/$/, '')}/${encodeURIComponent(wabaCredential.plaintext)}/phone_numbers?fields=id,display_phone_number,verified_name`;
+    probeUrl = `${baseUrl.replace(/\/$/, '')}/${encodeURIComponent(phoneCredential.plaintext)}?fields=id,display_phone_number,verified_name`;
   } else {
     return {
       providerKey: params.providerKey, tenantId: params.tenantId, executed: false, verified: false,
@@ -413,7 +416,9 @@ export async function runLiveReadOnlyVerification(params: {
       payload = null;
     }
     const data = payload && Array.isArray(payload.data) ? payload.data : [];
-    const hasAccountRecords = data.some(item => item && typeof item === 'object' && typeof (item as Record<string, unknown>).id === 'string');
+    const hasAccountRecords = params.providerKey === 'whatsapp_cloud_api'
+      ? Boolean(payload && typeof payload.id === 'string' && typeof payload.display_phone_number === 'string')
+      : data.some(item => item && typeof item === 'object' && typeof (item as Record<string, unknown>).id === 'string');
     const hasProviderError = Boolean(payload && payload.error);
     const verified = res.ok && !hasProviderError && hasAccountRecords;
 
