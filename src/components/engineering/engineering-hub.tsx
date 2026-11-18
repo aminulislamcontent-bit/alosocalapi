@@ -170,14 +170,17 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
 
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0] || null;
 
-  const loadVaultCredentials = useCallback(async () => {
-    if (!activeProject?.clientId) {
+  const loadVaultCredentials = async (
+    clientId: string | null | undefined = activeProject?.clientId,
+    providerKey: string = credentialProviderKey,
+  ) => {
+    if (!clientId) {
       setVaultCredentialRows([]);
       return;
     }
     try {
-      const query = new URLSearchParams({ tenantId: activeProject.clientId });
-      if (credentialProviderKey) query.set('providerKey', credentialProviderKey);
+      const query = new URLSearchParams({ tenantId: clientId });
+      if (providerKey) query.set('providerKey', providerKey);
       const res = await fetch(`/api/onboarding/vault?${query.toString()}`, { cache: 'no-store' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unable to load saved credentials');
@@ -185,9 +188,19 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
     } catch (e) {
       notify((e as Error).message, true);
     }
-  }, [activeProject?.clientId, credentialProviderKey, notify]);
+  };
 
-  useEffect(() => { void loadVaultCredentials(); }, [loadVaultCredentials]);
+  useEffect(() => {
+    let cancelled = false;
+    // Defer the load to a promise callback so state is never set synchronously
+    // inside the effect body (React Compiler set-state-in-effect rule).
+    void Promise.resolve().then(async () => {
+      if (!cancelled) await loadVaultCredentials();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProject?.clientId, credentialProviderKey]);
 
   const saveProviderCredential = async () => {
     if (!activeProject?.clientId || !credentialProviderKey || !credentialValue.trim()) {
