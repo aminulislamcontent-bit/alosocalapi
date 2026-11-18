@@ -34,7 +34,10 @@ function isPidAlive(pid) {
 async function waitForBrowserCalls(browserLog, count) {
   const deadline = Date.now() + 2000;
   while (Date.now() < deadline) {
-    if (fs.existsSync(browserLog)) {\n      const content = fs.readFileSync(browserLog, 'utf8').trim();\n      if (content && content.split('\n').length >= count) return;\n    }
+    if (fs.existsSync(browserLog)) {
+      const content = fs.readFileSync(browserLog, 'utf8').trim();
+      if (content && content.split('\n').length >= count) return;
+    }
     await new Promise(resolve => setTimeout(resolve, 25));
   }
 }
