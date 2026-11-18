@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const identity: IntegrationIdentityInput = { kind: kind as IntegrationIdentityInput['kind'], value };
-    const handover = await buildIntegrationHandoverPackage({ tenantId, providerKey, identity });
+    const handover = await buildIntegrationHandoverPackage({ tenantId, providerKey, identity, actor: guard.user.username });
     const discovery = await generateApiDiscoverySnapshot({ providerKey, actor: guard.user.username });
     let browserSession: { id: string; officialUrl: string; status: string; executionMode: string; note: string } | null = null;
     if (body.startOfficialPortal === true) {
