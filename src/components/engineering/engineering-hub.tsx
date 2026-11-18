@@ -207,7 +207,7 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'store',
-          tenantId: activeProject.clientId,
+          tenantId: activeProject?.clientId || 'default-workspace',
           providerKey: credentialProviderKey,
           credentialType,
           label: credentialLabel.trim() || 'primary',
@@ -284,7 +284,6 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
   }
 
   const generateIdentityHandover = async () => {
-    if (!activeProject?.clientId) { notify('Create or select a client project first.', true); return; }
     if (!identityValue.trim()) { notify('Enter a Facebook Page URL, WhatsApp phone number, or account identifier.', true); return; }
     setBusy(true);
     setIdentityHandover(null);
@@ -420,10 +419,18 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-slate-300"><input type="checkbox" checked={identityPortal} onChange={e => setIdentityPortal(e.target.checked)} /> Create supervised official-portal checkpoint</label>
-          <button disabled={busy || !activeProject} onClick={() => void generateIdentityHandover()} className="rounded bg-cyan-500 px-3 py-2 font-semibold text-slate-950 disabled:opacity-50">{busy ? 'Preparing…' : 'Generate Real Handover Manifest'}</button>
-          {!activeProject && <span className="text-amber-300">Create/select a project first.</span>}
+          <button disabled={busy} onClick={() => void generateIdentityHandover()} className="rounded bg-cyan-500 px-3 py-2 font-semibold text-slate-950 disabled:opacity-50">{busy ? 'Preparing…' : 'Generate Real Handover Manifest'}</button>
+          {!activeProject && <span className="text-slate-400">Using the default admin workspace until a client project is selected.</span>}
         </div>
-        {identityHandover && <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-all rounded border border-slate-700 bg-slate-950 p-3 text-[11px] text-cyan-100">{JSON.stringify(identityHandover, null, 2)}</pre>}
+        {identityHandover && (
+          <div className="space-y-2">
+            {(() => {
+              const session = identityHandover.browserSession as { officialUrl?: string; status?: string; executionMode?: string } | null;
+              return session?.officialUrl ? <a href={session.officialUrl} target="_blank" rel="noreferrer" className="inline-flex rounded border border-cyan-500/40 px-3 py-2 text-cyan-200 underline">Open official provider portal ({session.executionMode || session.status || 'owner checkpoint'})</a> : null;
+            })()}
+            <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-all rounded border border-slate-700 bg-slate-950 p-3 text-[11px] text-cyan-100">{JSON.stringify(identityHandover, null, 2)}</pre>
+          </div>
+        )}
       </section>
 
       {/* Navigation Tabs */}
