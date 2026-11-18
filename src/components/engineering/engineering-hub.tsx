@@ -292,7 +292,7 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tenantId: activeProject.clientId,
+          tenantId: activeProject?.clientId || 'default-workspace',
           providerKey: identityProviderKey,
           identityKind,
           identityValue: identityValue.trim(),
