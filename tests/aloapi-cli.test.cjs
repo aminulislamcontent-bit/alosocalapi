@@ -61,6 +61,7 @@ function createFixtureProject(t, port) {
   fs.mkdirSync(path.join(repoDir, 'scripts'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, 'prisma', 'migrations'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, 'node_modules', 'next', 'dist', 'bin'), { recursive: true });
+  fs.mkdirSync(path.join(repoDir, 'node_modules', 'prisma', 'build'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, 'node_modules', '.prisma', 'client'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, '.next', 'standalone'), { recursive: true });
   fs.mkdirSync(path.join(repoDir, 'src'), { recursive: true });
@@ -88,6 +89,7 @@ function createFixtureProject(t, port) {
   fs.writeFileSync(path.join(repoDir, 'prisma', 'schema.prisma'), '// test schema\n');
   fs.writeFileSync(path.join(repoDir, 'prisma', 'migrations', 'migration_lock.toml'), 'provider = "sqlite"\n');
   fs.writeFileSync(path.join(repoDir, 'node_modules', 'next', 'dist', 'bin', 'next'), '#!/usr/bin/env node\n');
+  fs.writeFileSync(path.join(repoDir, 'node_modules', 'prisma', 'build', 'index.js'), 'process.exit(0);\n');
   fs.writeFileSync(path.join(repoDir, 'node_modules', '.prisma', 'client', 'default.js'), 'module.exports = {};\n');
 
   // Create BUILD_ID slightly in the future relative to src/ so needsProductionBuild is false
