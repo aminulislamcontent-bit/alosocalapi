@@ -14,7 +14,11 @@ export async function registerEmailDomain(params: {
   actor: string;
   ip?: string;
 }) {
-  const domain = params.domain.trim().toLowerCase().replace(/^https?:\/\//, '').split('/')[0];
+  const domain = params.domain
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .split('/')[0];
   if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
     throw new Error(`Invalid sending domain format: ${params.domain}`);
   }
@@ -68,9 +72,9 @@ export async function verifyEmailDomainAuthentication(params: {
     dns.resolveTxt(`${existing.dkimSelector}._domainkey.${existing.domain}`).catch(() => []),
     dns.resolveTxt(`_dmarc.${existing.domain}`).catch(() => []),
   ]);
-  const spfOk = rootTxt.flat().some(line => /v=spf1/i.test(line));
-  const dkimOk = dkimTxt.flat().some(line => /v=DKIM1|p=/i.test(line));
-  const dmarcOk = dmarcTxt.flat().some(line => /v=DMARC1/i.test(line));
+  const spfOk = rootTxt.flat().some((line) => /v=spf1/i.test(line));
+  const dkimOk = dkimTxt.flat().some((line) => /v=DKIM1|p=/i.test(line));
+  const dmarcOk = dmarcTxt.flat().some((line) => /v=DMARC1/i.test(line));
   const spfStatus = spfOk ? 'verified' : 'failed';
   const dkimStatus = dkimOk ? 'verified' : 'failed';
   const dmarcStatus = dmarcOk ? 'verified' : 'failed';
@@ -119,7 +123,9 @@ export async function upsertEmailContact(params: {
 
   // Never silently re-opt-in an unsubscribed/suppressed address unless explicitly handled
   if (existing && (existing.consentStatus === 'bounced' || existing.consentStatus === 'complained')) {
-    throw new Error(`Email '${email}' is suppressed (${existing.suppressionReason || existing.consentStatus}) and cannot be activated.`);
+    throw new Error(
+      `Email '${email}' is suppressed (${existing.suppressionReason || existing.consentStatus}) and cannot be activated.`,
+    );
   }
 
   const token = existing?.unsubscribeToken || crypto.randomBytes(18).toString('hex');
@@ -299,8 +305,18 @@ export async function createEmailCampaign(params: {
   scheduledFor?: string;
   actor: string;
 }) {
-  if (params.domainId && !await db.emailSendingDomain.findFirst({where:{id:params.domainId,workspaceId:params.workspaceId}})) throw new Error('Unknown workspace domain.');
-  if (params.templateId && !await db.emailTemplate.findFirst({where:{id:params.templateId,workspaceId:params.workspaceId}})) throw new Error('Unknown workspace template.');
+  if (
+    params.domainId &&
+    !(await db.emailSendingDomain.findFirst({
+      where: { id: params.domainId, workspaceId: params.workspaceId },
+    }))
+  )
+    throw new Error('Unknown workspace domain.');
+  if (
+    params.templateId &&
+    !(await db.emailTemplate.findFirst({ where: { id: params.templateId, workspaceId: params.workspaceId } }))
+  )
+    throw new Error('Unknown workspace template.');
   const campaign = await db.emailCampaign.create({
     data: {
       workspaceId: params.workspaceId,
@@ -327,48 +343,143 @@ export async function createEmailCampaign(params: {
   return campaign;
 }
 
-type CampaignAction = { workspaceId:string; campaignId:string; actor:string; ip?:string };
+type CampaignAction = { workspaceId: string; campaignId: string; actor: string; ip?: string };
 async function loadCampaign(p: CampaignAction) {
-  const c = await db.emailCampaign.findFirst({where:{workspaceId:p.workspaceId,id:p.campaignId},include:{domain:true,template:true}});
-  if (!c || c.template?.workspaceId !== p.workspaceId || (c.domain && c.domain.workspaceId !== p.workspaceId)) throw new Error('Campaign requires a workspace-owned template and domain.');
+  const c = await db.emailCampaign.findFirst({
+    where: { workspaceId: p.workspaceId, id: p.campaignId },
+    include: { domain: true, template: true },
+  });
+  if (!c || c.template?.workspaceId !== p.workspaceId || (c.domain && c.domain.workspaceId !== p.workspaceId))
+    throw new Error('Campaign requires a workspace-owned template and domain.');
   return c;
 }
 function digest(c: Awaited<ReturnType<typeof loadCampaign>>) {
-  return crypto.createHash('sha256').update(JSON.stringify([c.workspaceId,c.id,c.name,c.segment,c.domainId,c.domain?.domain,c.template,c.adapterType,c.providerKey,c.scheduledFor])).digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(
+      JSON.stringify([
+        c.workspaceId,
+        c.id,
+        c.name,
+        c.segment,
+        c.domainId,
+        c.domain?.domain,
+        c.template,
+        c.adapterType,
+        c.providerKey,
+        c.scheduledFor,
+      ]),
+    )
+    .digest('hex');
 }
 export async function approveEmailCampaign(p: CampaignAction) {
   const c = await loadCampaign(p);
-  return db.emailCampaign.update({where:{id:c.id},data:{approvalStatus:'approved',approvedBy:p.actor,approvedAt:new Date(),approvalDigest:digest(c)}});
+  return db.emailCampaign.update({
+    where: { id: c.id },
+    data: {
+      approvalStatus: 'approved',
+      approvedBy: p.actor,
+      approvedAt: new Date(),
+      approvalDigest: digest(c),
+    },
+  });
 }
 export async function dispatchEmailCampaign(p: CampaignAction) {
   const c = await loadCampaign(p);
-  if (c.approvalStatus !== 'approved' || digest(c) !== c.approvalDigest) throw new Error('Current campaign version requires approval.');
-  if (c.adapterType !== 'sandbox_mock_adapter' && !c.domain?.verifiedForProduction) throw new Error('Production email sending blocked: domain requires verified SPF, DKIM, and DMARC.');
+  if (c.approvalStatus !== 'approved' || digest(c) !== c.approvalDigest)
+    throw new Error('Current campaign version requires approval.');
+  if (c.adapterType !== 'sandbox_mock_adapter' && !c.domain?.verifiedForProduction)
+    throw new Error('Production email sending blocked: domain requires verified SPF, DKIM, and DMARC.');
   // Never resubmit historical campaigns that predate per-recipient submission keys.
-  if (await db.emailDeliveryEvent.count({where:{campaignId:c.id,submissionKey:null,status:{in:['sent','sent_mocked']}}})) throw new Error('Historical dispatch cannot be replayed.');
-  const submit = await emailTransport(p.workspaceId,p.actor,c.adapterType,c.providerKey);
-  const contacts = await db.emailContact.findMany({where:{workspaceId:p.workspaceId,...(c.segment==='all'?{}:{segment:c.segment})}});
+  if (
+    await db.emailDeliveryEvent.count({
+      where: { campaignId: c.id, submissionKey: null, status: { in: ['sent', 'sent_mocked'] } },
+    })
+  )
+    throw new Error('Historical dispatch cannot be replayed.');
+  const submit = await emailTransport(p.workspaceId, p.actor, c.adapterType, c.providerKey);
+  const contacts = await db.emailContact.findMany({
+    where: { workspaceId: p.workspaceId, ...(c.segment === 'all' ? {} : { segment: c.segment }) },
+  });
   for (const contact of contacts) {
     const submissionKey = `${c.id}:${contact.id}`;
     const messageId = `<${crypto.randomUUID()}@${c.domain?.domain || 'localhost'}>`;
     let event;
     try {
-      event = await db.emailDeliveryEvent.create({data:{submissionKey,workspaceId:p.workspaceId,campaignId:c.id,contactId:contact.id,email:contact.email,messageId,adapterUsed:c.adapterType,status:contact.consentStatus==='granted' && !contact.suppressedAt ? 'SUBMITTING':'blocked'}});
-    } catch(e) { if ((e as {code?:string}).code==='P2002') continue; throw e; }
-    if (event.status==='blocked') continue;
-    const out = !/^[a-z0-9_+.'%-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(contact.email) ? {status:'REJECTED',receipt:undefined} : await submit({from:`postmaster@${c.domain?.domain}`,to:contact.email,subject:c.template!.subject,text:c.template!.textBody,html:c.template!.htmlBody,messageId});
-    await db.$transaction(async tx => {
-      await tx.emailDeliveryEvent.update({where:{id:event.id},data:{status:out.status,detail:out.receipt}});
-      if (out.status==='ACCEPTED') {
-        await tx.factoryUsageEvent.create({data:{workspaceId:p.workspaceId,moduleKey:'email_marketing',metric:'email_sent',quantity:1,unitCostUsd:0.0001,totalCostUsd:0.0001,adapter:c.adapterType,metadata:JSON.stringify({eventId:event.id})}});
-        await tx.emailSendingDomain.update({where:{id:c.domainId!},data:{sentCount:{increment:1}}});
+      event = await db.emailDeliveryEvent.create({
+        data: {
+          submissionKey,
+          workspaceId: p.workspaceId,
+          campaignId: c.id,
+          contactId: contact.id,
+          email: contact.email,
+          messageId,
+          adapterUsed: c.adapterType,
+          status: contact.consentStatus === 'granted' && !contact.suppressedAt ? 'SUBMITTING' : 'blocked',
+        },
+      });
+    } catch (e) {
+      if ((e as { code?: string }).code !== 'P2002') throw e;
+      // Only retry when no submission took place. Never replay an ambiguous SMTP outcome.
+      if (contact.consentStatus !== 'granted' || contact.suppressedAt) continue;
+      const reserved = await db.emailDeliveryEvent.updateMany({
+        where: { submissionKey, status: { in: ['PREFLIGHT_PASSED', 'NOT_CONFIGURED'] } },
+        data: { status: 'SUBMITTING', messageId },
+      });
+      if (!reserved.count) continue;
+      event = await db.emailDeliveryEvent.findUniqueOrThrow({ where: { submissionKey } });
+    }
+    if (event.status === 'blocked') continue;
+    const out = !/^[a-z0-9_+.'%-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(contact.email)
+      ? { status: 'REJECTED', receipt: undefined }
+      : await submit({
+          from: `postmaster@${c.domain?.domain}`,
+          to: contact.email,
+          subject: c.template!.subject,
+          text: c.template!.textBody,
+          html: c.template!.htmlBody,
+          messageId,
+        });
+    await db.$transaction(async (tx) => {
+      await tx.emailDeliveryEvent.update({
+        where: { id: event.id },
+        data: { status: out.status, detail: out.receipt },
+      });
+      if (out.status === 'ACCEPTED') {
+        await tx.factoryUsageEvent.create({
+          data: {
+            workspaceId: p.workspaceId,
+            moduleKey: 'email_marketing',
+            metric: 'email_sent',
+            quantity: 1,
+            unitCostUsd: 0.0001,
+            totalCostUsd: 0.0001,
+            adapter: c.adapterType,
+            metadata: JSON.stringify({ eventId: event.id }),
+          },
+        });
+        await tx.emailSendingDomain.update({
+          where: { id: c.domainId! },
+          data: { sentCount: { increment: 1 } },
+        });
       }
     });
   }
-  const groups = await db.emailDeliveryEvent.groupBy({by:['status'],where:{campaignId:c.id,submissionKey:{not:null}},_count:true});
-  const outcomes = Object.fromEntries(groups.map(g=>[g.status,g._count]));
-  const stats = {sent:outcomes.ACCEPTED || 0,blocked:outcomes.blocked || 0,outcomes};
-  const completed = stats.sent > 0 && groups.every(g=>['ACCEPTED','blocked'].includes(g.status));
-  const campaign = await db.emailCampaign.update({where:{id:c.id},data:{status:completed?'completed':'needs_review',sentAt:stats.sent ? c.sentAt ?? new Date():null,stats:JSON.stringify(stats)}});
-  return {campaign,stats};
+  const groups = await db.emailDeliveryEvent.groupBy({
+    by: ['status'],
+    where: { campaignId: c.id, submissionKey: { not: null } },
+    _count: true,
+  });
+  const outcomes = Object.fromEntries(groups.map((g) => [g.status, g._count]));
+  const stats = { sent: outcomes.ACCEPTED || 0, blocked: outcomes.blocked || 0, outcomes };
+  const completed = stats.sent > 0 && groups.every((g) => ['ACCEPTED', 'blocked'].includes(g.status));
+  const campaign = await db.emailCampaign.update({
+    where: { id: c.id },
+    data: {
+      status: completed ? 'completed' : 'needs_review',
+      sentAt: stats.sent ? (c.sentAt ?? new Date()) : null,
+      stats: JSON.stringify(stats),
+    },
+  });
+  return { campaign, stats };
 }

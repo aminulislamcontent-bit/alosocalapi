@@ -206,6 +206,19 @@ test('Shared Platform Infrastructure: tenancy isolation, RBAC, job retry/DLQ, AI
   assert.equal(recovered.attempts,3);
   assert.equal((await db.factoryJob.findUniqueOrThrow({where:{id:untouched.job.id}})).attempts,0);
 
+  const input={workspaceId:wsA.id,moduleKey:'test',jobType:'no_handler',actor:'alice',idempotencyKey:'concurrent-key'};
+  const pair=await Promise.all([jobs.enqueueFactoryJob(input),jobs.enqueueFactoryJob(input)]);
+  assert.equal(pair[0].job.id,pair[1].job.id);const id=pair[0].job.id;
+  const lease={workspaceId:wsA.id,id,lockedBy:'original-worker'};const deadline=new Date(Date.now()+10000);
+  await db.factoryJob.update({where:{id},data:{status:'running',lockedBy:lease.lockedBy,leaseExpiresAt:deadline,attempts:1}});
+  assert.equal((await jobs.processDueFactoryJobs({workspaceId:wsA.id,jobId:id,actor:'another'})).processedCount,0);
+  assert.equal((await jobs.completeFactoryJob({...lease,lockedBy:'another'},{})).count,0);
+  assert.equal((await jobs.heartbeatFactoryJob(lease)).count,1);assert.ok((await db.factoryJob.findUniqueOrThrow({where:{id}})).leaseExpiresAt>deadline);
+  await db.factoryJob.update({where:{id},data:{leaseExpiresAt:new Date(0)}});
+  assert.equal((await jobs.heartbeatFactoryJob(lease)).count,0);
+  assert.equal((await jobs.processDueFactoryJobs({workspaceId:wsB.id,jobId:id,actor:'bob'})).processedCount,0);
+  assert.equal((await jobs.processDueFactoryJobs({workspaceId:wsA.id,jobId:id,actor:'replacement'})).processedCount,1);
+  assert.equal((await db.factoryJob.findUniqueOrThrow({where:{id}})).attempts,2);
   // AI Router: Bangla local inference + non-loopback SSRF guard
   const bnAi = await ai.runFactoryAiInference({
     workspaceId: wsA.id,

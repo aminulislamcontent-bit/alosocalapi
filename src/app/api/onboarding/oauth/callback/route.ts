@@ -1,3 +1,4 @@
+import { callbackUrl } from '@/lib/onboarding/callback-url';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminApi } from '@/lib/security/admin-guard';
 import { handleOAuthCallback } from '@/lib/onboarding/oauth-service';
@@ -22,7 +23,8 @@ export async function GET(req: NextRequest) {
   try {
     const result = await handleOAuthCallback({
       stateToken,
-      redirectUri: req.nextUrl.origin + req.nextUrl.pathname,
+      callbackQuery:req.nextUrl.searchParams,
+      redirectUri: callbackUrl(req),
       providerKey:req.nextUrl.searchParams.get("providerKey") || undefined, tenantId:req.nextUrl.searchParams.get("tenantId") || undefined,
       code,
       error,

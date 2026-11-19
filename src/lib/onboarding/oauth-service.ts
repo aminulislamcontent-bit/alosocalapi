@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 import { db } from '@/lib/db';
 import { getProviderByKey } from '@/lib/intelligence/catalog';
 import { decryptVaultValue, encryptVaultValue, vaultConfigured } from '@/lib/security/vault-crypto';
@@ -7,7 +7,6 @@ import {
   resolveVaultSecretForServer,
   revokeVaultCredential,
   storeVaultCredential,
-  redactSecretText,
 } from './vault-service';
 import { auditEvent } from '@/lib/security/audit';
 
@@ -22,9 +21,25 @@ export function validateOAuthRedirectUri(rawUri: string): { ok: boolean; reason?
   } catch {
     return { ok: false, reason: 'Invalid OAuth redirectUri.' };
   }
-  if (parsed.username || parsed.password || parsed.search || parsed.pathname !== '/api/onboarding/oauth/callback') return {ok:false,reason:'Invalid OAuth callback path.'};
+  if (
+    parsed.username ||
+    parsed.password ||
+    parsed.search ||
+    parsed.pathname !== '/api/onboarding/oauth/callback'
+  )
+    return { ok: false, reason: 'Invalid OAuth callback path.' };
+  if (
+    ['127.0.0.1', 'localhost'].includes(parsed.hostname) &&
+    (parsed.port || (parsed.protocol === 'https:' ? '443' : '80')) !==
+      (process.env.PORT || process.env.ALOAPI_PORT || '47831')
+  )
+    return { ok: false, reason: 'Unregistered local callback port.' };
   const configured = process.env.ALOAPI_PUBLIC_WEBHOOK_BASE_URL;
-  if (!['127.0.0.1','localhost'].includes(parsed.hostname) && (!configured || parsed.origin !== new URL(configured).origin)) return {ok:false,reason:'Unregistered callback origin.'};
+  if (
+    !['127.0.0.1', 'localhost'].includes(parsed.hostname) &&
+    (!configured || parsed.origin !== new URL(configured).origin)
+  )
+    return { ok: false, reason: 'Unregistered callback origin.' };
   if (parsed.hash) {
     return { ok: false, reason: 'OAuth redirectUri must not contain a URL fragment.' };
   }
@@ -34,7 +49,10 @@ export function validateOAuthRedirectUri(rawUri: string): { ok: boolean; reason?
   if (parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost')) {
     return { ok: true };
   }
-  return { ok: false, reason: 'OAuth redirectUri must use HTTPS (or loopback localhost/127.0.0.1 for local desktop CLI).' };
+  return {
+    ok: false,
+    reason: 'OAuth redirectUri must use HTTPS (or loopback localhost/127.0.0.1 for local desktop CLI).',
+  };
 }
 
 function validateOAuthEndpointUrl(rawUrl: string, providerKey: string): string {
@@ -86,7 +104,9 @@ export async function createOAuthAuthorizationFlow(params: {
   const provider = getProviderByKey(params.providerKey);
   if (!provider) throw new Error('Unknown provider key.');
   if (!provider.oauthSupport || !provider.oauthConfig) {
-    throw new Error(`${provider.displayName} does not support browser OAuth 2.0 flow; use scoped API key setup instead.`);
+    throw new Error(
+      `${provider.displayName} does not support browser OAuth 2.0 flow; use scoped API key setup instead.`,
+    );
   }
 
   let authUrlRaw = provider.oauthConfig.authUrl;
@@ -94,7 +114,12 @@ export async function createOAuthAuthorizationFlow(params: {
   for (const [key, value] of Object.entries(params.dynamicParams ?? {})) {
     const clean = value.trim().toLowerCase();
     if (!authUrlRaw.includes(`{${key}}`)) throw new Error('Unexpected instance parameter.');
-    if (key === 'shop' ? !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(clean) : !(process.env.ALOAPI_OAUTH_INSTANCE_HOSTS || '').split(',').includes(clean)) throw new Error('Unregistered provider instance.');
+    if (
+      key === 'shop'
+        ? !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(clean)
+        : !(process.env.ALOAPI_OAUTH_INSTANCE_HOSTS || '').split(',').includes(clean)
+    )
+      throw new Error('Unregistered provider instance.');
     tokenEndpoint = tokenEndpoint.replace(`{${key}}`, clean);
     if (!/^[a-z0-9.-]+$/i.test(clean)) {
       throw new Error(`Invalid host/domain parameter for ${key}.`);
@@ -116,7 +141,9 @@ export async function createOAuthAuthorizationFlow(params: {
   if (storedClientId) {
     clientId = storedClientId.plaintext;
   } else {
-    const clientEnv = provider.environmentVariables.find(v => /CLIENT_ID|APP_ID|CLIENT_KEY|APPLICATION_ID/i.test(v.name));
+    const clientEnv = provider.environmentVariables.find((v) =>
+      /CLIENT_ID|APP_ID|CLIENT_KEY|APPLICATION_ID/i.test(v.name),
+    );
     if (clientEnv && process.env[clientEnv.name]) {
       clientId = process.env[clientEnv.name]!;
     }
@@ -124,7 +151,8 @@ export async function createOAuthAuthorizationFlow(params: {
 
   const savedCredentialMetadata = await listVaultCredentialsMetadata(params.tenantId, params.providerKey);
   const clientSecretConfigured = savedCredentialMetadata.some(
-    credential => credential.credentialType === 'oauth_client_secret' && credential.effectiveStatus === 'ACTIVE',
+    (credential) =>
+      credential.credentialType === 'oauth_client_secret' && credential.effectiveStatus === 'ACTIVE',
   );
 
   const stateToken = randomBytes(24).toString('base64url');
@@ -132,13 +160,15 @@ export async function createOAuthAuthorizationFlow(params: {
   const codeChallenge = pkceVerifier ? base64UrlSha256(pkceVerifier) : null;
   const scopes = (params.requestedScopes?.length ? params.requestedScopes : provider.requiredScopes).slice();
 
+  const admin = await db.adminUser.findUnique({ where: { username: params.actor }, select: { id: true } });
   const expiresAt = new Date(Date.now() + 15 * 60_000);
   await db.oAuthAuthorizationState.create({
     data: {
       clientId: params.tenantId,
       providerKey: params.providerKey,
       state: base64UrlSha256(stateToken),
-      tokenEndpoint:validateOAuthEndpointUrl(tokenEndpoint,provider.key),initiator:params.actor,
+      tokenEndpoint: validateOAuthEndpointUrl(tokenEndpoint, provider.key),
+      initiator: admin?.id ?? params.actor,
       codeVerifierCiphertext: pkceVerifier ? encryptVaultValue(pkceVerifier) : null,
       redirectUri: params.redirectUri,
       scopes: JSON.stringify(scopes),
@@ -170,7 +200,11 @@ export async function createOAuthAuthorizationFlow(params: {
     target: `${params.tenantId}:${params.providerKey}`,
     providerKey: params.providerKey,
     ip: params.ip,
-    metadata: { pkceEnabled: Boolean(codeChallenge), clientIdConfigured: Boolean(clientId), scopeCount: scopes.length },
+    metadata: {
+      pkceEnabled: Boolean(codeChallenge),
+      clientIdConfigured: Boolean(clientId),
+      scopeCount: scopes.length,
+    },
   });
 
   return {
@@ -189,11 +223,12 @@ export async function createOAuthAuthorizationFlow(params: {
   };
 }
 
-
-
 export async function handleOAuthCallback(params: {
   stateToken: string;
-  redirectUri?:string; tenantId?:string; providerKey?:string;
+  callbackQuery?: URLSearchParams;
+  redirectUri?: string;
+  tenantId?: string;
+  providerKey?: string;
   code?: string;
   error?: string;
   errorDescription?: string;
@@ -203,9 +238,51 @@ export async function handleOAuthCallback(params: {
 }) {
   const now = new Date();
   const state = base64UrlSha256(params.stateToken);
-  const row = await db.oAuthAuthorizationState.findUnique({where:{state}});
-  if (!row || row.initiator !== params.actor || !row.tokenEndpoint || (params.redirectUri && params.redirectUri !== row.redirectUri) || (params.tenantId && params.tenantId !== row.clientId) || (params.providerKey && params.providerKey !== row.providerKey) || params.dynamicParams) throw new Error('Invalid OAuth callback context.');
-  const claim = await db.oAuthAuthorizationState.updateMany({where:{id:row.id,status:'pending',consumedAt:null,expiresAt:{gt:now}},data:{status:'processing',consumedAt:now}});
+  const row = await db.oAuthAuthorizationState.findUnique({ where: { state } });
+  const admin = await db.adminUser.findUnique({ where: { username: params.actor }, select: { id: true } });
+  if (
+    !row ||
+    row.initiator !== (admin?.id ?? params.actor) ||
+    !row.tokenEndpoint ||
+    (params.redirectUri && params.redirectUri !== row.redirectUri) ||
+    (params.tenantId && params.tenantId !== row.clientId) ||
+    (params.providerKey && params.providerKey !== row.providerKey) ||
+    params.dynamicParams
+  )
+    throw new Error('Invalid OAuth callback context.');
+  if (row.providerKey === 'shopify_admin_api' && !params.error) {
+    const query = new URLSearchParams(params.callbackQuery);
+    const signature = query.get('hmac') || '';
+    if (
+      !/^[a-f0-9]{64}$/i.test(signature) ||
+      query.get('shop') !== new URL(row.tokenEndpoint).hostname ||
+      query.get('code') !== params.code ||
+      query.get('state') !== params.stateToken ||
+      new Set(query.keys()).size !== [...query.keys()].length
+    )
+      throw new Error('Invalid signed shop callback.');
+    query.delete('hmac');
+    query.sort();
+    const secret = await resolveVaultSecretForServer({
+      tenantId: row.clientId,
+      providerKey: row.providerKey,
+      credentialType: 'oauth_client_secret',
+      actor: params.actor,
+      reason: 'Verify signed shop callback',
+    });
+    if (
+      !secret ||
+      !timingSafeEqual(
+        createHmac('sha256', secret.plaintext).update(query.toString()).digest(),
+        Buffer.from(signature, 'hex'),
+      )
+    )
+      throw new Error('Invalid shop callback signature.');
+  }
+  const claim = await db.oAuthAuthorizationState.updateMany({
+    where: { id: row.id, status: 'pending', consumedAt: null, expiresAt: { gt: now } },
+    data: { status: 'processing', consumedAt: now },
+  });
   if (!claim.count) throw new Error('OAuth state expired or already consumed (replay rejected).');
 
   if (params.error) {
@@ -214,16 +291,26 @@ export async function handleOAuthCallback(params: {
       data: {
         status: 'denied',
         consumedAt: new Date(),
-        errorDetail:'Provider denied the authorization request.',
+        errorDetail: 'Provider denied the authorization request.',
       },
     });
-    return { ok: false, providerKey: row.providerKey, tenantId: row.clientId, status: 'DENIED', error: 'Provider denied authorization.' };
+    return {
+      ok: false,
+      providerKey: row.providerKey,
+      tenantId: row.clientId,
+      status: 'DENIED',
+      error: 'Provider denied authorization.',
+    };
   }
 
   if (!params.code) {
     await db.oAuthAuthorizationState.update({
       where: { id: row.id },
-      data: { status: 'failed', consumedAt: new Date(), errorDetail: 'Missing authorization code on OAuth callback.' },
+      data: {
+        status: 'failed',
+        consumedAt: new Date(),
+        errorDetail: 'Missing authorization code on OAuth callback.',
+      },
     });
     throw new Error('Missing authorization code on OAuth callback.');
   }
@@ -252,22 +339,31 @@ export async function handleOAuthCallback(params: {
     reason: 'OAuth authorization code exchange',
   });
 
-  const idEnv = provider.environmentVariables.find(v => /CLIENT_ID|APP_ID|CLIENT_KEY|APPLICATION_ID/i.test(v.name));
-  const secretEnv = provider.environmentVariables.find(v => /CLIENT_SECRET|APP_SECRET|SECRET/i.test(v.name));
+  const idEnv = provider.environmentVariables.find((v) =>
+    /CLIENT_ID|APP_ID|CLIENT_KEY|APPLICATION_ID/i.test(v.name),
+  );
+  const secretEnv = provider.environmentVariables.find((v) =>
+    /CLIENT_SECRET|APP_SECRET|SECRET/i.test(v.name),
+  );
   const clientId = storedId?.plaintext || (idEnv ? process.env[idEnv.name] : '') || '';
   const clientSecret = storedSecret?.plaintext || (secretEnv ? process.env[secretEnv.name] : '') || '';
 
   if (!clientId || !clientSecret) {
     await db.oAuthAuthorizationState.update({
       where: { id: row.id },
-      data: { status: 'requires_client_secret', consumedAt: new Date(), errorDetail: 'Client ID or Secret missing for token exchange.' },
+      data: {
+        status: 'requires_client_secret',
+        consumedAt: new Date(),
+        errorDetail: 'Client ID or Secret missing for token exchange.',
+      },
     });
     return {
       ok: false,
       providerKey: row.providerKey,
       tenantId: row.clientId,
       status: 'REQUIRES_CLIENT_SECRET',
-      error: 'OAuth callback state verified, but official Client ID / Client Secret are not yet stored in Vault.',
+      error:
+        'OAuth callback state verified, but official Client ID / Client Secret are not yet stored in Vault.',
     };
   }
 
@@ -287,7 +383,8 @@ export async function handleOAuthCallback(params: {
   const timer = setTimeout(() => controller.abort(), 15_000);
   try {
     const res = await fetch(tokenUrl, {
-      method: 'POST', redirect:'error',
+      method: 'POST',
+      redirect: 'error',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Accept: 'application/json',
@@ -298,7 +395,11 @@ export async function handleOAuthCallback(params: {
 
     const rawText = await res.text();
     let payload: Record<string, unknown> = {};
-    try { payload = JSON.parse(rawText) as Record<string, unknown>; } catch { /* non-json */ }
+    try {
+      payload = JSON.parse(rawText) as Record<string, unknown>;
+    } catch {
+      /* non-json */
+    }
 
     if (!res.ok || typeof payload.access_token !== 'string' || !payload.access_token) {
       const msg = `Token exchange failed (HTTP ${res.status}).`;
@@ -306,12 +407,24 @@ export async function handleOAuthCallback(params: {
         where: { id: row.id },
         data: { status: 'failed', consumedAt: new Date(), errorDetail: msg },
       });
-      return { ok: false, providerKey: row.providerKey, tenantId: row.clientId, status: 'FAILED', error: msg };
+      return {
+        ok: false,
+        providerKey: row.providerKey,
+        tenantId: row.clientId,
+        status: 'FAILED',
+        error: msg,
+      };
     }
 
     const expiresInSec = typeof payload.expires_in === 'number' ? payload.expires_in : null;
     const tokenExpiry = expiresInSec ? new Date(Date.now() + expiresInSec * 1000) : null;
-    const scopes = (() => { try { return JSON.parse(row.scopes) as string[]; } catch { return []; } })();
+    const scopes = (() => {
+      try {
+        return JSON.parse(row.scopes) as string[];
+      } catch {
+        return [];
+      }
+    })();
 
     await storeVaultCredential({
       tenantId: row.clientId,
@@ -384,6 +497,15 @@ export async function refreshOAuthTokens(params: {
     throw new Error('Provider OAuth metadata missing.');
   }
 
+  // The legacy vault stores one primary refresh token per tenant/provider, not per instance.
+  // Never send such a token to a newly authorized shop/instance.
+  if (provider.oauthConfig.tokenUrl.includes('{'))
+    return {
+      ok: false,
+      status: 'REAUTHORIZATION_REQUIRED',
+      error: 'Use the bound authorization flow to renew this instance.',
+    };
+
   const refreshCred = await resolveVaultSecretForServer({
     tenantId: params.tenantId,
     providerKey: params.providerKey,
@@ -412,12 +534,20 @@ export async function refreshOAuthTokens(params: {
   const clientId = storedId?.plaintext || '';
   const clientSecret = storedSecret?.plaintext || '';
   if (!clientId || !clientSecret) {
-    return { ok: false, status: 'REQUIRES_CLIENT_SECRET', error: 'Client ID or Client Secret missing in Vault.' };
+    return {
+      ok: false,
+      status: 'REQUIRES_CLIENT_SECRET',
+      error: 'Client ID or Client Secret missing in Vault.',
+    };
   }
 
-  const binding = await db.oAuthAuthorizationState.findFirst({where:{clientId:params.tenantId,providerKey:params.providerKey,status:'authorized'},orderBy:{consumedAt:'desc'}});
+  const binding = await db.oAuthAuthorizationState.findFirst({
+    where: { clientId: params.tenantId, providerKey: params.providerKey, status: 'authorized' },
+    orderBy: { consumedAt: 'desc' },
+  });
   const endpoint = binding?.tokenEndpoint ?? provider.oauthConfig.tokenUrl;
-  if (params.dynamicParams || endpoint.includes('{')) throw new Error('Reauthorize this provider instance before refresh.');
+  if (params.dynamicParams || endpoint.includes('{'))
+    throw new Error('Reauthorize this provider instance before refresh.');
   const tokenUrl = validateOAuthEndpointUrl(endpoint, params.providerKey);
 
   const form = new URLSearchParams();
@@ -427,14 +557,19 @@ export async function refreshOAuthTokens(params: {
   form.set('client_secret', clientSecret);
 
   const res = await fetch(tokenUrl, {
-    method: 'POST', redirect:'error',
+    method: 'POST',
+    redirect: 'error',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     body: form.toString(),
     signal: AbortSignal.timeout(15_000),
   });
   const rawText = await res.text();
   let payload: Record<string, unknown> = {};
-  try { payload = JSON.parse(rawText) as Record<string, unknown>; } catch { /* non-json */ }
+  try {
+    payload = JSON.parse(rawText) as Record<string, unknown>;
+  } catch {
+    /* non-json */
+  }
   if (!res.ok || typeof payload.access_token !== 'string' || !payload.access_token) {
     const errText = `Token refresh failed (HTTP ${res.status}).`;
     return { ok: false, status: 'REFRESH_FAILED', error: errText };
@@ -442,7 +577,13 @@ export async function refreshOAuthTokens(params: {
 
   const expiresInSec = typeof payload.expires_in === 'number' ? payload.expires_in : null;
   const tokenExpiry = expiresInSec ? new Date(Date.now() + expiresInSec * 1000) : null;
-  const scopes = (() => { try { return JSON.parse(refreshCred.scopes) as string[]; } catch { return []; } })();
+  const scopes = (() => {
+    try {
+      return JSON.parse(refreshCred.scopes) as string[];
+    } catch {
+      return [];
+    }
+  })();
 
   await storeVaultCredential({
     tenantId: params.tenantId,
@@ -512,7 +653,8 @@ export async function revokeOAuthTokens(params: {
       try {
         const revokeEndpoint = validateOAuthEndpointUrl(provider.oauthConfig.revokeUrl, params.providerKey);
         const res = await fetch(revokeEndpoint, {
-          method: 'POST', redirect:'error',
+          method: 'POST',
+          redirect: 'error',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({ token: activeToken.plaintext }).toString(),
           signal: AbortSignal.timeout(8_000),
@@ -525,7 +667,11 @@ export async function revokeOAuthTokens(params: {
   }
 
   const creds = await listVaultCredentialsMetadata(params.tenantId, params.providerKey);
-  const oauthCreds = creds.filter(c => !c.revokedAt && (c.credentialType === 'oauth_access_token' || c.credentialType === 'oauth_refresh_token'));
+  const oauthCreds = creds.filter(
+    (c) =>
+      !c.revokedAt &&
+      (c.credentialType === 'oauth_access_token' || c.credentialType === 'oauth_refresh_token'),
+  );
   for (const cred of oauthCreds) {
     await revokeVaultCredential({
       credentialId: cred.id,
@@ -536,7 +682,11 @@ export async function revokeOAuthTokens(params: {
     });
   }
   const states = await db.oAuthAuthorizationState.updateMany({
-    where: { clientId: params.tenantId, providerKey: params.providerKey, status: { in: ['pending', 'processing', 'authorized'] } },
+    where: {
+      clientId: params.tenantId,
+      providerKey: params.providerKey,
+      status: { in: ['pending', 'processing', 'authorized'] },
+    },
     data: { status: 'revoked', errorDetail: params.reason || 'Revoked by administrator' },
   });
   await auditEvent({
@@ -545,7 +695,17 @@ export async function revokeOAuthTokens(params: {
     target: `${params.tenantId}:${params.providerKey}`,
     providerKey: params.providerKey,
     ip: params.ip,
-    metadata: { revokedCredentials: oauthCreds.length, updatedStates: states.count, remoteRevokeAttempted, remoteRevokeStatus },
+    metadata: {
+      revokedCredentials: oauthCreds.length,
+      updatedStates: states.count,
+      remoteRevokeAttempted,
+      remoteRevokeStatus,
+    },
   });
-  return { revokedCredentials: oauthCreds.length, updatedStates: states.count, remoteRevokeAttempted, remoteRevokeStatus };
+  return {
+    revokedCredentials: oauthCreds.length,
+    updatedStates: states.count,
+    remoteRevokeAttempted,
+    remoteRevokeStatus,
+  };
 }

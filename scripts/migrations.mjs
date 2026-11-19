@@ -56,7 +56,8 @@ function tableSnapshot(db, table) {
     on_delete: String(key.on_delete).toUpperCase(),
     match: String(key.match).toUpperCase(),
   })).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
-  return { columns, indexes, foreignKeys };
+  const triggers=db.prepare("SELECT name,sql FROM sqlite_master WHERE type='trigger' AND tbl_name=? ORDER BY name").all(table);
+  return { columns, indexes, foreignKeys, triggers };
 }
 
 /**

@@ -1,3 +1,4 @@
+import { callbackUrl } from '@/lib/onboarding/callback-url';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdminApi } from '@/lib/security/admin-guard';
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     if (action === 'create_flow') {
       const tenantId = String(body.tenantId || '').trim();
       const providerKey = String(body.providerKey || '').trim();
-      const redirectUri = String(body.redirectUri || `${req.nextUrl.origin}/api/onboarding/oauth/callback`).trim();
+      const redirectUri = String(body.redirectUri || callbackUrl(req)).trim();
       if (!tenantId || !providerKey) {
         return NextResponse.json({ error: 'tenantId and providerKey are required.' }, { status: 400 });
       }

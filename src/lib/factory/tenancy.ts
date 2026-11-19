@@ -21,10 +21,24 @@ export function hasRolePermission(role: string, permission: FactoryPermission): 
 }
 
 export async function ensureDefaultFactoryWorkspace(ownerUsername = 'admin') {
-  return db.factoryWorkspace.upsert({ where: { slug: 'default-workspace' }, update: {}, create: {
-    id: 'default-workspace', slug: 'default-workspace', name: 'ALOAPI Default Factory Workspace', ownerUsername,
-    planTier: 'growth', members: { create: { username: ownerUsername, role: 'owner', permissions: JSON.stringify(ROLE_PERMISSIONS.owner) } },
-  } });
+  return db.factoryWorkspace.upsert({
+    where: { slug: 'default-workspace' },
+    update: {},
+    create: {
+      id: 'default-workspace',
+      slug: 'default-workspace',
+      name: 'ALOAPI Default Factory Workspace',
+      ownerUsername,
+      planTier: 'growth',
+      members: {
+        create: {
+          username: ownerUsername,
+          role: 'owner',
+          permissions: JSON.stringify(ROLE_PERMISSIONS.owner),
+        },
+      },
+    },
+  });
 }
 
 export async function createFactoryWorkspace(params: {
@@ -37,7 +51,11 @@ export async function createFactoryWorkspace(params: {
   actor: string;
   ip?: string;
 }) {
-  const slug = params.slug.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-').replace(/^-+|-+$/g, '');
+  const slug = params.slug
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, '-')
+    .replace(/^-+|-+$/g, '');
   if (!slug || slug.length < 3) {
     throw new Error('Workspace slug must be at least 3 alphanumeric/hyphen characters.');
   }
@@ -47,7 +65,9 @@ export async function createFactoryWorkspace(params: {
   }
   const ownerUsername = (params.ownerUsername || params.actor || 'admin').trim();
 
-  const clientAccountId = (await db.clientAccount.findUnique({where:{username:ownerUsername},select:{id:true}}))?.id ?? null;
+  const clientAccountId =
+    (await db.clientAccount.findUnique({ where: { username: ownerUsername }, select: { id: true } }))?.id ??
+    null;
   const workspace = await db.factoryWorkspace.create({
     data: {
       slug,
@@ -58,7 +78,14 @@ export async function createFactoryWorkspace(params: {
       timezone: params.timezone || 'Asia/Dhaka',
       defaultLanguage: params.defaultLanguage || 'en',
       settings: '{}',
-      members:{create:{username:ownerUsername, clientAccountId, role:'owner', permissions:JSON.stringify(ROLE_PERMISSIONS.owner)}},
+      members: {
+        create: {
+          username: ownerUsername,
+          clientAccountId,
+          role: 'owner',
+          permissions: JSON.stringify(ROLE_PERMISSIONS.owner),
+        },
+      },
     },
   });
 
@@ -86,18 +113,22 @@ export async function upsertWorkspaceMember(params: {
   const ws = await db.factoryWorkspace.findUnique({ where: { id: params.workspaceId } });
   if (!ws) throw new Error('Workspace not found.');
 
-  const clientAccountId = (await db.clientAccount.findUnique({where:{username: params.username.trim()}, select:{id:true}}))?.id ?? null;
+  const clientAccountId =
+    (await db.clientAccount.findUnique({ where: { username: params.username.trim() }, select: { id: true } }))
+      ?.id ?? null;
   const member = await db.factoryWorkspaceMember.upsert({
     where: { workspaceId_username: { workspaceId: params.workspaceId, username: params.username.trim() } },
     update: {
-      clientAccountId, role: params.role,
+      clientAccountId,
+      role: params.role,
       permissions: JSON.stringify(ROLE_PERMISSIONS[params.role]),
       status: 'active',
     },
     create: {
       workspaceId: params.workspaceId,
       username: params.username.trim(),
-      clientAccountId, role: params.role,
+      clientAccountId,
+      role: params.role,
       permissions: JSON.stringify(ROLE_PERMISSIONS[params.role]),
       status: 'active',
     },
@@ -137,7 +168,13 @@ export async function requireFactoryAccess(
     requireCsrf?: boolean;
   } = {},
 ): Promise<
-  | { ok: true; user: SessionUser & { username: string }; workspaceId: string; role: WorkspaceRole; ip: string }
+  | {
+      ok: true;
+      user: SessionUser & { username: string };
+      workspaceId: string;
+      role: WorkspaceRole;
+      ip: string;
+    }
   | { ok: false; response: NextResponse }
 > {
   if (opts.requireCsrf && !isSameOriginRequest(req)) {
@@ -165,7 +202,10 @@ export async function requireFactoryAccess(
   } catch (err) {
     return {
       ok: false,
-      response: NextResponse.json({ error: user.role === 'admin' && err instanceof Error ? err.message : 'Forbidden.' }, { status: user.role === 'admin' ? 404 : 403 }),
+      response: NextResponse.json(
+        { error: user.role === 'admin' && err instanceof Error ? err.message : 'Forbidden.' },
+        { status: user.role === 'admin' ? 404 : 403 },
+      ),
     };
   }
 
@@ -178,7 +218,10 @@ export async function requireFactoryAccess(
     if (!hasRolePermission(role, requiredPerm)) {
       return {
         ok: false,
-        response: NextResponse.json({ error: `Insufficient workspace permission (${requiredPerm}) for role ${role}.` }, { status: 403 }),
+        response: NextResponse.json(
+          { error: `Insufficient workspace permission (${requiredPerm}) for role ${role}.` },
+          { status: 403 },
+        ),
       };
     }
     return { ok: true, user: { ...user, username }, workspaceId, role, ip };
@@ -199,14 +242,26 @@ export async function requireFactoryAccess(
   if (!hasRolePermission(role, requiredPerm)) {
     return {
       ok: false,
-      response: NextResponse.json({ error: `Forbidden: role '${role}' lacks '${requiredPerm}' permission.` }, { status: 403 }),
+      response: NextResponse.json(
+        { error: `Forbidden: role '${role}' lacks '${requiredPerm}' permission.` },
+        { status: 403 },
+      ),
     };
   }
 
   return { ok: true, user: { ...user, username }, workspaceId, role, ip };
 }
 
-export function listVisibleWorkspaces(user:SessionUser) {
-  if(user.role!=='admin' && !user.clientId) throw new Error('Missing authenticated client identity.');
-  return db.factoryWorkspace.findMany({where:user.role==='admin'?{}:{status:'active',members:{some:{clientAccountId:user.clientId,username:user.username,status:'active'}}},orderBy:{createdAt:'asc'}});
+export function listVisibleWorkspaces(user: SessionUser) {
+  if (user.role !== 'admin' && !user.clientId) throw new Error('Missing authenticated client identity.');
+  return db.factoryWorkspace.findMany({
+    where:
+      user.role === 'admin'
+        ? {}
+        : {
+            status: 'active',
+            members: { some: { clientAccountId: user.clientId, username: user.username, status: 'active' } },
+          },
+    orderBy: { createdAt: 'asc' },
+  });
 }

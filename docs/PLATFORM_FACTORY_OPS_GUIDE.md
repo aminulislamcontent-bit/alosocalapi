@@ -24,7 +24,7 @@ ALOAPI separates external SaaS integration intelligence from first-party operati
 
 ## 3. First-Party Platform Modules Inventory (All 20 Modules)
 
-1. `email_marketing` (Priority) — Verified sending domain gate (`SPF`/`DKIM`/`DMARC` via live DNS lookup or explicit owner verification), consent/suppression registry, RFC 8058 one-click unsubscribe (`/api/factory/modules/email_marketing/unsubscribe`), bounce-rate reputation scoring & auto-pause, SMTP/Provider/Sandbox-Mock adapters.
+1. `email_marketing` (Priority) — Verified sending domain gate (`SPF`/`DKIM`/`DMARC` via live DNS lookup), consent/suppression registry, RFC 8058 one-click unsubscribe (`/api/factory/modules/email_marketing/unsubscribe`), bounce-rate reputation scoring & auto-pause, SMTP and SendGrid submission with acceptance receipts. Unsupported adapters do not deliver.
 2. `voice_call_center` (Priority) — Inbound/outbound voice orchestration supporting **Bangla (`bn`), English (`en`), Hindi (`hi`), Arabic (`ar`), Spanish (`es`)**, lawful calling-hours & timezone check, DNC/consent verification, mandatory recording disclosure turn before agent audio, SIP Trunk / Vault Provider / Mocked Telephony adapters, human handoff detection, and post-call summary.
 3. `social_media_manager` — Multi-channel content scheduling, asset compliance check, owner approval queue.
 4. `ai_crm` (Priority) — Isolated First-Party CRM (`FactoryCrmOrganization`, `FactoryCrmContact`, `FactoryCrmOpportunity`, `FactoryCrmActivity`) completely separate from legacy ALOAPI `CrmLead`/`CrmContact` tables.
@@ -66,3 +66,11 @@ node --test tests/e2e-onboarding-runtime.test.cjs
 node --test tests/e2e-factory-runtime.test.cjs
 node scripts/aloapi.mjs doctor --json
 ```
+
+### Dispatch, retries and upgrades
+
+First `approve_campaign` (workspace approve permission), then `dispatch_campaign` (execute permission). Changing the template invalidates approval. Old approvals need renewal. The SMTP adapter reads Vault `custom_secret` labels `smtp_host` (`host:port`), and optional `smtp_user`/`smtp_password`, provider `smtp_custom`. Non-loopback SMTP requires STARTTLS or implicit TLS on port 465. Sender is `postmaster@<verified-domain>`; authorize this address at the relay/provider. For SendGrid authorize the email module bridge and store `api_key` labeled `primary`. `ACCEPTED` means the relay accepted the message, not inbox delivery. `UNKNOWN` or a `SUBMITTING` row after a crash requires recipient-level reconciliation. Do not replay a legacy campaign or create a replacement solely on a timeout.
+
+Jobs deduplicate within the workspace. Active leases are renewed every 20 seconds and expire after 60 seconds. Manual DLQ retry requires workspace admin, targets one job and grants one extra attempt (lifetime limit 20). Unsupported job types fail rather than reporting success. Use idempotent downstream handlers: database leases alone cannot guarantee exactly-once external effects.
+
+On migration, review default workspace owner memberships and ambiguous usernames with a master administrator. Legacy default owner entries are preserved but not automatically bound to client identities. Regrant only after review. Pending legacy OAuth states lack a verified initiator and endpoint: restart authorization rather than resuming them. For self-hosted instance templates, allow only owner-managed hostnames in `ALOAPI_OAUTH_INSTANCE_HOSTS` (comma separated); provider-instance refresh tokens require reauthorization rather than implicit host switching.

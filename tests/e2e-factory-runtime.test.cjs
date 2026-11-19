@@ -59,7 +59,9 @@ test('full E2E Factory HTTP runtime: 20 modules, pages, RBAC, compliance, automa
   });
 
   const sink = await require('./support/mail-fixture.cjs').start(t);
-  const preload = path.join(tmpDir,'dns.cjs'); fs.writeFileSync(preload,`require('node:dns/promises').setServers(['127.0.0.1:${sink.dnsPort}']);`);
+  let providerSubmissions=0;const provider=require('node:http').createServer((req,res)=>{if(req.method==='POST' && req.url==='/v3/mail/send')providerSubmissions++;res.writeHead(503);res.end();});
+  await new Promise(r=>provider.listen(0,'127.0.0.1',r));t.after(()=>provider.close());
+  const preload = path.join(tmpDir,'dns.cjs'); fs.writeFileSync(preload,`require('node:dns/promises').setServers(['127.0.0.1:${sink.dnsPort}']);const fetch=global.fetch;global.fetch=(url,init)=>fetch(String(url)==='https://api.sendgrid.com/v3/mail/send'?'http://127.0.0.1:${provider.address().port}/v3/mail/send':url,init);`);
   const db = require('../scripts/prisma-client.mjs').createPrismaClient(dbUrl);t.after(()=>db.$disconnect());
   const crypto=require('node:crypto'); const token=crypto.randomBytes(32).toString('hex');
   const client=await db.clientAccount.create({data:{name:'QA',business:'QA',username:'qaoperator',passwordHash:'disabled'}});
@@ -191,6 +193,14 @@ test('full E2E Factory HTTP runtime: 20 modules, pages, RBAC, compliance, automa
     assert.equal(sink.accepted,1);assert.equal(await usage(),1);await email(dispatch,memberHeaders);assert.equal(sink.connections,3);assert.equal(await usage(),1);
     await db.emailTemplate.update({where:{id:template.id},data:{subject:'Changed after approval'}});assert.match((await (await email(dispatch,memberHeaders)).json()).error,/requires approval/);assert.equal(sink.connections,3);
 
+    for(const providerKey of ['brevo_api','sendgrid_api']) {
+      assert.equal((await post('/api/onboarding/vault',{tenantId:'default-workspace',providerKey,credentialType:'api_key',value:crypto.randomUUID(),label:'primary'})).status,200);
+      const conn=await post('/api/factory/connections',{moduleKey:'email_marketing',providerKey,explicitOwnerConsent:true});assert.equal(conn.status,200);assert.equal((await conn.json()).connection.status,'authorized_with_vault');
+      const {campaign:bridged}=await (await email({action:'create_campaign',name:'Bridge',segment:'regression',domainId:domain.id,templateId:template.id,providerKey,adapterType:'external_provider_bridge'})).json();
+      assert.equal((await email({...approve,campaignId:bridged.id})).status,200);const out=await (await email({...dispatch,campaignId:bridged.id},memberHeaders)).json();
+      assert.equal(out.stats.sent,0);assert.equal(out.stats.outcomes[providerKey==='sendgrid_api'?'FAILED':'PREFLIGHT_PASSED'],3);assert.equal(await usage(),1);
+      assert.equal(providerSubmissions,providerKey==='sendgrid_api'?3:0);
+    }
     // 6. Voice Call Center HTTP flow (Bangla + calling-hours gate + conversation turn + completion)
     const vcConsent = await api('/api/factory/modules/voice_call_center', {
       method: 'POST',

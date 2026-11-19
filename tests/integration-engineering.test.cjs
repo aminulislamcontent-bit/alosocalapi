@@ -275,7 +275,9 @@ test('Universal Provider Adapters cover all 131 providers & end-to-end Credentia
   assert.equal(imported.originalCrmModified, false);
 
   // 7. Authorized Autonomous Client API Execution Engine enforces approval gates for high-impact actions
+  let mutationCalls=0;
   const mockApiServer = http.createServer((req, res) => {
+    mutationCalls++;
     const auth = req.headers.authorization || '';
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, method: req.method, echoAuth: auth }));
@@ -327,21 +329,27 @@ test('Universal Provider Adapters cover all 131 providers & end-to-end Credentia
   const grant = await approveOperation(disc.project.id,'sendgrid_api','publish_campaign_broadcast',{campaignId:'123'},admin.id);
   const scoped = {projectId:disc.project.id,providerKey:'sendgrid_api',actionName:'publish_campaign_broadcast',approvalId:grant.id,actor:'engineer',allowLoopbackForTest:true,testEndpointOverride:mockApiUrl};
   assert.equal((await executor.executeAuthorizedClientApiAction({...scoped,bodyPayload:{campaignId:'124'}})).status,'APPROVAL_REQUIRED');
-  const approvedExec = await executor.executeAuthorizedClientApiAction({
-    projectId: disc.project.id,
-    providerKey: 'sendgrid_api',
-    actionName: 'publish_campaign_broadcast',
-    httpMethod: 'POST',
-    bodyPayload: { campaignId: '123' }, approvalId:grant.id,
-    allowLoopbackForTest: true,
-    testEndpointOverride: mockApiUrl,
-    ownerApprovalGranted: true,
-    approvalCheckpointId: cps[0].id,
-    actor: 'ai_agent',
-  });
+  const args={...scoped,bodyPayload:{campaignId:'123'}};
+  const wrongScope=await db.integrationProject.create({data:{clientId:'other',name:'Other project',websiteUrl:'https://example.invalid',domain:'example.invalid',createdBy:'qa'}});
+  assert.equal((await executor.executeAuthorizedClientApiAction({...args,projectId:wrongScope.id})).status,'APPROVAL_REQUIRED');
+  await assert.rejects(()=>executor.executeAuthorizedClientApiAction({...args,providerKey:'mailgun_api'}),/Unregistered|Unknown provider/);
+  await assert.rejects(()=>approveOperation(disc.project.id,'sendgrid_api',args.actionName,args.bodyPayload,'not-an-admin'),/approval required/i);
+  const expired=await approveOperation(disc.project.id,'sendgrid_api',args.actionName,args.bodyPayload,admin.id);await db.operationApproval.update({where:{id:expired.id},data:{expiresAt:new Date(0)}});
+  assert.equal((await executor.executeAuthorizedClientApiAction({...args,approvalId:expired.id})).status,'APPROVAL_REQUIRED');
+  for(const mismatch of [{action:'unrelated_operation'},{providerKey:'different_provider'}]){
+    const original=await db.operationApproval.findUniqueOrThrow({where:{id:grant.id}});
+    const foreign=await db.operationApproval.create({data:{...original,id:require('node:crypto').randomUUID(),...mismatch}});
+    assert.equal((await executor.executeAuthorizedClientApiAction({...args,approvalId:foreign.id})).status,'APPROVAL_REQUIRED');
+    assert.equal((await db.operationApproval.findUniqueOrThrow({where:{id:foreign.id}})).consumedAt,null);
+  }
+  assert.equal(mutationCalls,0);
+  const concurrent=await Promise.all([executor.executeAuthorizedClientApiAction(args),executor.executeAuthorizedClientApiAction(args)]);
+  assert.deepEqual(concurrent.map(r=>r.status).sort(),['APPROVAL_REQUIRED','EXECUTED']);const approvedExec=concurrent.find(r=>r.status==='EXECUTED');
   assert.equal(approvedExec.status, 'EXECUTED');
   assert.equal(approvedExec.httpStatus, 200);
   assert.equal((await executor.executeAuthorizedClientApiAction({...scoped,bodyPayload:{campaignId:'123'}})).status,'APPROVAL_REQUIRED');
+  assert.equal(mutationCalls,1);
+  await assert.rejects(()=>db.agentExecutionRun.update({where:{id:approvedExec.runId},data:{status:'changed'}}));
   // Bearer token must be redacted from responsePreview!
   assert.ok(!approvedExec.responsePreview.includes('SG.test_live_authorized_token_xyz_123456'));
   assert.ok(approvedExec.responsePreview.includes('[REDACTED]'));
