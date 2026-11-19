@@ -22,6 +22,8 @@ export async function GET(req: NextRequest) {
   try {
     const result = await handleOAuthCallback({
       stateToken,
+      redirectUri: req.nextUrl.origin + req.nextUrl.pathname,
+      providerKey:req.nextUrl.searchParams.get("providerKey") || undefined, tenantId:req.nextUrl.searchParams.get("tenantId") || undefined,
       code,
       error,
       errorDescription,

@@ -58,11 +58,17 @@ test('full E2E Factory HTTP runtime: 20 modules, pages, RBAC, compliance, automa
     stdio: 'pipe',
   });
 
+  const sink = await require('./support/mail-fixture.cjs').start(t);
+  const preload = path.join(tmpDir,'dns.cjs'); fs.writeFileSync(preload,`require('node:dns/promises').setServers(['127.0.0.1:${sink.dnsPort}']);`);
+  const db = require('../scripts/prisma-client.mjs').createPrismaClient(dbUrl);t.after(()=>db.$disconnect());
+  const crypto=require('node:crypto'); const token=crypto.randomBytes(32).toString('hex');
+  const client=await db.clientAccount.create({data:{name:'QA',business:'QA',username:'qaoperator',passwordHash:'disabled'}});
+  await db.portalSession.create({data:{role:'client',clientId:client.id,token:crypto.createHash('sha256').update(token).digest('hex'),expiresAt:new Date(Date.now()+600000)}});
   const port = await getFreePort();
   const baseUrl = `http://127.0.0.1:${port}`;
   const serverLogs = [];
 
-  const child = spawn(process.execPath, [STANDALONE_SERVER], {
+  const child = spawn(process.execPath, ['-r',preload,STANDALONE_SERVER], {
     cwd: path.join(ROOT, '.next', 'standalone'),
     env: {
       ...process.env,
@@ -89,6 +95,9 @@ test('full E2E Factory HTTP runtime: 20 modules, pages, RBAC, compliance, automa
     const unauth = await fetch(`${baseUrl}/api/factory/overview`);
     assert.equal(unauth.status, 401);
 
+    const memberHeaders={cookie:`aia_session=${token}`,origin:baseUrl,'content-type':'application/json'};
+    assert.equal((await fetch(`${baseUrl}/api/factory/workspaces?username=factoryadmin`,{headers:memberHeaders})).status,403);
+    assert.equal(await db.factoryWorkspace.count(),0);assert.equal(await db.factoryWorkspaceMember.count(),0);
     // 2. Sign in
     const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
@@ -157,17 +166,30 @@ test('full E2E Factory HTTP runtime: 20 modules, pages, RBAC, compliance, automa
     assert.equal(unsubRes.status, 200);
     assert.equal((await unsubRes.json()).unsubscribed, true);
 
-    const campRes = await api('/api/factory/modules/email_marketing', {
-      method: 'POST',
-      body: JSON.stringify({ action: 'create_campaign', name: 'E2E Unverified SMTP', domainId: domain.id, adapterType: 'smtp_custom' }),
-    });
-    assert.equal(campRes.status, 201);
-    const { campaign } = await campRes.json();
-    const blockedDispatch = await api('/api/factory/modules/email_marketing', {
-      method: 'POST',
-      body: JSON.stringify({ action: 'dispatch_campaign', campaignId: campaign.id, approveNow: true }),
-    });
-    assert.equal(blockedDispatch.status, 400);
+    const post=(url,body,headers)=>api(url,{method:'POST',body:JSON.stringify(body),headers});
+    const email=(body,headers)=>post('/api/factory/modules/email_marketing',body,headers);
+    assert.equal((await post('/api/factory/workspaces',{action:'create_workspace',name:'Other',slug:'other'})).status,201);
+    assert.equal((await post('/api/factory/workspaces',{action:'upsert_member',username:client.username,role:'operator'})).status,200);
+    assert.equal((await (await api('/api/factory/workspaces')).json()).workspaces.length,2);
+    assert.deepEqual((await (await api('/api/factory/workspaces',{headers:memberHeaders})).json()).workspaces.map(w=>w.id),['default-workspace']);
+    const store=await post('/api/onboarding/vault',{tenantId:'default-workspace',providerKey:'smtp_custom',credentialType:'custom_secret',label:'smtp_host',value:`127.0.0.1:${sink.port}`});assert.equal(store.status,200);
+    const {template}=await (await email({action:'save_template',name:'Regression',subject:'Controlled message',textBody:'Test message',htmlBody:'<p>Test message</p>'})).json();
+    for(const addr of ['success','reject','timeout'])assert.equal((await email({action:'upsert_contact',email:`${addr}@example.invalid`,segment:'regression',consentStatus:'granted'})).status,200);
+    const {campaign}=await (await email({action:'create_campaign',name:'Controlled dispatch',segment:'regression',domainId:domain.id,templateId:template.id,adapterType:'smtp_custom'})).json();
+    const approve={action:'approve_campaign',campaignId:campaign.id}; const dispatch={action:'dispatch_campaign',campaignId:campaign.id};
+    assert.equal((await email(approve,memberHeaders)).status,403);assert.equal((await email({...dispatch,approveNow:true},memberHeaders)).status,403);
+    assert.equal((await db.emailCampaign.findUniqueOrThrow({where:{id:campaign.id}})).approvalStatus,'pending');
+    assert.equal((await email(approve)).status,200);
+    const blocked=await email(dispatch,memberHeaders);assert.equal(blocked.status,400);assert.match((await blocked.json()).error,/domain requires verified SPF/);
+    const events=()=>db.emailDeliveryEvent.findMany({where:{campaignId:campaign.id}});
+    const usage=()=>db.factoryUsageEvent.count({where:{metric:'email_sent'}});
+    assert.equal(sink.connections,0);assert.equal((await events()).length,0);assert.equal(await usage(),0);assert.equal((await db.emailCampaign.findUniqueOrThrow({where:{id:campaign.id}})).sentAt,null);
+    sink.verified=true;const verified=await email({action:'verify_domain',domainId:domain.id});assert.equal((await verified.json()).domain.verifiedForProduction,true);
+    const accepted=await email(dispatch,memberHeaders);assert.equal(accepted.status,200);
+    const stats=(await accepted.json()).stats;assert.deepEqual(stats.outcomes,{ACCEPTED:1,REJECTED:1,UNKNOWN:1});
+    assert.equal((await events()).find(e=>e.status==='ACCEPTED').detail,'250 queued receipt-123');
+    assert.equal(sink.accepted,1);assert.equal(await usage(),1);await email(dispatch,memberHeaders);assert.equal(sink.connections,3);assert.equal(await usage(),1);
+    await db.emailTemplate.update({where:{id:template.id},data:{subject:'Changed after approval'}});assert.match((await (await email(dispatch,memberHeaders)).json()).error,/requires approval/);assert.equal(sink.connections,3);
 
     // 6. Voice Call Center HTTP flow (Bangla + calling-hours gate + conversation turn + completion)
     const vcConsent = await api('/api/factory/modules/voice_call_center', {

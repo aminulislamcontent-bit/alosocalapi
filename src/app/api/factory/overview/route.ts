@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { summarizeCatalog } from '@/lib/intelligence/catalog';
-import { requireFactoryAccess } from '@/lib/factory/tenancy';
+import { requireFactoryAccess,listVisibleWorkspaces } from '@/lib/factory/tenancy';
 import { FIRST_PARTY_MODULES } from '@/lib/factory/modules/registry';
 import { getWorkspaceUsageSummary } from '@/lib/factory/billing';
 import { listFactoryProviderConnections } from '@/lib/factory/provider-bridge';
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     crmOpportunities,
     auditEvents,
   ] = await Promise.all([
-    db.factoryWorkspace.findMany({ orderBy: { createdAt: 'asc' } }),
+    listVisibleWorkspaces(access.user),
     db.factoryWorkspaceMember.findMany({ where: { workspaceId: wid }, orderBy: { createdAt: 'asc' } }),
     db.factoryModuleConfig.findMany({ where: { workspaceId: wid } }),
     db.factoryModuleRecord.groupBy({ by: ['moduleKey'], where: { workspaceId: wid }, _count: { _all: true } }),
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     db.factoryAutomationWorkflow.findMany({ where: { workspaceId: wid }, orderBy: { updatedAt: 'desc' } }),
     db.factoryAutomationRun.findMany({ where: { workspaceId: wid }, orderBy: { createdAt: 'desc' }, take: 30 }),
     db.factoryCrmOpportunity.findMany({ where: { workspaceId: wid }, orderBy: { updatedAt: 'desc' }, take: 50 }),
-    db.integrationAuditEvent.findMany({
+    access.user.role !== 'admin' ? [] : db.integrationAuditEvent.findMany({
       where: { action: { startsWith: 'factory.' } },
       orderBy: { createdAt: 'desc' },
       take: 60,

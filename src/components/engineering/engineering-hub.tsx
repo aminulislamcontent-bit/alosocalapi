@@ -113,8 +113,9 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
   const [subTab, setSubTab] = useState<'discover' | 'adapters' | 'credentials' | 'checkpoints' | 'handover'>('discover');
   const [adapterFilter, setAdapterFilter] = useState('');
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [campaignId,setCampaignId] = useState('');
+  const [grant,setGrant] = useState('');
   const [apiActionResult, setApiActionResult] = useState<string | null>(null);
-  const [ownerApprovalGate, setOwnerApprovalGate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [credentialProviderKey, setCredentialProviderKey] = useState('meta_facebook_pages');
@@ -722,43 +723,18 @@ export default function EngineeringHub({ onToast }: { onToast?: (msg: string, ty
               <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-2">
                 <div className="flex flex-wrap justify-between items-center gap-2">
                   <h3 className="text-sm font-semibold text-white">Authorized Autonomous Client API Execution Gate</h3>
-                  <label className="flex items-center gap-1.5 text-[11px] text-amber-200 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={ownerApprovalGate}
-                      onChange={e => setOwnerApprovalGate(e.target.checked)}
-                    />
-                    Explicit Owner Approval Granted (High-Impact Actions)
-                  </label>
+
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Reads client credentials from AES-256-GCM Vault only; high-impact mutations (publish, send, billing, delete) are blocked until explicit owner approval is checked.
+                  Reads client credentials from AES-256-GCM Vault only; high-impact mutations (publish, send, billing, delete) are blocked without a matching single-use approval record.
                 </p>
                 {activeProject.oauthApps[0] && (
                   <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={async () => {
-                        const res = await fetch('/api/engineering/providers', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            action: 'execute_client_api',
-                            projectId: activeProject.id,
-                            providerKey: activeProject.oauthApps[0].providerKey,
-                            actionName: 'publish_campaign_broadcast',
-                            httpMethod: 'POST',
-                            ownerApprovalGranted: ownerApprovalGate,
-                            approvalReference: ownerApprovalGate ? 'owner_ui_approved' : undefined,
-                          }),
-                        });
-                        const d = await res.json();
-                        setApiActionResult(JSON.stringify(d));
-                        notify(d.reason || d.status, res.status >= 400);
-                      }}
-                      className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-200"
-                    >
-                      Test Approval Gate (High-Impact Publish on {activeProject.oauthApps[0].providerKey})
-                    </button>
+                    <input aria-label="SendGrid campaign ID" value={campaignId} onChange={e=>{setCampaignId(e.target.value);setGrant('');}} />
+                    {['approve_operation','execute_client_api'].map(action=><button key={action} onClick={async()=>{
+                      const res = await fetch('/api/engineering/providers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,projectId:activeProject.id,providerKey:'sendgrid_api',actionName:'publish_campaign_broadcast',bodyPayload:{campaignId},approvalId:grant})});
+                      const data=await res.json(); if (action==='approve_operation' && res.ok) setGrant(data.id); setApiActionResult(JSON.stringify(data));
+                    }}>{action==='approve_operation'?'Approve SendGrid campaign version':'Execute approved SendGrid campaign'}</button>)}
                   </div>
                 )}
                 {apiActionResult && (

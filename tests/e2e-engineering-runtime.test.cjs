@@ -190,7 +190,7 @@ test('full E2E Integration Engineering HTTP runtime: URL discovery -> 131 adapte
         projectId: project.id,
         providerKey: 'sendgrid_api',
         actionName: 'publish_campaign_broadcast',
-        httpMethod: 'POST',
+        httpMethod: 'POST', bodyPayload:{campaignId:'123'},
         endpointPath: '/v3/marketing/campaigns',
         ownerApprovalGranted: false,
       }),
@@ -198,6 +198,8 @@ test('full E2E Integration Engineering HTTP runtime: URL discovery -> 131 adapte
     assert.equal(blockedExecRes.status, 403);
     assert.equal((await blockedExecRes.json()).status, 'APPROVAL_REQUIRED');
 
+    const approve = await api('/api/engineering/providers',{method:'POST',body:JSON.stringify({projectId:project.id,providerKey:'sendgrid_api',action:'approve_operation',actionName:'publish_campaign_broadcast',bodyPayload:{campaignId:'123'}})});
+    assert.equal(approve.status,200); const grant = await approve.json();
     const approvedExecRes = await api('/api/engineering/providers', {
       method: 'POST',
       body: JSON.stringify({
@@ -205,9 +207,9 @@ test('full E2E Integration Engineering HTTP runtime: URL discovery -> 131 adapte
         projectId: project.id,
         providerKey: 'sendgrid_api',
         actionName: 'publish_campaign_broadcast',
-        httpMethod: 'POST',
+        httpMethod: 'POST', bodyPayload:{campaignId:'123'},
         endpointPath: '/v3/marketing/campaigns',
-        ownerApprovalGranted: true,
+        approvalId:grant.id,
         approvalCheckpointId: cpList.checkpoints[0].id,
       }),
     });

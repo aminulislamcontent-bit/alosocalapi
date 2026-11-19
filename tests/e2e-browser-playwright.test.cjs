@@ -177,10 +177,12 @@ test('Real Playwright Chromium click-through acceptance across login, discovery,
     await page.waitForSelector('text=Universal Credential Engineering Ledger', { timeout: 15_000 });
     await page.getByRole('button', { name: 'Run Honest Live Connection Probe' }).first().click();
     await page.getByRole('button', { name: 'Verify Live DNS' }).first().click();
-    await page.getByRole('button', { name: /Test Approval Gate/ }).click();
+    await page.getByLabel('SendGrid campaign ID').fill('123');
+    await page.getByRole('button',{name:'Execute approved SendGrid campaign'}).click();
     await page.waitForSelector('text=APPROVAL_REQUIRED', { timeout: 10_000 });
-    await page.getByLabel(/Explicit Owner Approval Granted/).check();
-    await page.getByRole('button', { name: /Test Approval Gate/ }).click();
+    await page.getByRole('button',{name:'Approve SendGrid campaign version'}).click();
+    await page.waitForSelector('pre:text-matches("expiresAt")');
+    await page.getByRole('button', { name: 'Execute approved SendGrid campaign' }).click();
     await page.waitForSelector('text=CLIENT_ACTIVATION_REQUIRED', { timeout: 10_000 });
     await page.screenshot({ path: path.join(shotsDir, '04-credentials-gate.png') });
 

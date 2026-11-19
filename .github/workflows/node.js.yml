@@ -54,6 +54,12 @@ jobs:
       - name: ESLint
         run: npm run lint
 
+      - name: Validate callback-only Caddy routing
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y caddy
+          node --test tests/caddy-policy.test.cjs
+
       - name: Unit and integration tests
         run: npm test
 

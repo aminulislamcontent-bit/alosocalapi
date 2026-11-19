@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import {
-  createFactoryWorkspace,
+  createFactoryWorkspace,listVisibleWorkspaces,
   requireFactoryAccess,
   upsertWorkspaceMember,
   type WorkspaceRole,
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   if (!access.ok) return access.response;
 
   const [workspaces, members] = await Promise.all([
-    db.factoryWorkspace.findMany({ orderBy: { createdAt: 'asc' } }),
+    listVisibleWorkspaces(access.user),
     db.factoryWorkspaceMember.findMany({ where: { workspaceId: access.workspaceId }, orderBy: { createdAt: 'asc' } }),
   ]);
 

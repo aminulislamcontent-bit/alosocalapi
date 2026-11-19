@@ -21,36 +21,10 @@ export function hasRolePermission(role: string, permission: FactoryPermission): 
 }
 
 export async function ensureDefaultFactoryWorkspace(ownerUsername = 'admin') {
-  const existing = await db.factoryWorkspace.findUnique({ where: { slug: 'default-workspace' } });
-  if (existing) return existing;
-
-  const created = await db.factoryWorkspace.create({
-    data: {
-      id: 'default-workspace',
-      slug: 'default-workspace',
-      name: 'ALOAPI Default Factory Workspace',
-      planTier: 'growth',
-      status: 'active',
-      ownerUsername,
-      timezone: 'Asia/Dhaka',
-      defaultLanguage: 'en',
-      settings: JSON.stringify({ createdAutomatically: true }),
-    },
-  });
-
-  await db.factoryWorkspaceMember.upsert({
-    where: { workspaceId_username: { workspaceId: created.id, username: ownerUsername } },
-    update: { role: 'owner', status: 'active' },
-    create: {
-      workspaceId: created.id,
-      username: ownerUsername,
-      role: 'owner',
-      permissions: JSON.stringify(ROLE_PERMISSIONS.owner),
-      status: 'active',
-    },
-  });
-
-  return created;
+  return db.factoryWorkspace.upsert({ where: { slug: 'default-workspace' }, update: {}, create: {
+    id: 'default-workspace', slug: 'default-workspace', name: 'ALOAPI Default Factory Workspace', ownerUsername,
+    planTier: 'growth', members: { create: { username: ownerUsername, role: 'owner', permissions: JSON.stringify(ROLE_PERMISSIONS.owner) } },
+  } });
 }
 
 export async function createFactoryWorkspace(params: {
@@ -73,6 +47,7 @@ export async function createFactoryWorkspace(params: {
   }
   const ownerUsername = (params.ownerUsername || params.actor || 'admin').trim();
 
+  const clientAccountId = (await db.clientAccount.findUnique({where:{username:ownerUsername},select:{id:true}}))?.id ?? null;
   const workspace = await db.factoryWorkspace.create({
     data: {
       slug,
@@ -83,16 +58,7 @@ export async function createFactoryWorkspace(params: {
       timezone: params.timezone || 'Asia/Dhaka',
       defaultLanguage: params.defaultLanguage || 'en',
       settings: '{}',
-    },
-  });
-
-  await db.factoryWorkspaceMember.create({
-    data: {
-      workspaceId: workspace.id,
-      username: ownerUsername,
-      role: 'owner',
-      permissions: JSON.stringify(ROLE_PERMISSIONS.owner),
-      status: 'active',
+      members:{create:{username:ownerUsername, clientAccountId, role:'owner', permissions:JSON.stringify(ROLE_PERMISSIONS.owner)}},
     },
   });
 
@@ -120,17 +86,18 @@ export async function upsertWorkspaceMember(params: {
   const ws = await db.factoryWorkspace.findUnique({ where: { id: params.workspaceId } });
   if (!ws) throw new Error('Workspace not found.');
 
+  const clientAccountId = (await db.clientAccount.findUnique({where:{username: params.username.trim()}, select:{id:true}}))?.id ?? null;
   const member = await db.factoryWorkspaceMember.upsert({
     where: { workspaceId_username: { workspaceId: params.workspaceId, username: params.username.trim() } },
     update: {
-      role: params.role,
+      clientAccountId, role: params.role,
       permissions: JSON.stringify(ROLE_PERMISSIONS[params.role]),
       status: 'active',
     },
     create: {
       workspaceId: params.workspaceId,
       username: params.username.trim(),
-      role: params.role,
+      clientAccountId, role: params.role,
       permissions: JSON.stringify(ROLE_PERMISSIONS[params.role]),
       status: 'active',
     },
@@ -147,12 +114,8 @@ export async function upsertWorkspaceMember(params: {
   return member;
 }
 
-export async function resolveWorkspaceId(requestedId?: string | null, actor = 'admin'): Promise<string> {
-  const candidate = requestedId?.trim();
-  if (!candidate || candidate === 'default-workspace') {
-    const ws = await ensureDefaultFactoryWorkspace(actor);
-    return ws.id;
-  }
+export async function resolveWorkspaceId(requestedId?: string | null): Promise<string> {
+  const candidate = requestedId?.trim() || 'default-workspace';
   const found = await db.factoryWorkspace.findFirst({
     where: { OR: [{ id: candidate }, { slug: candidate }] },
     select: { id: true, status: true },
@@ -198,11 +161,11 @@ export async function requireFactoryAccess(
 
   let workspaceId: string;
   try {
-    workspaceId = await resolveWorkspaceId(opts.workspaceId, username);
+    workspaceId = await resolveWorkspaceId(opts.workspaceId);
   } catch (err) {
     return {
       ok: false,
-      response: NextResponse.json({ error: err instanceof Error ? err.message : 'Workspace invalid.' }, { status: 404 }),
+      response: NextResponse.json({ error: user.role === 'admin' && err instanceof Error ? err.message : 'Forbidden.' }, { status: user.role === 'admin' ? 404 : 403 }),
     };
   }
 
@@ -225,7 +188,7 @@ export async function requireFactoryAccess(
   const member = await db.factoryWorkspaceMember.findUnique({
     where: { workspaceId_username: { workspaceId, username } },
   });
-  if (!member || member.status !== 'active') {
+  if (!member || member.status !== 'active' || !user.clientId || member.clientAccountId !== user.clientId) {
     return {
       ok: false,
       response: NextResponse.json({ error: 'Forbidden: no active workspace membership.' }, { status: 403 }),
@@ -241,4 +204,9 @@ export async function requireFactoryAccess(
   }
 
   return { ok: true, user: { ...user, username }, workspaceId, role, ip };
+}
+
+export function listVisibleWorkspaces(user:SessionUser) {
+  if(user.role!=='admin' && !user.clientId) throw new Error('Missing authenticated client identity.');
+  return db.factoryWorkspace.findMany({where:user.role==='admin'?{}:{status:'active',members:{some:{clientAccountId:user.clientId,username:user.username,status:'active'}}},orderBy:{createdAt:'asc'}});
 }

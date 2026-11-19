@@ -87,3 +87,5 @@ All production migrations are checked into `prisma/migrations/`. The normal star
 ## Submodules
 
 The seven pinned provider submodules under `providers/` are retained at their existing commits. They are not automatically initialized, installed, launched, or connected.
+
+Before any database migration, follow the [database and vault recovery drill](docs/DATABASE_AND_VAULT_RECOVERY.md).

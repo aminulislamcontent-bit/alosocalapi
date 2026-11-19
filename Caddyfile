@@ -1,23 +1,18 @@
-:81 {
-	@transform_port_query {
-		query XTransformPort=*
+# Set ALOAPI_CALLBACK_HOST to the owner's DNS hostname before enabling TLS.
+https://{$ALOAPI_CALLBACK_HOST:callbacks.invalid} {
+	header X-Content-Type-Options nosniff
+	header Referrer-Policy no-referrer
+	header Strict-Transport-Security "max-age=31536000"
+	@callbacks path /api/webhooks/whatsapp /api/onboarding/oauth/callback
+	handle @callbacks {
+		reverse_proxy 127.0.0.1:47831
 	}
-
-	handle @transform_port_query {
-		reverse_proxy localhost:{query.XTransformPort} {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
-	}
-
 	handle {
-		reverse_proxy localhost:3000 {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
+		respond 404
 	}
+}
+
+# Reject a mismatched HTTP Host even on an already-established TLS connection.
+:443 {
+	respond 421
 }

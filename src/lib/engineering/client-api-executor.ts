@@ -1,3 +1,4 @@
+import { operationFor } from './operations';
 import { createHash, randomUUID } from 'node:crypto';
 import { db } from '@/lib/db';
 import { getProviderByKey } from '@/lib/intelligence/catalog';
@@ -20,23 +21,6 @@ export interface NormalizedProviderApiError {
   httpStatus: number | null;
   rateLimitResetAt: string | null;
   message: string;
-}
-
-const HIGH_IMPACT_PATTERN =
-  /(?:^|_|-)(publish|send|broadcast|spend|billing|charge|invoice|delete|destroy|remove|revoke|permission|role|transfer|dns|webhook_mutate|payout|ad_launch)(?:$|_|-)/i;
-
-export function classifyApiActionImpact(params: {
-  actionName: string;
-  httpMethod?: string;
-  requestedImpactLevel?: ApiActionImpactLevel;
-}): ApiActionImpactLevel {
-  if (params.requestedImpactLevel === 'HIGH_IMPACT_ACTION') return 'HIGH_IMPACT_ACTION';
-  const method = (params.httpMethod || 'GET').toUpperCase();
-  if (method === 'DELETE' || HIGH_IMPACT_PATTERN.test(params.actionName)) {
-    return 'HIGH_IMPACT_ACTION';
-  }
-  if (method === 'GET' || method === 'HEAD') return 'READ_ONLY';
-  return params.requestedImpactLevel || 'LOW_IMPACT_WRITE';
 }
 
 export function normalizeProviderApiError(params: {
@@ -128,9 +112,7 @@ export async function executeAuthorizedClientApiAction(params: {
   endpointPath?: string;
   bodyPayload?: Record<string, unknown>;
   requestedImpactLevel?: ApiActionImpactLevel;
-  ownerApprovalGranted?: boolean;
-  approvalCheckpointId?: string;
-  approvalReference?: string;
+  approvalId?: string;
   idempotencyKey?: string;
   maxRetries?: number;
   retryBaseDelayMs?: number;
@@ -146,13 +128,9 @@ export async function executeAuthorizedClientApiAction(params: {
   const provider = getProviderByKey(params.providerKey);
   if (!provider) throw new Error(`Unknown provider: ${params.providerKey}`);
 
-  const method = (params.httpMethod || 'GET').toUpperCase() as 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  const impactLevel = classifyApiActionImpact({
-    actionName: params.actionName,
-    httpMethod: method,
-    requestedImpactLevel: params.requestedImpactLevel,
-  });
-
+  const {op,path,digest} = operationFor(provider.key,params.actionName,params.bodyPayload);
+  const method = op.method;
+  const impactLevel = op.impact;
   const correlationId = `exec_${randomUUID()}`;
   const idempotencyKey =
     params.idempotencyKey?.trim() ||
@@ -162,11 +140,11 @@ export async function executeAuthorizedClientApiAction(params: {
   const rawEndpoint =
     params.allowLoopbackForTest && params.testEndpointOverride
       ? params.testEndpointOverride
-      : `${defaultBase.replace(/\/$/, '')}/${(params.endpointPath || '').replace(/^\//, '')}`;
+      : `${defaultBase.replace(/\/$/, '')}/${path}`;
   const endpoint = validateTargetEndpointUrl(rawEndpoint, provider.apiBaseUrls, Boolean(params.allowLoopbackForTest));
 
   // Idempotency replay check for caller-supplied idempotencyKey
-  if (params.idempotencyKey) {
+  if (params.idempotencyKey && impactLevel === 'READ_ONLY') {
     const prior = await db.agentExecutionRun.findFirst({
       where: {
         clientId: project.clientId,
@@ -174,7 +152,7 @@ export async function executeAuthorizedClientApiAction(params: {
         providerKey: provider.key,
         action: params.actionName,
         status: 'completed',
-        inputSummary: { contains: idempotencyKey },
+        inputSummary: { contains: JSON.stringify({projectId:project.id,idempotencyKey}).slice(1,-1) },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -185,7 +163,7 @@ export async function executeAuthorizedClientApiAction(params: {
       return {
         status: 'EXECUTED',
         impactLevel,
-        approvalRequired: impactLevel === 'HIGH_IMPACT_ACTION',
+        approvalRequired: false,
         approvalSatisfied: true,
         providerKey: provider.key,
         actionName: params.actionName,
@@ -206,16 +184,9 @@ export async function executeAuthorizedClientApiAction(params: {
   // Verify approval gate for HIGH_IMPACT_ACTION
   let approvalSatisfied = impactLevel !== 'HIGH_IMPACT_ACTION';
   if (impactLevel === 'HIGH_IMPACT_ACTION') {
-    let checkpointValid = false;
-    if (params.approvalCheckpointId) {
-      const cp = await db.verificationCheckpoint.findUnique({ where: { id: params.approvalCheckpointId } });
-      if (cp && cp.projectId === project.id && cp.status === 'completed') {
-        checkpointValid = true;
-      }
-    }
-    approvalSatisfied = Boolean(
-      params.ownerApprovalGranted === true && (checkpointValid || (params.approvalReference && params.approvalReference.trim().length >= 4)),
-    );
+    approvalSatisfied = !!params.approvalId && (await db.operationApproval.updateMany({where:{
+      id:params.approvalId,projectId:project.id,tenantId:project.clientId,providerKey:provider.key,action:op.action,digest,expiresAt:{gt:new Date()},consumedAt:null,
+    },data:{consumedAt:new Date()}})).count===1;
   }
 
   if (!approvalSatisfied) {
@@ -230,7 +201,7 @@ export async function executeAuthorizedClientApiAction(params: {
         inputSummary: JSON.stringify({ method, endpoint: endpoint.toString(), impactLevel, idempotencyKey }),
         correlationId,
         complianceDecision: 'DENIED_APPROVAL_REQUIRED',
-        complianceReason: `High-impact client API action "${params.actionName}" requires explicit owner approval + checkpoint/reference.`,
+        complianceReason: `High-impact client API action "${params.actionName}" requires explicit one-time payload-bound approval.`,
       },
     });
     await auditEvent({
@@ -323,7 +294,7 @@ export async function executeAuthorizedClientApiAction(params: {
   const maxRetries = Math.min(Math.max(params.maxRetries ?? 2, 0), 4);
   const retryBaseDelayMs = Math.min(Math.max(params.retryBaseDelayMs ?? 150, 10), 2000);
   const timeoutMs = Math.min(Math.max(params.timeoutMs ?? 10_000, 1000), 30_000);
-  const canRetrySafety = method === 'GET' || method === 'HEAD' || Boolean(params.idempotencyKey);
+  const canRetrySafety = method === 'GET';
 
   const startedAt = Date.now();
   let attempts = 0;
@@ -340,9 +311,9 @@ export async function executeAuthorizedClientApiAction(params: {
           Authorization: `Bearer ${cred.plaintext}`,
           Accept: 'application/json',
           'Idempotency-Key': idempotencyKey,
-          ...(method !== 'GET' && method !== 'HEAD' ? { 'Content-Type': 'application/json' } : {}),
+          ...(method !== 'GET' ? { 'Content-Type': 'application/json' } : {}),
         },
-        body: method !== 'GET' && method !== 'HEAD' && params.bodyPayload ? JSON.stringify(params.bodyPayload) : undefined,
+        redirect: 'error',
         signal: AbortSignal.timeout(timeoutMs),
       });
       const rawText = await res.text();
@@ -362,9 +333,9 @@ export async function executeAuthorizedClientApiAction(params: {
               method,
               endpoint: endpoint.toString(),
               impactLevel,
-              idempotencyKey,
+              projectId:project.id,idempotencyKey,
               attempts,
-              approvalReference: params.approvalReference ?? params.approvalCheckpointId ?? null,
+              approvalReference: params.approvalId ?? null,
             }),
             outputSummary: JSON.stringify({ httpStatus: res.status, preview: lastPreview }),
             durationMs: Date.now() - startedAt,

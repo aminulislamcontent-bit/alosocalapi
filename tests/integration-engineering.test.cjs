@@ -293,7 +293,7 @@ test('Universal Provider Adapters cover all 131 providers & end-to-end Credentia
     httpMethod: 'POST',
     allowLoopbackForTest: true,
     testEndpointOverride: mockApiUrl,
-    ownerApprovalGranted: false,
+    bodyPayload:{campaignId:'123'}, requestedImpactLevel:'READ_ONLY', ownerApprovalGranted:true, approvalReference:'untrusted',
     actor: 'ai_agent',
   });
   assert.equal(blockedHighImpact.status, 'APPROVAL_REQUIRED');
@@ -322,12 +322,17 @@ test('Universal Provider Adapters cover all 131 providers & end-to-end Credentia
     scopes: ['mail.send'],
     actor: 'owner',
   });
+  const admin = await db.adminUser.create({data:{username:'approval-owner',passwordHash:'disabled-test-account'}});
+  const {approveOperation} = loadTsModule('src/lib/engineering/operations.ts');
+  const grant = await approveOperation(disc.project.id,'sendgrid_api','publish_campaign_broadcast',{campaignId:'123'},admin.id);
+  const scoped = {projectId:disc.project.id,providerKey:'sendgrid_api',actionName:'publish_campaign_broadcast',approvalId:grant.id,actor:'engineer',allowLoopbackForTest:true,testEndpointOverride:mockApiUrl};
+  assert.equal((await executor.executeAuthorizedClientApiAction({...scoped,bodyPayload:{campaignId:'124'}})).status,'APPROVAL_REQUIRED');
   const approvedExec = await executor.executeAuthorizedClientApiAction({
     projectId: disc.project.id,
     providerKey: 'sendgrid_api',
     actionName: 'publish_campaign_broadcast',
     httpMethod: 'POST',
-    bodyPayload: { campaignId: 'cmp_123' },
+    bodyPayload: { campaignId: '123' }, approvalId:grant.id,
     allowLoopbackForTest: true,
     testEndpointOverride: mockApiUrl,
     ownerApprovalGranted: true,
@@ -336,6 +341,7 @@ test('Universal Provider Adapters cover all 131 providers & end-to-end Credentia
   });
   assert.equal(approvedExec.status, 'EXECUTED');
   assert.equal(approvedExec.httpStatus, 200);
+  assert.equal((await executor.executeAuthorizedClientApiAction({...scoped,bodyPayload:{campaignId:'123'}})).status,'APPROVAL_REQUIRED');
   // Bearer token must be redacted from responsePreview!
   assert.ok(!approvedExec.responsePreview.includes('SG.test_live_authorized_token_xyz_123456'));
   assert.ok(approvedExec.responsePreview.includes('[REDACTED]'));
@@ -359,8 +365,8 @@ test('Universal Provider Adapters cover all 131 providers & end-to-end Credentia
   const retriedExec = await executor.executeAuthorizedClientApiAction({
     projectId: disc.project.id,
     providerKey: 'sendgrid_api',
-    actionName: 'sync_audience_tags',
-    httpMethod: 'POST',
+    actionName: 'read_sender_status',
+    httpMethod: 'GET',
     idempotencyKey: 'idem_test_retry_key_1',
     retryBaseDelayMs: 10,
     allowLoopbackForTest: true,
@@ -374,8 +380,8 @@ test('Universal Provider Adapters cover all 131 providers & end-to-end Credentia
   const replayExec = await executor.executeAuthorizedClientApiAction({
     projectId: disc.project.id,
     providerKey: 'sendgrid_api',
-    actionName: 'sync_audience_tags',
-    httpMethod: 'POST',
+    actionName: 'read_sender_status',
+    httpMethod: 'GET',
     idempotencyKey: 'idem_test_retry_key_1',
     allowLoopbackForTest: true,
     testEndpointOverride: retryUrl,

@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   const access = await requireFactoryAccess(req, {
     workspaceId: body.workspaceId ? String(body.workspaceId) : undefined,
-    permission: 'execute',
+    permission: body.action === 'retry_dlq' ? 'admin' : 'execute',
     requireCsrf: true,
   });
   if (!access.ok) return access.response;

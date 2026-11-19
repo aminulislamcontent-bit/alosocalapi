@@ -106,3 +106,21 @@ test('vault migration refuses a wrong key before updating any legacy row', async
     else process.env.ALOAPI_VAULT_KEY = previous;
   }
 });
+
+test('WAL backup and isolated vault restore authenticate the canary without logging plaintext',async t=>{
+  const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto');
+  const {spawnSync}=require('node:child_process'), {DatabaseSync}=require('node:sqlite');
+  const root=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'vault-drill-'));
+  t.after(()=>fs.rmSync(tmp,{recursive:true,force:true}));
+  const file=path.join(tmp,'source.db'),dest=path.join(tmp,'snapshot');
+  const mig=spawnSync(process.execPath,[path.join(root,'node_modules/prisma/build/index.js'),'migrate','deploy'],{env:{...process.env,DATABASE_URL:`file:${file}`}});assert.equal(mig.status,0);
+  const key=crypto.randomBytes(36).toString('hex'),canary=crypto.randomUUID();
+  const cipher=vault.encryptVaultValue(canary,crypto.createHash('sha256').update(key).digest());
+  const live=new DatabaseSync(file); t.after(()=>live.close());live.exec('PRAGMA journal_mode=WAL');
+  live.prepare(`INSERT INTO VaultCredential(id,clientId,providerKey,credentialType,ciphertext,updatedAt) VALUES ('fixture','scope','test','test',?,CURRENT_TIMESTAMP)`).run(cipher);
+  const run=(args,k)=>{const env={...process.env};delete env.ALOAPI_VAULT_KEY;if(k)env.ALOAPI_VAULT_KEY=k;
+    const p=spawnSync(process.execPath,[path.join(root,'scripts/vault-recovery.mjs'),...args],{env,encoding:'utf8'});assert.ok(!`${p.stdout}${p.stderr}`.includes(canary));return p.status};
+  assert.equal(run(['backup',file,dest]),0);const restored=path.join(tmp,'isolated.db');fs.copyFileSync(path.join(dest,'snapshot.db'),restored);
+  for(const [tenant,k,status] of [['scope',key,0],['scope',crypto.randomBytes(40).toString('hex'),1],['scope',undefined,1],['other',key,1]])assert.equal(run(['verify',restored,tenant,'fixture'],k),status);
+  assert.equal(live.prepare('SELECT ciphertext FROM VaultCredential').get().ciphertext,cipher);
+});

@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       const stateToken = String(body.stateToken || body.state || '').trim();
       if (!stateToken) return NextResponse.json({ error: 'stateToken is required.' }, { status: 400 });
       const res = await handleOAuthCallback({
-        stateToken,
+        stateToken, tenantId:body.tenantId ? String(body.tenantId):undefined,providerKey:body.providerKey ? String(body.providerKey):undefined,
         code: body.code ? String(body.code) : undefined,
         error: body.error ? String(body.error) : undefined,
         errorDescription: body.errorDescription ? String(body.errorDescription) : undefined,

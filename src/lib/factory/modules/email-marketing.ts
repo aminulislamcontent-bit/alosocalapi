@@ -1,10 +1,7 @@
 import crypto from 'node:crypto';
-import net from 'node:net';
+import { emailTransport } from './email-transport';
 import { db } from '@/lib/db';
 import { auditEvent } from '@/lib/security/audit';
-import { resolveVaultSecretForServer } from '@/lib/onboarding/vault-service';
-import { listFactoryProviderConnections } from '@/lib/factory/provider-bridge';
-import { recordFactoryUsage } from '@/lib/factory/billing';
 
 export type EmailAdapterType = 'smtp_custom' | 'external_provider_bridge' | 'sandbox_mock_adapter';
 
@@ -50,15 +47,12 @@ export async function registerEmailDomain(params: {
 }
 
 /**
- * Verifies SPF, DKIM, and DMARC records via live DNS TXT resolution or explicit operator DNS verification flags.
+ * Verifies SPF, DKIM, and DMARC records via live DNS TXT resolution.
  * Production deliverability flag (`verifiedForProduction`) ONLY becomes true when all 3 records pass.
  */
 export async function verifyEmailDomainAuthentication(params: {
   workspaceId: string;
   domainId: string;
-  spfVerified?: boolean;
-  dkimVerified?: boolean;
-  dmarcVerified?: boolean;
   dkimPublicKeyHint?: string;
   actor: string;
   ip?: string;
@@ -68,23 +62,15 @@ export async function verifyEmailDomainAuthentication(params: {
   });
   if (!existing) throw new Error('Sending domain not found.');
 
-  let spfOk = Boolean(params.spfVerified);
-  let dkimOk = Boolean(params.dkimVerified);
-  let dmarcOk = Boolean(params.dmarcVerified);
-
-  // If explicit DNS verification flags weren't provided, check DNS TXT records cleanly
-  if (params.spfVerified === undefined && params.dkimVerified === undefined && params.dmarcVerified === undefined) {
-    const dns = await import('node:dns/promises');
-    const [rootTxt, dkimTxt, dmarcTxt] = await Promise.all([
-      dns.resolveTxt(existing.domain).catch(() => []),
-      dns.resolveTxt(`${existing.dkimSelector}._domainkey.${existing.domain}`).catch(() => []),
-      dns.resolveTxt(`_dmarc.${existing.domain}`).catch(() => []),
-    ]);
-    spfOk = rootTxt.flat().some(line => /v=spf1/i.test(line));
-    dkimOk = dkimTxt.flat().some(line => /v=DKIM1|p=/i.test(line));
-    dmarcOk = dmarcTxt.flat().some(line => /v=DMARC1/i.test(line));
-  }
-
+  const dns = await import('node:dns/promises');
+  const [rootTxt, dkimTxt, dmarcTxt] = await Promise.all([
+    dns.resolveTxt(existing.domain).catch(() => []),
+    dns.resolveTxt(`${existing.dkimSelector}._domainkey.${existing.domain}`).catch(() => []),
+    dns.resolveTxt(`_dmarc.${existing.domain}`).catch(() => []),
+  ]);
+  const spfOk = rootTxt.flat().some(line => /v=spf1/i.test(line));
+  const dkimOk = dkimTxt.flat().some(line => /v=DKIM1|p=/i.test(line));
+  const dmarcOk = dmarcTxt.flat().some(line => /v=DMARC1/i.test(line));
   const spfStatus = spfOk ? 'verified' : 'failed';
   const dkimStatus = dkimOk ? 'verified' : 'failed';
   const dmarcStatus = dmarcOk ? 'verified' : 'failed';
@@ -124,7 +110,7 @@ export async function upsertEmailContact(params: {
   actor: string;
 }) {
   const email = params.email.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!/^[a-z0-9_+.'%-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)) {
     throw new Error(`Invalid email address: ${params.email}`);
   }
   const existing = await db.emailContact.findUnique({
@@ -313,6 +299,8 @@ export async function createEmailCampaign(params: {
   scheduledFor?: string;
   actor: string;
 }) {
+  if (params.domainId && !await db.emailSendingDomain.findFirst({where:{id:params.domainId,workspaceId:params.workspaceId}})) throw new Error('Unknown workspace domain.');
+  if (params.templateId && !await db.emailTemplate.findFirst({where:{id:params.templateId,workspaceId:params.workspaceId}})) throw new Error('Unknown workspace template.');
   const campaign = await db.emailCampaign.create({
     data: {
       workspaceId: params.workspaceId,
@@ -339,175 +327,48 @@ export async function createEmailCampaign(params: {
   return campaign;
 }
 
-async function probeSmtpSocket(host: string, port: number): Promise<{ reachable: boolean; banner?: string; error?: string }> {
-  return new Promise(resolve => {
-    const socket = net.createConnection({ host, port, timeout: 4000 });
-    let done = false;
-    const finish = (out: { reachable: boolean; banner?: string; error?: string }) => {
-      if (done) return;
-      done = true;
-      socket.destroy();
-      resolve(out);
-    };
-    socket.on('data', chunk => {
-      finish({ reachable: true, banner: chunk.toString('utf8').slice(0, 120).trim() });
-    });
-    socket.on('timeout', () => finish({ reachable: false, error: 'SMTP connection timed out.' }));
-    socket.on('error', err => finish({ reachable: false, error: err.message }));
-  });
+type CampaignAction = { workspaceId:string; campaignId:string; actor:string; ip?:string };
+async function loadCampaign(p: CampaignAction) {
+  const c = await db.emailCampaign.findFirst({where:{workspaceId:p.workspaceId,id:p.campaignId},include:{domain:true,template:true}});
+  if (!c || c.template?.workspaceId !== p.workspaceId || (c.domain && c.domain.workspaceId !== p.workspaceId)) throw new Error('Campaign requires a workspace-owned template and domain.');
+  return c;
 }
-
-export async function dispatchEmailCampaign(params: {
-  workspaceId: string;
-  campaignId: string;
-  approveNow?: boolean;
-  actor: string;
-  ip?: string;
-}) {
-  const campaign = await db.emailCampaign.findFirst({
-    where: { id: params.campaignId, workspaceId: params.workspaceId },
-    include: { domain: true, template: true },
-  });
-  if (!campaign) throw new Error('Campaign not found.');
-
-  if (params.approveNow && campaign.approvalStatus !== 'approved') {
-    await db.emailCampaign.update({
-      where: { id: campaign.id },
-      data: { approvalStatus: 'approved', approvedBy: params.actor },
-    });
-    campaign.approvalStatus = 'approved';
-  }
-  if (campaign.approvalStatus !== 'approved') {
-    throw new Error('Campaign requires explicit owner/admin approval before dispatch.');
-  }
-  if (!campaign.template) {
-    throw new Error('Campaign must attach a verified EmailTemplate.');
-  }
-
-  const isMock = campaign.adapterType === 'sandbox_mock_adapter';
-  if (!isMock) {
-    if (!campaign.domain || !campaign.domain.verifiedForProduction) {
-      await db.emailCampaign.update({ where: { id: campaign.id }, data: { status: 'blocked' } });
-      throw new Error('Production email sending blocked: domain requires verified SPF, DKIM, and DMARC and healthy reputation.');
-    }
-  }
-
-  // Adapter preflight
-  let adapterLabel = campaign.adapterType;
-  if (campaign.adapterType === 'smtp_custom') {
-    const hostSecret = await resolveVaultSecretForServer({
-      tenantId: params.workspaceId,
-      providerKey: 'smtp_custom',
-      credentialType: 'custom_secret',
-      label: 'smtp_host',
-      actor: params.actor,
-      reason: `Dispatch email campaign ${campaign.id}`,
-    });
-    if (!hostSecret) {
-      throw new Error('SMTP adapter requires Vault credential (providerKey=smtp_custom, label=smtp_host, value=host:port).');
-    }
-    const [host, rawPort] = hostSecret.plaintext.split(':');
-    const port = Number(rawPort || 587);
-    const probe = await probeSmtpSocket(host, port);
-    if (!probe.reachable) {
-      throw new Error(`SMTP host ${host}:${port} unreachable: ${probe.error}`);
-    }
-    adapterLabel = `smtp_custom (${host}:${port})`;
-  } else if (campaign.adapterType === 'external_provider_bridge') {
-    if (!campaign.providerKey) {
-      throw new Error('external_provider_bridge requires a providerKey.');
-    }
-    const conns = await listFactoryProviderConnections(params.workspaceId, 'email_marketing');
-    const active = conns.find(c => c.providerKey === campaign.providerKey && c.status === 'authorized_with_vault');
-    if (!active) {
-      throw new Error(`External provider '${campaign.providerKey}' is not tenant-authorized with active Vault credentials.`);
-    }
-    adapterLabel = `external_provider_bridge (${campaign.providerKey})`;
-  } else {
-    adapterLabel = 'sandbox_mock_adapter (MOCKED)';
-  }
-
-  const allContacts = await db.emailContact.findMany({
-    where: {
-      workspaceId: params.workspaceId,
-      ...(campaign.segment !== 'all' ? { segment: campaign.segment } : {}),
-    },
-  });
-
-  let sent = 0;
-  let blocked = 0;
-
-  for (const contact of allContacts) {
-    if (contact.consentStatus !== 'granted' || contact.suppressedAt) {
-      blocked += 1;
-      await db.emailDeliveryEvent.create({
-        data: {
-          workspaceId: params.workspaceId,
-          campaignId: campaign.id,
-          contactId: contact.id,
-          email: contact.email,
-          messageId: `blk-${crypto.randomUUID()}`,
-          status: 'blocked',
-          adapterUsed: adapterLabel,
-          detail: `Skipped: consentStatus=${contact.consentStatus}${contact.suppressionReason ? ` (${contact.suppressionReason})` : ''}`,
-        },
-      });
-      continue;
-    }
-
-    sent += 1;
-    await db.emailDeliveryEvent.create({
-      data: {
-        workspaceId: params.workspaceId,
-        campaignId: campaign.id,
-        contactId: contact.id,
-        email: contact.email,
-        messageId: `<${crypto.randomUUID()}@${campaign.domain?.domain || 'sandbox.aloapi.local'}>`,
-        status: isMock ? 'sent_mocked' : 'sent',
-        adapterUsed: adapterLabel,
-        detail: isMock
-          ? 'Recorded by sandbox_mock_adapter for automated verification (not live SMTP delivery).'
-          : `Accepted by ${adapterLabel}`,
-      },
+function digest(c: Awaited<ReturnType<typeof loadCampaign>>) {
+  return crypto.createHash('sha256').update(JSON.stringify([c.workspaceId,c.id,c.name,c.segment,c.domainId,c.domain?.domain,c.template,c.adapterType,c.providerKey,c.scheduledFor])).digest('hex');
+}
+export async function approveEmailCampaign(p: CampaignAction) {
+  const c = await loadCampaign(p);
+  return db.emailCampaign.update({where:{id:c.id},data:{approvalStatus:'approved',approvedBy:p.actor,approvedAt:new Date(),approvalDigest:digest(c)}});
+}
+export async function dispatchEmailCampaign(p: CampaignAction) {
+  const c = await loadCampaign(p);
+  if (c.approvalStatus !== 'approved' || digest(c) !== c.approvalDigest) throw new Error('Current campaign version requires approval.');
+  if (c.adapterType !== 'sandbox_mock_adapter' && !c.domain?.verifiedForProduction) throw new Error('Production email sending blocked: domain requires verified SPF, DKIM, and DMARC.');
+  // Never resubmit historical campaigns that predate per-recipient submission keys.
+  if (await db.emailDeliveryEvent.count({where:{campaignId:c.id,submissionKey:null,status:{in:['sent','sent_mocked']}}})) throw new Error('Historical dispatch cannot be replayed.');
+  const submit = await emailTransport(p.workspaceId,p.actor,c.adapterType,c.providerKey);
+  const contacts = await db.emailContact.findMany({where:{workspaceId:p.workspaceId,...(c.segment==='all'?{}:{segment:c.segment})}});
+  for (const contact of contacts) {
+    const submissionKey = `${c.id}:${contact.id}`;
+    const messageId = `<${crypto.randomUUID()}@${c.domain?.domain || 'localhost'}>`;
+    let event;
+    try {
+      event = await db.emailDeliveryEvent.create({data:{submissionKey,workspaceId:p.workspaceId,campaignId:c.id,contactId:contact.id,email:contact.email,messageId,adapterUsed:c.adapterType,status:contact.consentStatus==='granted' && !contact.suppressedAt ? 'SUBMITTING':'blocked'}});
+    } catch(e) { if ((e as {code?:string}).code==='P2002') continue; throw e; }
+    if (event.status==='blocked') continue;
+    const out = !/^[a-z0-9_+.'%-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(contact.email) ? {status:'REJECTED',receipt:undefined} : await submit({from:`postmaster@${c.domain?.domain}`,to:contact.email,subject:c.template!.subject,text:c.template!.textBody,html:c.template!.htmlBody,messageId});
+    await db.$transaction(async tx => {
+      await tx.emailDeliveryEvent.update({where:{id:event.id},data:{status:out.status,detail:out.receipt}});
+      if (out.status==='ACCEPTED') {
+        await tx.factoryUsageEvent.create({data:{workspaceId:p.workspaceId,moduleKey:'email_marketing',metric:'email_sent',quantity:1,unitCostUsd:0.0001,totalCostUsd:0.0001,adapter:c.adapterType,metadata:JSON.stringify({eventId:event.id})}});
+        await tx.emailSendingDomain.update({where:{id:c.domainId!},data:{sentCount:{increment:1}}});
+      }
     });
   }
-
-  const stats = { totalEvaluated: allContacts.length, sent, blocked, adapterLabel, mocked: isMock };
-  const updatedCampaign = await db.emailCampaign.update({
-    where: { id: campaign.id },
-    data: {
-      status: 'completed',
-      sentAt: new Date(),
-      stats: JSON.stringify(stats),
-    },
-  });
-
-  if (campaign.domain && sent > 0) {
-    await db.emailSendingDomain.update({
-      where: { id: campaign.domain.id },
-      data: { sentCount: { increment: sent } },
-    });
-  }
-
-  if (sent > 0) {
-    await recordFactoryUsage({
-      workspaceId: params.workspaceId,
-      moduleKey: 'email_marketing',
-      metric: 'email_sent',
-      quantity: sent,
-      unitCostUsd: isMock ? 0 : 0.0001,
-      adapter: adapterLabel,
-      metadata: { campaignId: campaign.id, blocked },
-    });
-  }
-
-  await auditEvent({
-    actor: params.actor,
-    action: 'factory.email.campaign.dispatch',
-    target: `${params.workspaceId}:${campaign.id}`,
-    ip: params.ip,
-    metadata: stats,
-  });
-
-  return { campaign: updatedCampaign, stats };
+  const groups = await db.emailDeliveryEvent.groupBy({by:['status'],where:{campaignId:c.id,submissionKey:{not:null}},_count:true});
+  const outcomes = Object.fromEntries(groups.map(g=>[g.status,g._count]));
+  const stats = {sent:outcomes.ACCEPTED || 0,blocked:outcomes.blocked || 0,outcomes};
+  const completed = stats.sent > 0 && groups.every(g=>['ACCEPTED','blocked'].includes(g.status));
+  const campaign = await db.emailCampaign.update({where:{id:c.id},data:{status:completed?'completed':'needs_review',sentAt:stats.sent ? c.sentAt ?? new Date():null,stats:JSON.stringify(stats)}});
+  return {campaign,stats};
 }

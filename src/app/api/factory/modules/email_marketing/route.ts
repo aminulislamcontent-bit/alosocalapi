@@ -5,7 +5,7 @@ import { getFirstPartyModule } from '@/lib/factory/modules/registry';
 import {
   createEmailCampaign,
   createEmailTemplate,
-  dispatchEmailCampaign,
+  dispatchEmailCampaign, approveEmailCampaign,
   processEmailUnsubscribe,
   recordEmailBounce,
   registerEmailDomain,
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   if (!body) return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
 
   const action = String(body.action || '');
-  const perm = action === 'dispatch_campaign' ? 'execute' : 'write';
+  const perm = action === 'dispatch_campaign' ? 'execute' : action === 'approve_campaign' ? 'approve' : 'write';
   const access = await requireFactoryAccess(req, {
     workspaceId: body.workspaceId ? String(body.workspaceId) : undefined,
     permission: perm,
@@ -75,9 +75,6 @@ export async function POST(req: NextRequest) {
       const domain = await verifyEmailDomainAuthentication({
         workspaceId: access.workspaceId,
         domainId: String(body.domainId || ''),
-        spfVerified: typeof body.spfVerified === 'boolean' ? body.spfVerified : undefined,
-        dkimVerified: typeof body.dkimVerified === 'boolean' ? body.dkimVerified : undefined,
-        dmarcVerified: typeof body.dmarcVerified === 'boolean' ? body.dmarcVerified : undefined,
         dkimPublicKeyHint: body.dkimPublicKeyHint ? String(body.dkimPublicKeyHint) : undefined,
         actor: access.user.username,
         ip: access.ip,
@@ -149,11 +146,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ campaign }, { status: 201 });
     }
 
+    if (action === 'approve_campaign') return NextResponse.json(await approveEmailCampaign({workspaceId:access.workspaceId,campaignId:String(body.campaignId || ''),actor:access.user.username}));
     if (action === 'dispatch_campaign') {
+      if ('approveNow' in body) return NextResponse.json({error:'Use separate campaign approval.'},{status:403});
       const out = await dispatchEmailCampaign({
         workspaceId: access.workspaceId,
         campaignId: String(body.campaignId || ''),
-        approveNow: Boolean(body.approveNow),
         actor: access.user.username,
         ip: access.ip,
       });

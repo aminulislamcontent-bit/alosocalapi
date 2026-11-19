@@ -752,6 +752,8 @@ model VaultCredential {
 
 // Single-use OAuth 2.0 state & PKCE verifier store
 model OAuthAuthorizationState {
+  initiator String?
+  tokenEndpoint String?
   id                     String    @id @default(cuid())
   state                  String    @unique
   clientId               String
@@ -927,6 +929,7 @@ model FactoryWorkspace {
 }
 
 model FactoryWorkspaceMember {
+  clientAccountId String?
   id          String           @id @default(cuid())
   workspaceId String
   workspace   FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -962,12 +965,15 @@ model FactoryProviderConnection {
 }
 
 model FactoryJob {
+  lockedBy String?
+  leaseExpiresAt DateTime?
+  lastHeartbeatAt DateTime?
   id             String           @id @default(cuid())
   workspaceId    String
   workspace      FactoryWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   moduleKey      String
   jobType        String
-  idempotencyKey String           @unique
+  idempotencyKey String
   payload        String           @default("{}")
   status         String           @default("queued")
   attempts       Int              @default(0)
@@ -981,6 +987,7 @@ model FactoryJob {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
+  @@unique([workspaceId, idempotencyKey])
   @@index([workspaceId, moduleKey, status])
   @@index([status, scheduledFor])
 }
@@ -1103,6 +1110,8 @@ model EmailTemplate {
 }
 
 model EmailCampaign {
+  approvedAt DateTime?
+  approvalDigest String?
   id             String               @id @default(cuid())
   workspaceId    String
   workspace      FactoryWorkspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -1128,6 +1137,7 @@ model EmailCampaign {
 }
 
 model EmailDeliveryEvent {
+  submissionKey String? @unique
   id          String        @id @default(cuid())
   workspaceId String
   campaignId  String
@@ -1527,3 +1537,16 @@ model ClientHandoverPackage {
   @@index([projectId, exportedAt])
 }
 
+
+model OperationApproval {
+  id String @id @default(cuid())
+  tenantId String
+  projectId String
+  adminId String
+  providerKey String
+  action String
+  digest String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  consumedAt DateTime?
+}
