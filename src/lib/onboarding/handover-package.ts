@@ -31,7 +31,8 @@ export function normalizeIdentity(input: IntegrationIdentityInput) {
     return { kind: input.kind, value: parsed.toString(), hostname: parsed.hostname.toLowerCase() };
   }
   if (input.kind === 'phone') {
-    const phone = value.replace(/[\s().-]/g, '');
+    const digits = value.replace(/[\s().–-]/g, '').replace(/^00/, '+');
+    const phone = /^[1-9]/.test(digits) ? `+${digits}` : digits;
     if (!/^\+[1-9]\d{7,14}$/.test(phone)) throw new Error('Enter a phone number in international E.164 format, including the leading +.');
     return { kind: input.kind, value: phone };
   }
@@ -118,6 +119,7 @@ export async function buildIntegrationHandoverPackage(params: {
     provider.developerApproval,
     ...(playbook?.securityAndComplianceNotes ?? []),
   ].filter(Boolean);
+  const requiredOwnerActions = Array.from(new Set([...approvals, ...provider.setupChecklist]));
   const configuredCount = credentialStatus.filter(c => c.status === 'COLLECTED_ENCRYPTED').length;
   const allCredentialTypesPresent = credentialStatus.length > 0 && configuredCount === credentialStatus.length;
   const lastVerifiedCredential = credentials.find(c => Boolean(c.lastVerifiedAt));

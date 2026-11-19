@@ -1,3 +1,4 @@
+import { ensureDefaultFactoryWorkspace } from '@/lib/factory/tenancy';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createHash } from 'node:crypto';
@@ -115,6 +116,7 @@ export async function POST(req: NextRequest) {
 
       await clearLoginFailures(throttleKey);
       const secureCookie = isSecureRequest(req) || (req.headers.get('origin')?.startsWith('https://') ?? false);
+      await ensureDefaultFactoryWorkspace(admin.username);
       const raw = await createSession({ role: 'admin', adminId: admin.id, ip, userAgent });
       const store = await cookies();
       store.set(SESSION_COOKIE, raw, sessionCookieOptions(ADMIN_SESSION_HOURS * 3600, secureCookie));

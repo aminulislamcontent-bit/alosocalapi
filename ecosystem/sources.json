@@ -1,0 +1,366 @@
+[
+  {
+    "repo": "FoundationAgents/MetaGPT",
+    "category": "framework"
+  },
+  {
+    "repo": "microsoft/autogen",
+    "category": "framework"
+  },
+  {
+    "repo": "crewAIInc/crewAI",
+    "category": "framework"
+  },
+  {
+    "repo": "langchain-ai/langgraph",
+    "category": "framework"
+  },
+  {
+    "repo": "OpenInterpreter/open-interpreter",
+    "category": "framework"
+  },
+  {
+    "repo": "ollama/ollama",
+    "category": "inference"
+  },
+  {
+    "repo": "ggml-org/llama.cpp",
+    "category": "inference"
+  },
+  {
+    "repo": "vllm-project/vllm",
+    "category": "inference"
+  },
+  {
+    "repo": "mudler/LocalAI",
+    "category": "inference"
+  },
+  {
+    "repo": "sgl-project/sglang",
+    "category": "inference"
+  },
+  {
+    "repo": "huggingface/transformers",
+    "category": "inference"
+  },
+  {
+    "repo": "deepset-ai/haystack",
+    "category": "rag"
+  },
+  {
+    "repo": "run-llama/llama_index",
+    "category": "rag"
+  },
+  {
+    "repo": "langchain-ai/langchain",
+    "category": "rag"
+  },
+  {
+    "repo": "chroma-core/chroma",
+    "category": "rag"
+  },
+  {
+    "repo": "qdrant/qdrant",
+    "category": "rag"
+  },
+  {
+    "repo": "milvus-io/milvus",
+    "category": "rag"
+  },
+  {
+    "repo": "weaviate/weaviate",
+    "category": "rag"
+  },
+  {
+    "repo": "facebookresearch/faiss",
+    "category": "rag"
+  },
+  {
+    "repo": "openai/whisper",
+    "category": "voice"
+  },
+  {
+    "repo": "OHF-Voice/piper1-gpl",
+    "category": "voice"
+  },
+  {
+    "repo": "coqui-ai/TTS",
+    "category": "voice"
+  },
+  {
+    "repo": "hexgrad/kokoro",
+    "category": "voice"
+  },
+  {
+    "repo": "speechbrain/speechbrain",
+    "category": "voice"
+  },
+  {
+    "repo": "Comfy-Org/ComfyUI",
+    "category": "creative"
+  },
+  {
+    "repo": "CompVis/stable-diffusion",
+    "category": "creative"
+  },
+  {
+    "repo": "black-forest-labs/flux",
+    "category": "creative"
+  },
+  {
+    "repo": "Invoke-ai/InvokeAI",
+    "category": "creative"
+  },
+  {
+    "repo": "AUTOMATIC1111/stable-diffusion-webui",
+    "category": "creative"
+  },
+  {
+    "repo": "mltframework/shotcut",
+    "category": "creative"
+  },
+  {
+    "repo": "libvips/libvips",
+    "category": "creative"
+  },
+  {
+    "repo": "n8n-io/n8n",
+    "category": "automation"
+  },
+  {
+    "repo": "activepieces/activepieces",
+    "category": "automation"
+  },
+  {
+    "repo": "node-red/node-red",
+    "category": "automation"
+  },
+  {
+    "repo": "temporalio/temporal",
+    "category": "automation"
+  },
+  {
+    "repo": "windmill-labs/windmill",
+    "category": "automation"
+  },
+  {
+    "repo": "kestra-io/kestra",
+    "category": "automation"
+  },
+  {
+    "repo": "OpenHands/OpenHands",
+    "category": "developer"
+  },
+  {
+    "repo": "Aider-AI/aider",
+    "category": "developer"
+  },
+  {
+    "repo": "continuedev/continue",
+    "category": "developer"
+  },
+  {
+    "repo": "cline/cline",
+    "category": "developer"
+  },
+  {
+    "repo": "RooCodeInc/Roo-Code",
+    "category": "developer"
+  },
+  {
+    "repo": "SWE-agent/SWE-agent",
+    "category": "developer"
+  },
+  {
+    "repo": "postgres/postgres",
+    "category": "infrastructure"
+  },
+  {
+    "repo": "sqlite/sqlite",
+    "category": "infrastructure"
+  },
+  {
+    "repo": "redis/redis",
+    "category": "infrastructure"
+  },
+  {
+    "repo": "supabase/supabase",
+    "category": "infrastructure"
+  },
+  {
+    "repo": "minio/minio",
+    "category": "infrastructure"
+  },
+  {
+    "repo": "prometheus/prometheus",
+    "category": "infrastructure"
+  },
+  {
+    "repo": "grafana/grafana",
+    "category": "infrastructure"
+  },
+  {
+    "repo": "open-telemetry/opentelemetry-collector",
+    "category": "infrastructure"
+  },
+  {
+    "repo": "open-webui/open-webui",
+    "category": "application"
+  },
+  {
+    "repo": "chatwoot/chatwoot",
+    "category": "application"
+  },
+  {
+    "repo": "twentyhq/twenty",
+    "category": "application"
+  },
+  {
+    "repo": "pipecat-ai/pipecat",
+    "category": "application"
+  },
+  {
+    "repo": "microsoft/playwright",
+    "category": "application"
+  },
+  {
+    "repo": "docling-project/docling",
+    "category": "application"
+  },
+  {
+    "repo": "QwenLM/Qwen3",
+    "category": "model",
+    "name": "Qwen3-8B",
+    "weights": "https://huggingface.co/Qwen/Qwen3-8B",
+    "weightsTerms": "Apache-2.0",
+    "ollamaTag": "qwen3:8b",
+    "termsReadmeEvidence": "All our open-weight models are licensed under Apache 2.0.",
+    "parameterBillions": 8,
+    "context": null
+  },
+  {
+    "repo": "deepseek-ai/DeepSeek-R1",
+    "category": "model",
+    "name": "DeepSeek-R1",
+    "weights": "https://huggingface.co/deepseek-ai/DeepSeek-R1",
+    "weightsTerms": "MIT",
+    "ollamaTag": null,
+    "termsReadmeEvidence": "This code repository and the model weights are licensed under",
+    "parameterBillions": 671,
+    "context": "128K"
+  },
+  {
+    "repo": "meta-llama/llama-models",
+    "category": "model",
+    "name": "Llama 3.2 1B",
+    "weights": "https://huggingface.co/meta-llama/Llama-3.2-1B",
+    "weightsTerms": "Llama 3.2 Community License",
+    "ollamaTag": null,
+    "termsReadmeEvidence": "models/llama3_2/LICENSE",
+    "parameterBillions": 1,
+    "context": "128K"
+  },
+  {
+    "repo": "mistralai/mistral-inference",
+    "category": "model",
+    "name": "Mistral 7B Instruct v0.3",
+    "weights": "https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3",
+    "weightsTerms": "Apache-2.0",
+    "ollamaTag": null,
+    "termsReadmeEvidence": null,
+    "parameterBillions": null,
+    "context": null
+  },
+  {
+    "repo": "google-deepmind/gemma",
+    "category": "model",
+    "name": "Gemma 2 2B",
+    "weights": "https://huggingface.co/google/gemma-2-2b",
+    "weightsTerms": "Gemma Terms of Use",
+    "ollamaTag": null,
+    "termsReadmeEvidence": null,
+    "parameterBillions": null,
+    "context": null
+  },
+  {
+    "repo": "microsoft/Phi-3CookBook",
+    "category": "model",
+    "name": "Phi-3 Mini 4K Instruct",
+    "weights": "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct",
+    "weightsTerms": "MIT",
+    "ollamaTag": null,
+    "termsReadmeEvidence": null,
+    "parameterBillions": null,
+    "context": null
+  },
+  {
+    "repo": "zai-org/GLM-4",
+    "category": "model",
+    "name": "GLM-4-9B-Chat",
+    "weights": "https://huggingface.co/zai-org/glm-4-9b-chat",
+    "weightsTerms": null,
+    "ollamaTag": null,
+    "termsReadmeEvidence": null,
+    "parameterBillions": null,
+    "context": "128K"
+  },
+  {
+    "repo": "01-ai/Yi",
+    "category": "model",
+    "name": "Yi-1.5-6B",
+    "weights": "https://huggingface.co/01-ai/Yi-1.5-6B",
+    "weightsTerms": "Apache-2.0",
+    "ollamaTag": null,
+    "termsReadmeEvidence": "The code and weights of the Yi-1.5 series models are distributed under",
+    "parameterBillions": 6,
+    "context": null
+  },
+  {
+    "repo": "tiiuae/Falcon-H1",
+    "category": "model",
+    "name": "Falcon-H1-1.5B-Instruct-GGUF",
+    "weights": "https://huggingface.co/tiiuae/Falcon-H1-1.5B-Instruct-GGUF",
+    "weightsTerms": null,
+    "ollamaTag": null,
+    "termsReadmeEvidence": null,
+    "parameterBillions": null,
+    "context": null
+  },
+  {
+    "repo": "coqui-ai/TTS",
+    "category": "model",
+    "name": "XTTS v2",
+    "weights": "https://huggingface.co/coqui/XTTS-v2",
+    "weightsTerms": "Coqui Public Model License",
+    "ollamaTag": null,
+    "termsReadmeEvidence": null,
+    "parameterBillions": null,
+    "context": null
+  },
+  {
+    "repo": "hexgrad/kokoro",
+    "category": "model",
+    "name": "Kokoro-82M",
+    "weights": "https://huggingface.co/hexgrad/Kokoro-82M",
+    "weightsTerms": "Apache-2.0",
+    "ollamaTag": null,
+    "termsReadmeEvidence": "Apache-licensed weights",
+    "parameterBillions": 0.082,
+    "context": null
+  },
+  {
+    "repo": "black-forest-labs/flux",
+    "category": "model",
+    "name": "FLUX.1 schnell",
+    "weights": "https://huggingface.co/black-forest-labs/FLUX.1-schnell",
+    "weightsTerms": "Apache-2.0",
+    "ollamaTag": null,
+    "termsReadmeEvidence": "model_licenses/LICENSE-FLUX1-schnell",
+    "parameterBillions": null,
+    "context": null
+  },
+  {
+    "repo": "cmusphinx/pocketsphinx",
+    "category": "voice"
+  }
+]

@@ -177,10 +177,12 @@ test('Real Playwright Chromium click-through acceptance across login, discovery,
     await page.waitForSelector('text=Universal Credential Engineering Ledger', { timeout: 15_000 });
     await page.getByRole('button', { name: 'Run Honest Live Connection Probe' }).first().click();
     await page.getByRole('button', { name: 'Verify Live DNS' }).first().click();
-    await page.getByRole('button', { name: /Test Approval Gate/ }).click();
+    await page.getByLabel('SendGrid campaign ID').fill('123');
+    await page.getByRole('button',{name:'Execute approved SendGrid campaign'}).click();
     await page.waitForSelector('text=APPROVAL_REQUIRED', { timeout: 10_000 });
-    await page.getByLabel(/Explicit Owner Approval Granted/).check();
-    await page.getByRole('button', { name: /Test Approval Gate/ }).click();
+    await page.getByRole('button',{name:'Approve SendGrid campaign version'}).click();
+    await page.waitForSelector('pre:text-matches("expiresAt")');
+    await page.getByRole('button', { name: 'Execute approved SendGrid campaign' }).click();
     await page.waitForSelector('text=CLIENT_ACTIVATION_REQUIRED', { timeout: 10_000 });
     await page.screenshot({ path: path.join(shotsDir, '04-credentials-gate.png') });
 
@@ -201,7 +203,7 @@ test('Real Playwright Chromium click-through acceptance across login, discovery,
 
     // 7. Smoke every administrator top-level navigation view in an isolated test database.
     const adminViews = [
-      'Integration Engineering', 'Platform Factory (20)', 'Onboarding Hub (19 Views)',
+      'Integration Engineering', 'AI Ecosystem', 'Platform Factory (20)', 'Onboarding Hub (19 Views)',
       'ক্লায়েন্ট অ্যাক্সেস', 'CRM পাইপলাইন', 'ফলো-আপ টাস্ক', 'অটোমেশন ও নলেজ বেস',
       'SetupBot Pro', 'গ্রোথ ইঞ্জিন', 'API Intelligence', 'Security', 'Ops Dashboard',
       'Channel Matrix', 'Launch Planner', 'Access Workflow', 'Official setup references',
@@ -220,6 +222,12 @@ test('Real Playwright Chromium click-through acceptance across login, discovery,
         undefined,
         { timeout: 10_000 },
       );
+      if (label === 'AI Ecosystem') {
+        await page.getByLabel('Search ecosystem').fill('Qwen3-8B');
+        await page.getByText('1 matching entries', {exact:false}).waitFor();
+        await page.getByRole('checkbox', {name:'Qwen3-8B'}).check();
+        assert.ok(await page.getByRole('button', {name:'Export shortlist (1)'}).isVisible());
+      }
       const mainText = (await page.locator('main').innerText()).trim();
       assert.ok(mainText.length > 20, 'Admin view should render after navigation: ' + label);
     }

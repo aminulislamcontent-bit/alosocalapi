@@ -1,3 +1,4 @@
+import { approveOperation } from '@/lib/engineering/operations';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdminApi } from '@/lib/security/admin-guard';
@@ -110,20 +111,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(out);
     }
 
+    if (action === 'approve_operation' && guard.user.adminId) return NextResponse.json(await approveOperation(projectId,providerKey,String(body.actionName),body.bodyPayload,guard.user.adminId));
     if (action === 'execute_client_api') {
       const execResult = await executeAuthorizedClientApiAction({
         projectId,
         providerKey,
         actionName: String(body.actionName || 'read_status'),
-        httpMethod: (body.httpMethod ? String(body.httpMethod).toUpperCase() : 'GET') as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-        endpointPath: body.endpointPath ? String(body.endpointPath) : undefined,
-        bodyPayload: body.bodyPayload && typeof body.bodyPayload === 'object' ? (body.bodyPayload as Record<string, unknown>) : undefined,
-        requestedImpactLevel: body.impactLevel as 'READ_ONLY' | 'LOW_IMPACT_WRITE' | 'HIGH_IMPACT_ACTION' | undefined,
-        ownerApprovalGranted: Boolean(body.ownerApprovalGranted),
-        approvalCheckpointId: body.approvalCheckpointId ? String(body.approvalCheckpointId) : undefined,
-        approvalReference: body.approvalReference ? String(body.approvalReference) : undefined,
-        allowLoopbackForTest: process.env.ALOAPI_ALLOW_TEST_LOOPBACK_EXECUTION === 'true' && Boolean(body.allowLoopbackForTest),
-        testEndpointOverride: body.testEndpointOverride ? String(body.testEndpointOverride) : undefined,
+        bodyPayload: body.bodyPayload as Record<string,unknown> | undefined,
+        approvalId: typeof body.approvalId === 'string' ? body.approvalId : undefined,
         actor: guard.user.username,
         ip: guard.ip,
       });

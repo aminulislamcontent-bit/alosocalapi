@@ -63,6 +63,16 @@ test('full E2E Integration Engineering HTTP runtime: URL discovery -> 131 adapte
   t.after(() => siteSrv.close());
   const sitePort = siteSrv.address().port;
 
+  // A read-only local runtime probe. No fake completion, downloads or external service.
+  const runtimeCalls = [];
+  let runtimeInventory = [];
+  const runtime = http.createServer((req, res) => {
+    runtimeCalls.push([req.method,req.url]);
+    res.setHeader('content-type','application/json');
+    res.end(JSON.stringify(req.url === '/api/version' ? {version:'test'} : {models:runtimeInventory}));
+  });
+  await new Promise(r => runtime.listen(0,'127.0.0.1',r));
+  t.after(()=>runtime.close());
   const port = await getFreePort();
   const baseUrl = `http://127.0.0.1:${port}`;
   const logs = [];
@@ -73,6 +83,8 @@ test('full E2E Integration Engineering HTTP runtime: URL discovery -> 131 adapte
       NODE_ENV: 'production',
       HOSTNAME: '127.0.0.1',
       PORT: String(port),
+      OLLAMA_BASE_URL: `http://127.0.0.1:${runtime.address().port}`,
+      ALOAPI_QWEN3_8B_DIGEST: 'b'.repeat(64),
       DATABASE_URL: dbUrl,
       ALOAPI_VAULT_KEY: '0123456789abcdef0123456789abcdef',
       ALOAPI_ALLOW_TEST_LOOPBACK_DISCOVERY: 'true',
@@ -109,6 +121,31 @@ test('full E2E Integration Engineering HTTP runtime: URL discovery -> 131 adapte
         ...opts,
         headers: { cookie: cookieHeader, origin: baseUrl, 'content-type': 'application/json', ...(opts.headers || {}) },
       });
+
+    const catalogPath='/api/admin/ecosystem';
+    const modelId='model:qwen/qwen3-8b';
+    const post=(action,fields={})=>({method:'POST',body:JSON.stringify({action,...fields})});
+    const denied=await fetch(baseUrl+catalogPath,{...post('preflight',{id:modelId}),headers:{origin:baseUrl,'content-type':'application/json'}});
+    assert.equal(denied.status,401);assert.deepEqual(runtimeCalls,[]);
+    assert.equal((await api(catalogPath,{...post('preflight',{id:modelId}),headers:{origin:'https://not-the-application.example'}})).status,403);
+    assert.deepEqual(runtimeCalls,[]);
+    const snap=await (await api(catalogPath)).json();assert.ok(snap.entries.some(e=>e.id===modelId));
+    assert.deepEqual((await (await api(catalogPath,post('validate',{ids:[modelId]}))).json()).ids,[modelId]);
+    for(const [action,fields] of [['install',{id:modelId}],['preflight',{id:'not-a-model'}],['validate',{ids:[modelId,modelId]}],['validate',{ids:['unavailable:repo']}]] ) {
+      assert.equal((await api(catalogPath,post(action,fields))).status,400);assert.deepEqual(runtimeCalls,[]);
+    }
+    const readiness=await api(catalogPath,post('preflight',{id:modelId}));assert.equal(readiness.status,200);assert.equal((await readiness.json()).reason,'not-installed');
+    assert.deepEqual(runtimeCalls.sort(),[['GET','/api/tags'],['GET','/api/version']]);
+    const missing=await api('/api/factory/ai',{method:'POST',body:JSON.stringify({catalogId:modelId,prompt:'A synthetic Bangla test',approved:true})});
+    assert.equal(missing.status,400); assert.match((await missing.json()).error,/not-installed/);assert.ok(runtimeCalls.every(([method,path])=>method==='GET' && ['/api/version','/api/tags'].includes(path)));
+
+    runtimeInventory=[{name:'qwen3:8b',digest:'a'.repeat(64),size:100}];
+    const badDigest=await api('/api/factory/ai',{method:'POST',body:JSON.stringify({catalogId:modelId,prompt:'test',approved:true,digest:'a'.repeat(64)})});
+    assert.equal(badDigest.status,400);assert.match((await badDigest.json()).error,/digest-not-approved/);assert.ok(runtimeCalls.every(([m,p])=>m==='GET' && ['/api/version','/api/tags'].includes(p)));
+
+    runtimeInventory=[{name:'qwen3:8b',digest:'b'.repeat(64),size:Number.MAX_SAFE_INTEGER}];
+    const tooLarge=await api('/api/factory/ai',{method:'POST',body:JSON.stringify({catalogId:modelId,prompt:'test'})});
+    assert.equal(tooLarge.status,400);assert.match((await tooLarge.json()).error,/insufficient-free-memory/);assert.ok(runtimeCalls.every(([m,p])=>m==='GET' && ['/api/version','/api/tags'].includes(p)));
 
     // 2. /engineering UI page returns 200
     const uiRes = await fetch(`${baseUrl}/engineering`, { headers: { cookie: cookieHeader } });
@@ -190,7 +227,7 @@ test('full E2E Integration Engineering HTTP runtime: URL discovery -> 131 adapte
         projectId: project.id,
         providerKey: 'sendgrid_api',
         actionName: 'publish_campaign_broadcast',
-        httpMethod: 'POST',
+        httpMethod: 'POST', bodyPayload:{campaignId:'123'},
         endpointPath: '/v3/marketing/campaigns',
         ownerApprovalGranted: false,
       }),
@@ -198,6 +235,8 @@ test('full E2E Integration Engineering HTTP runtime: URL discovery -> 131 adapte
     assert.equal(blockedExecRes.status, 403);
     assert.equal((await blockedExecRes.json()).status, 'APPROVAL_REQUIRED');
 
+    const approve = await api('/api/engineering/providers',{method:'POST',body:JSON.stringify({projectId:project.id,providerKey:'sendgrid_api',action:'approve_operation',actionName:'publish_campaign_broadcast',bodyPayload:{campaignId:'123'}})});
+    assert.equal(approve.status,200); const grant = await approve.json();
     const approvedExecRes = await api('/api/engineering/providers', {
       method: 'POST',
       body: JSON.stringify({
@@ -205,9 +244,9 @@ test('full E2E Integration Engineering HTTP runtime: URL discovery -> 131 adapte
         projectId: project.id,
         providerKey: 'sendgrid_api',
         actionName: 'publish_campaign_broadcast',
-        httpMethod: 'POST',
+        httpMethod: 'POST', bodyPayload:{campaignId:'123'},
         endpointPath: '/v3/marketing/campaigns',
-        ownerApprovalGranted: true,
+        approvalId:grant.id,
         approvalCheckpointId: cpList.checkpoints[0].id,
       }),
     });

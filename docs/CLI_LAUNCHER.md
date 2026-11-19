@@ -118,3 +118,7 @@ If you supply `ADMIN_BOOTSTRAP_USERNAME`, `ADMIN_BOOTSTRAP_PASSWORD`, or `ALOAPI
   ```bash
   aloapi baseline-existing
   ```
+
+### Recovery and callback proxy
+
+Use the [isolated SQLite and vault recovery drill](DATABASE_AND_VAULT_RECOVERY.md) before upgrades. The supplied Caddyfile is a **callback-only** TLS site, not an admin reverse proxy. Set `ALOAPI_CALLBACK_HOST` to the reviewed public DNS name and `ALOAPI_PUBLIC_WEBHOOK_BASE_URL` to its HTTPS origin. Validate with `caddy validate --config Caddyfile`. Only the WhatsApp webhook and OAuth callback route to `127.0.0.1:47831`; other paths must stay private. OAuth browser callbacks require the initiating administrator's authenticated session on the registered origin; a private loopback callback is preferable where the provider permits it. Do not forward admin/login routes publicly to work around a missing session.

@@ -1,0 +1,3711 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-11-19",
+  "entries": [
+    {
+      "installDocs": "https://github.com/FoundationAgents/MetaGPT/blob/11cdf466d042aece04fc6cfd13b28e1a70341b1f/README.md#L52",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 660551251,
+      "repository": "FoundationAgents/MetaGPT",
+      "source": "https://github.com/FoundationAgents/MetaGPT",
+      "revision": "11cdf466d042aece04fc6cfd13b28e1a70341b1f",
+      "docs": "https://github.com/FoundationAgents/MetaGPT/tree/11cdf466d042aece04fc6cfd13b28e1a70341b1f#readme",
+      "licenseUrl": "https://github.com/FoundationAgents/MetaGPT/blob/11cdf466d042aece04fc6cfd13b28e1a70341b1f/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-01-21T10:12:33Z",
+      "release": {
+        "tagName": "v0.8.1",
+        "url": "https://github.com/FoundationAgents/MetaGPT/releases/tag/v0.8.1"
+      },
+      "language": "Python",
+      "stars": 71359,
+      "forks": 9118,
+      "dockerEvidence": [
+        "Dockerfile"
+      ],
+      "advisories": [],
+      "category": "framework",
+      "name": "MetaGPT",
+      "id": "github:660551251",
+      "maintenance": "recent-push",
+      "kind": "agent-framework",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/microsoft/autogen/blob/8390985108cb1e3881f5f7297765758d8ad2540c/README.md#L33",
+      "apiDocs": "https://github.com/microsoft/autogen/blob/8390985108cb1e3881f5f7297765758d8ad2540c/README.md#L217",
+      "hardwareDocs": null,
+      "repoId": 680120071,
+      "repository": "microsoft/autogen",
+      "source": "https://github.com/microsoft/autogen",
+      "revision": "8390985108cb1e3881f5f7297765758d8ad2540c",
+      "docs": "https://github.com/microsoft/autogen/tree/8390985108cb1e3881f5f7297765758d8ad2540c#readme",
+      "licenseUrl": "https://github.com/microsoft/autogen/blob/8390985108cb1e3881f5f7297765758d8ad2540c/LICENSE",
+      "codeLicense": "CC-BY-4.0",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-12T10:19:36Z",
+      "release": {
+        "tagName": "python-v0.7.5",
+        "url": "https://github.com/microsoft/autogen/releases/tag/python-v0.7.5"
+      },
+      "language": "Python",
+      "stars": 61944,
+      "forks": 9419,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "framework",
+      "name": "autogen",
+      "id": "github:680120071",
+      "maintenance": "recent-push",
+      "kind": "agent-framework",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/crewAIInc/crewAI/blob/374c05392021271cabb809868282d949e0efbbe2/README.md#L382",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 710601088,
+      "repository": "crewAIInc/crewAI",
+      "source": "https://github.com/crewAIInc/crewAI",
+      "revision": "374c05392021271cabb809868282d949e0efbbe2",
+      "docs": "https://github.com/crewAIInc/crewAI/tree/374c05392021271cabb809868282d949e0efbbe2#readme",
+      "licenseUrl": "https://github.com/crewAIInc/crewAI/blob/374c05392021271cabb809868282d949e0efbbe2/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T17:59:48Z",
+      "release": {
+        "tagName": "1.15.44",
+        "url": "https://github.com/crewAIInc/crewAI/releases/tag/1.15.44"
+      },
+      "language": "Python",
+      "stars": 61104,
+      "forks": 9226,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-wp6h-6xxh-g8fp",
+          "severity": "high",
+          "url": "https://github.com/crewAIInc/crewAI/security/advisories/GHSA-wp6h-6xxh-g8fp"
+        }
+      ],
+      "category": "framework",
+      "name": "crewAI",
+      "id": "github:710601088",
+      "maintenance": "recent-push",
+      "kind": "agent-framework",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/langchain-ai/langgraph/blob/7830b91a24e657a8167e2dbf40c3fa5a77ef5d93/README.md#L27",
+      "apiDocs": "https://github.com/langchain-ai/langgraph/blob/7830b91a24e657a8167e2dbf40c3fa5a77ef5d93/README.md#L64",
+      "hardwareDocs": null,
+      "repoId": 676672661,
+      "repository": "langchain-ai/langgraph",
+      "source": "https://github.com/langchain-ai/langgraph",
+      "revision": "7830b91a24e657a8167e2dbf40c3fa5a77ef5d93",
+      "docs": "https://github.com/langchain-ai/langgraph/tree/7830b91a24e657a8167e2dbf40c3fa5a77ef5d93#readme",
+      "licenseUrl": "https://github.com/langchain-ai/langgraph/blob/7830b91a24e657a8167e2dbf40c3fa5a77ef5d93/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T14:16:17Z",
+      "release": {
+        "tagName": "1.2.23",
+        "url": "https://github.com/langchain-ai/langgraph/releases/tag/1.2.23"
+      },
+      "language": "Python",
+      "stars": 45157,
+      "forks": 7795,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-8prr-f582-jqq3",
+          "severity": "medium",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-8prr-f582-jqq3"
+        },
+        {
+          "id": "GHSA-3fx2-cqw9-xr3c",
+          "severity": "medium",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-3fx2-cqw9-xr3c"
+        },
+        {
+          "id": "GHSA-fvww-7h3r-vfhp",
+          "severity": "high",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-fvww-7h3r-vfhp"
+        },
+        {
+          "id": "GHSA-47pj-3jcm-6whg",
+          "severity": "medium",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-47pj-3jcm-6whg"
+        },
+        {
+          "id": "GHSA-4hm6-w6qq-w73v",
+          "severity": "high",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-4hm6-w6qq-w73v"
+        },
+        {
+          "id": "GHSA-w39p-vh2g-g8g5",
+          "severity": "medium",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-w39p-vh2g-g8g5"
+        },
+        {
+          "id": "GHSA-fjqc-hq36-qh5p",
+          "severity": "medium",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-fjqc-hq36-qh5p"
+        },
+        {
+          "id": "GHSA-6hmw-9432-67qq",
+          "severity": "medium",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-6hmw-9432-67qq"
+        },
+        {
+          "id": "GHSA-g48c-2wqr-h844",
+          "severity": "medium",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-g48c-2wqr-h844"
+        },
+        {
+          "id": "GHSA-mhr3-j7m5-c7c9",
+          "severity": "medium",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-mhr3-j7m5-c7c9"
+        },
+        {
+          "id": "GHSA-9rwj-6rc7-p77c",
+          "severity": "high",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-9rwj-6rc7-p77c"
+        },
+        {
+          "id": "GHSA-wwqv-p2pp-99h5",
+          "severity": "high",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-wwqv-p2pp-99h5"
+        },
+        {
+          "id": "GHSA-7p73-8jqx-23r8",
+          "severity": "high",
+          "url": "https://github.com/langchain-ai/langgraph/security/advisories/GHSA-7p73-8jqx-23r8"
+        }
+      ],
+      "category": "framework",
+      "name": "langgraph",
+      "id": "github:676672661",
+      "maintenance": "recent-push",
+      "kind": "agent-framework",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/openinterpreter/openinterpreter/blob/382f615b907279be1b6518156ac2754d3c235ff4/README.md#L29",
+      "apiDocs": "https://github.com/openinterpreter/openinterpreter/blob/382f615b907279be1b6518156ac2754d3c235ff4/README.md#L112",
+      "hardwareDocs": null,
+      "repoId": 666299222,
+      "repository": "openinterpreter/openinterpreter",
+      "source": "https://github.com/openinterpreter/openinterpreter",
+      "revision": "382f615b907279be1b6518156ac2754d3c235ff4",
+      "docs": "https://github.com/openinterpreter/openinterpreter/tree/382f615b907279be1b6518156ac2754d3c235ff4#readme",
+      "licenseUrl": "https://github.com/openinterpreter/openinterpreter/blob/382f615b907279be1b6518156ac2754d3c235ff4/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-15T22:46:33Z",
+      "release": {
+        "tagName": "rust-v0.0.61",
+        "url": "https://github.com/openinterpreter/openinterpreter/releases/tag/rust-v0.0.61"
+      },
+      "language": "Rust",
+      "stars": 68916,
+      "forks": 5953,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "framework",
+      "name": "openinterpreter",
+      "id": "github:666299222",
+      "maintenance": "recent-push",
+      "kind": "agent-framework",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/ollama/ollama/blob/42ac2c0c1e132c0b4f0d9cfcd4e7950f0c5470bc/README.md#L110",
+      "apiDocs": "https://github.com/ollama/ollama/blob/42ac2c0c1e132c0b4f0d9cfcd4e7950f0c5470bc/README.md#L90",
+      "hardwareDocs": null,
+      "repoId": 658928958,
+      "repository": "ollama/ollama",
+      "source": "https://github.com/ollama/ollama",
+      "revision": "42ac2c0c1e132c0b4f0d9cfcd4e7950f0c5470bc",
+      "docs": "https://github.com/ollama/ollama/tree/42ac2c0c1e132c0b4f0d9cfcd4e7950f0c5470bc#readme",
+      "licenseUrl": "https://github.com/ollama/ollama/blob/42ac2c0c1e132c0b4f0d9cfcd4e7950f0c5470bc/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-18T22:53:05Z",
+      "release": {
+        "tagName": "v0.40.16",
+        "url": "https://github.com/ollama/ollama/releases/tag/v0.40.16"
+      },
+      "language": "Go",
+      "stars": 187643,
+      "forks": 19169,
+      "dockerEvidence": [
+        "Dockerfile"
+      ],
+      "advisories": [],
+      "category": "inference",
+      "name": "ollama",
+      "id": "github:658928958",
+      "maintenance": "recent-push",
+      "kind": "inference-engine",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": "https://github.com/ggml-org/llama.cpp/blob/7fce5439fe451cd48340b112ec37d2befe02c776/README.md#L16",
+      "hardwareDocs": null,
+      "repoId": 612354784,
+      "repository": "ggml-org/llama.cpp",
+      "source": "https://github.com/ggml-org/llama.cpp",
+      "revision": "7fce5439fe451cd48340b112ec37d2befe02c776",
+      "docs": "https://github.com/ggml-org/llama.cpp/tree/7fce5439fe451cd48340b112ec37d2befe02c776#readme",
+      "licenseUrl": "https://github.com/ggml-org/llama.cpp/blob/7fce5439fe451cd48340b112ec37d2befe02c776/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:11:11Z",
+      "release": {
+        "tagName": "v1.0.0",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/tag/v1.0.0"
+      },
+      "language": "C++",
+      "stars": 135733,
+      "forks": 25802,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-3p4r-fq3f-q74v",
+          "severity": "high",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-3p4r-fq3f-q74v"
+        },
+        {
+          "id": "GHSA-j8rj-fmpv-wcxw",
+          "severity": "critical",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-j8rj-fmpv-wcxw"
+        },
+        {
+          "id": "GHSA-96jg-mvhq-q7q7",
+          "severity": "high",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-96jg-mvhq-q7q7"
+        },
+        {
+          "id": "GHSA-8947-pfff-2f3c",
+          "severity": "low",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-8947-pfff-2f3c"
+        },
+        {
+          "id": "GHSA-vgg9-87g3-85w8",
+          "severity": "high",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-vgg9-87g3-85w8"
+        },
+        {
+          "id": "GHSA-7rxv-5jhh-j6xx",
+          "severity": "high",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-7rxv-5jhh-j6xx"
+        },
+        {
+          "id": "GHSA-g4cc-763q-h9h6",
+          "severity": "medium",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-g4cc-763q-h9h6"
+        },
+        {
+          "id": "GHSA-8wwf-w4qm-gpqr",
+          "severity": "high",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-8wwf-w4qm-gpqr"
+        },
+        {
+          "id": "GHSA-wcr5-566p-9cwj",
+          "severity": "critical",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-wcr5-566p-9cwj"
+        },
+        {
+          "id": "GHSA-5vm9-p64x-gqw9",
+          "severity": "medium",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-5vm9-p64x-gqw9"
+        },
+        {
+          "id": "GHSA-mqp6-7pv6-fqjf",
+          "severity": "medium",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-mqp6-7pv6-fqjf"
+        },
+        {
+          "id": "GHSA-49q7-2jmh-92fp",
+          "severity": "medium",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-49q7-2jmh-92fp"
+        },
+        {
+          "id": "GHSA-p5mv-gjc5-mwqv",
+          "severity": "high",
+          "url": "https://github.com/ggml-org/llama.cpp/security/advisories/GHSA-p5mv-gjc5-mwqv"
+        }
+      ],
+      "category": "inference",
+      "name": "llama.cpp",
+      "id": "github:612354784",
+      "maintenance": "recent-push",
+      "kind": "inference-engine",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/vllm-project/vllm/blob/fab6445e755c82fce10cba833e372436a7ea3629/README.md#L69",
+      "apiDocs": "https://github.com/vllm-project/vllm/blob/fab6445e755c82fce10cba833e372436a7ea3629/README.md#L49",
+      "hardwareDocs": null,
+      "repoId": 599547518,
+      "repository": "vllm-project/vllm",
+      "source": "https://github.com/vllm-project/vllm",
+      "revision": "fab6445e755c82fce10cba833e372436a7ea3629",
+      "docs": "https://github.com/vllm-project/vllm/tree/fab6445e755c82fce10cba833e372436a7ea3629#readme",
+      "licenseUrl": "https://github.com/vllm-project/vllm/blob/fab6445e755c82fce10cba833e372436a7ea3629/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T18:51:06Z",
+      "release": {
+        "tagName": "v0.34.0",
+        "url": "https://github.com/vllm-project/vllm/releases/tag/v0.34.0"
+      },
+      "language": "Python",
+      "stars": 97220,
+      "forks": 25036,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-xgh8-qwjh-q853",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-xgh8-qwjh-q853"
+        },
+        {
+          "id": "GHSA-qrj2-j723-m6w8",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-qrj2-j723-m6w8"
+        },
+        {
+          "id": "GHSA-vvpg-rrww-wpmh",
+          "severity": "low",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-vvpg-rrww-wpmh"
+        },
+        {
+          "id": "GHSA-8397-8qf6-f2gm",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-8397-8qf6-f2gm"
+        },
+        {
+          "id": "GHSA-h3rc-j82p-2c3h",
+          "severity": "high",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-h3rc-j82p-2c3h"
+        },
+        {
+          "id": "GHSA-6cxc-2vcg-w5qc",
+          "severity": "low",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-6cxc-2vcg-w5qc"
+        },
+        {
+          "id": "GHSA-q97c-p368-75c4",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-q97c-p368-75c4"
+        },
+        {
+          "id": "GHSA-gq5q-89c7-vhvx",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-gq5q-89c7-vhvx"
+        },
+        {
+          "id": "GHSA-894j-wg8m-63h8",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-894j-wg8m-63h8"
+        },
+        {
+          "id": "GHSA-p92p-rxj5-7p2x",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-p92p-rxj5-7p2x"
+        },
+        {
+          "id": "GHSA-4xqp-c3mv-qff7",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-4xqp-c3mv-qff7"
+        },
+        {
+          "id": "GHSA-q9v9-qpjp-fc24",
+          "severity": "high",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-q9v9-qpjp-fc24"
+        },
+        {
+          "id": "GHSA-m9fg-w9qh-67pc",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-m9fg-w9qh-67pc"
+        },
+        {
+          "id": "GHSA-x6mc-67gf-chw4",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-x6mc-67gf-chw4"
+        },
+        {
+          "id": "GHSA-w4cg-mhc7-mgw3",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-w4cg-mhc7-mgw3"
+        },
+        {
+          "id": "GHSA-5r3c-5x4v-8gjh",
+          "severity": "high",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-5r3c-5x4v-8gjh"
+        },
+        {
+          "id": "GHSA-823j-m4cj-hmjf",
+          "severity": "high",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-823j-m4cj-hmjf"
+        },
+        {
+          "id": "GHSA-5fj9-pfhr-6j48",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-5fj9-pfhr-6j48"
+        },
+        {
+          "id": "GHSA-9g3c-x747-c6wr",
+          "severity": "medium",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-9g3c-x747-c6wr"
+        },
+        {
+          "id": "GHSA-25q3-v2hm-8vpf",
+          "severity": "high",
+          "url": "https://github.com/vllm-project/vllm/security/advisories/GHSA-25q3-v2hm-8vpf"
+        }
+      ],
+      "category": "inference",
+      "name": "vllm",
+      "id": "github:599547518",
+      "maintenance": "recent-push",
+      "kind": "inference-engine",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/mudler/LocalAI/blob/811ec93262d9eb16a9253d6c9b80b02be9ddd9c1/README.md#L45",
+      "apiDocs": "https://github.com/mudler/LocalAI/blob/811ec93262d9eb16a9253d6c9b80b02be9ddd9c1/README.md#L111",
+      "hardwareDocs": null,
+      "repoId": 615869301,
+      "repository": "mudler/LocalAI",
+      "source": "https://github.com/mudler/LocalAI",
+      "revision": "811ec93262d9eb16a9253d6c9b80b02be9ddd9c1",
+      "docs": "https://github.com/mudler/LocalAI/tree/811ec93262d9eb16a9253d6c9b80b02be9ddd9c1#readme",
+      "licenseUrl": "https://github.com/mudler/LocalAI/blob/811ec93262d9eb16a9253d6c9b80b02be9ddd9c1/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T18:33:17Z",
+      "release": {
+        "tagName": "v5.0.0",
+        "url": "https://github.com/mudler/LocalAI/releases/tag/v5.0.0"
+      },
+      "language": "Go",
+      "stars": 50454,
+      "forks": 4620,
+      "dockerEvidence": [
+        "Dockerfile",
+        "docker-compose.yaml"
+      ],
+      "advisories": [],
+      "category": "inference",
+      "name": "LocalAI",
+      "id": "github:615869301",
+      "maintenance": "recent-push",
+      "kind": "inference-engine",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/sgl-project/sglang/blob/17a9168f1f99f9eeb17ee7a97717f8a100abf4d8/README.md#L41",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 740303686,
+      "repository": "sgl-project/sglang",
+      "source": "https://github.com/sgl-project/sglang",
+      "revision": "17a9168f1f99f9eeb17ee7a97717f8a100abf4d8",
+      "docs": "https://github.com/sgl-project/sglang/tree/17a9168f1f99f9eeb17ee7a97717f8a100abf4d8#readme",
+      "licenseUrl": "https://github.com/sgl-project/sglang/blob/17a9168f1f99f9eeb17ee7a97717f8a100abf4d8/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:07:48Z",
+      "release": {
+        "tagName": "v0.5.23",
+        "url": "https://github.com/sgl-project/sglang/releases/tag/v0.5.23"
+      },
+      "language": "Python",
+      "stars": 38861,
+      "forks": 10632,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [],
+      "category": "inference",
+      "name": "sglang",
+      "id": "github:740303686",
+      "maintenance": "recent-push",
+      "kind": "inference-engine",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/huggingface/transformers/blob/e41087b973a6542ad64f341b68ed8991b0318e22/README.md#L86",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 155220641,
+      "repository": "huggingface/transformers",
+      "source": "https://github.com/huggingface/transformers",
+      "revision": "e41087b973a6542ad64f341b68ed8991b0318e22",
+      "docs": "https://github.com/huggingface/transformers/tree/e41087b973a6542ad64f341b68ed8991b0318e22#readme",
+      "licenseUrl": "https://github.com/huggingface/transformers/blob/e41087b973a6542ad64f341b68ed8991b0318e22/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T18:59:23Z",
+      "release": {
+        "tagName": "v5.23.0",
+        "url": "https://github.com/huggingface/transformers/releases/tag/v5.23.0"
+      },
+      "language": "Python",
+      "stars": 169275,
+      "forks": 35249,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [],
+      "category": "inference",
+      "name": "transformers",
+      "id": "github:155220641",
+      "maintenance": "recent-push",
+      "kind": "inference-engine",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/deepset-ai/haystack/blob/65fc36abbe59f40f46002476df84f326c91601af/README.md#L28",
+      "apiDocs": "https://github.com/deepset-ai/haystack/blob/65fc36abbe59f40f46002476df84f326c91601af/README.md#L76",
+      "hardwareDocs": null,
+      "repoId": 221654678,
+      "repository": "deepset-ai/haystack",
+      "source": "https://github.com/deepset-ai/haystack",
+      "revision": "65fc36abbe59f40f46002476df84f326c91601af",
+      "docs": "https://github.com/deepset-ai/haystack/tree/65fc36abbe59f40f46002476df84f326c91601af#readme",
+      "licenseUrl": "https://github.com/deepset-ai/haystack/blob/65fc36abbe59f40f46002476df84f326c91601af/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T15:50:26Z",
+      "release": {
+        "tagName": "v3.5.0",
+        "url": "https://github.com/deepset-ai/haystack/releases/tag/v3.5.0"
+      },
+      "language": "Python",
+      "stars": 27053,
+      "forks": 3482,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-hx9v-6r9f-w677",
+          "severity": "low",
+          "url": "https://github.com/deepset-ai/haystack/security/advisories/GHSA-hx9v-6r9f-w677"
+        }
+      ],
+      "category": "rag",
+      "name": "haystack",
+      "id": "github:221654678",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/run-llama/llama_index/blob/99d7433f6f71888951379ccca9294e272442c832/README.md#L115",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 560704231,
+      "repository": "run-llama/llama_index",
+      "source": "https://github.com/run-llama/llama_index",
+      "revision": "99d7433f6f71888951379ccca9294e272442c832",
+      "docs": "https://github.com/run-llama/llama_index/tree/99d7433f6f71888951379ccca9294e272442c832#readme",
+      "licenseUrl": "https://github.com/run-llama/llama_index/blob/99d7433f6f71888951379ccca9294e272442c832/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-14T02:26:05Z",
+      "release": {
+        "tagName": "v0.14.26",
+        "url": "https://github.com/run-llama/llama_index/releases/tag/v0.14.26"
+      },
+      "language": "Python",
+      "stars": 52962,
+      "forks": 8592,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "rag",
+      "name": "llama_index",
+      "id": "github:560704231",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/langchain-ai/langchain/blob/179a944d968c62175ad68906eef99fbc1afd88e1/README.md#L32",
+      "apiDocs": "https://github.com/langchain-ai/langchain/blob/179a944d968c62175ad68906eef99fbc1afd88e1/README.md#L76",
+      "hardwareDocs": null,
+      "repoId": 552661142,
+      "repository": "langchain-ai/langchain",
+      "source": "https://github.com/langchain-ai/langchain",
+      "revision": "179a944d968c62175ad68906eef99fbc1afd88e1",
+      "docs": "https://github.com/langchain-ai/langchain/tree/179a944d968c62175ad68906eef99fbc1afd88e1#readme",
+      "licenseUrl": "https://github.com/langchain-ai/langchain/blob/179a944d968c62175ad68906eef99fbc1afd88e1/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:02:46Z",
+      "release": {
+        "tagName": "langchain-core==1.8.3",
+        "url": "https://github.com/langchain-ai/langchain/releases/tag/langchain-core%3D%3D1.8.3"
+      },
+      "language": "Python",
+      "stars": 149907,
+      "forks": 25161,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-gr75-jv2w-4656",
+          "severity": "medium",
+          "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-gr75-jv2w-4656"
+        },
+        {
+          "id": "GHSA-pjwx-r37v-7724",
+          "severity": "high",
+          "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-pjwx-r37v-7724"
+        },
+        {
+          "id": "GHSA-r7w7-9xr2-qq2r",
+          "severity": "low",
+          "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-r7w7-9xr2-qq2r"
+        },
+        {
+          "id": "GHSA-926x-3r5x-gfhw",
+          "severity": "medium",
+          "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-926x-3r5x-gfhw"
+        },
+        {
+          "id": "GHSA-qh6h-p6c9-ff54",
+          "severity": "high",
+          "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-qh6h-p6c9-ff54"
+        },
+        {
+          "id": "GHSA-fv5p-p927-qmxr",
+          "severity": "medium",
+          "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-fv5p-p927-qmxr"
+        },
+        {
+          "id": "GHSA-2g6r-c272-w58r",
+          "severity": "low",
+          "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-2g6r-c272-w58r"
+        },
+        {
+          "id": "GHSA-c67j-w6g6-q2cm",
+          "severity": "critical",
+          "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-c67j-w6g6-q2cm"
+        },
+        {
+          "id": "GHSA-6qv9-48xg-fc7f",
+          "severity": "high",
+          "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-6qv9-48xg-fc7f"
+        }
+      ],
+      "category": "rag",
+      "name": "langchain",
+      "id": "github:552661142",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/chroma-core/chroma/blob/1a3ac2c7c623adbd03ed2508dc27b98cdf26016d/README.md#L24",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 546206616,
+      "repository": "chroma-core/chroma",
+      "source": "https://github.com/chroma-core/chroma",
+      "revision": "1a3ac2c7c623adbd03ed2508dc27b98cdf26016d",
+      "docs": "https://github.com/chroma-core/chroma/tree/1a3ac2c7c623adbd03ed2508dc27b98cdf26016d#readme",
+      "licenseUrl": "https://github.com/chroma-core/chroma/blob/1a3ac2c7c623adbd03ed2508dc27b98cdf26016d/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-13T21:08:18Z",
+      "release": {
+        "tagName": "1.5.9",
+        "url": "https://github.com/chroma-core/chroma/releases/tag/1.5.9"
+      },
+      "language": "Rust",
+      "stars": 29715,
+      "forks": 2609,
+      "dockerEvidence": [
+        "Dockerfile",
+        "docker-compose.yml"
+      ],
+      "advisories": [],
+      "category": "rag",
+      "name": "chroma",
+      "id": "github:546206616",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/qdrant/qdrant/blob/23065a0bf6857c3e5da45f6c8939cc746cc0580e/README.md#L49",
+      "apiDocs": "https://github.com/qdrant/qdrant/blob/23065a0bf6857c3e5da45f6c8939cc746cc0580e/README.md#L121",
+      "hardwareDocs": null,
+      "repoId": 268163609,
+      "repository": "qdrant/qdrant",
+      "source": "https://github.com/qdrant/qdrant",
+      "revision": "23065a0bf6857c3e5da45f6c8939cc746cc0580e",
+      "docs": "https://github.com/qdrant/qdrant/tree/23065a0bf6857c3e5da45f6c8939cc746cc0580e#readme",
+      "licenseUrl": "https://github.com/qdrant/qdrant/blob/23065a0bf6857c3e5da45f6c8939cc746cc0580e/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:07:43Z",
+      "release": {
+        "tagName": "v1.20.2",
+        "url": "https://github.com/qdrant/qdrant/releases/tag/v1.20.2"
+      },
+      "language": "Rust",
+      "stars": 35637,
+      "forks": 2825,
+      "dockerEvidence": [
+        "Dockerfile"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-frc7-44gm-99qq",
+          "severity": "critical",
+          "url": "https://github.com/qdrant/qdrant/security/advisories/GHSA-frc7-44gm-99qq"
+        },
+        {
+          "id": "GHSA-3gph-6c29-p29v",
+          "severity": "high",
+          "url": "https://github.com/qdrant/qdrant/security/advisories/GHSA-3gph-6c29-p29v"
+        },
+        {
+          "id": "GHSA-f632-vm87-2m2f",
+          "severity": "high",
+          "url": "https://github.com/qdrant/qdrant/security/advisories/GHSA-f632-vm87-2m2f"
+        }
+      ],
+      "category": "rag",
+      "name": "qdrant",
+      "id": "github:268163609",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/milvus-io/milvus/blob/20746425a1e56f7b12709dc64a4b871cb8be338d/README.md#L22",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 208728772,
+      "repository": "milvus-io/milvus",
+      "source": "https://github.com/milvus-io/milvus",
+      "revision": "20746425a1e56f7b12709dc64a4b871cb8be338d",
+      "docs": "https://github.com/milvus-io/milvus/tree/20746425a1e56f7b12709dc64a4b871cb8be338d#readme",
+      "licenseUrl": "https://github.com/milvus-io/milvus/blob/20746425a1e56f7b12709dc64a4b871cb8be338d/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T18:05:20Z",
+      "release": {
+        "tagName": "v3.0.6",
+        "url": "https://github.com/milvus-io/milvus/releases/tag/v3.0.6"
+      },
+      "language": "Go",
+      "stars": 46695,
+      "forks": 4337,
+      "dockerEvidence": [
+        "docker-compose.yml"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-39xr-fgh7-mh3c",
+          "severity": "medium",
+          "url": "https://github.com/milvus-io/milvus/security/advisories/GHSA-39xr-fgh7-mh3c"
+        },
+        {
+          "id": "GHSA-6hp9-pxpj-9f64",
+          "severity": "medium",
+          "url": "https://github.com/milvus-io/milvus/security/advisories/GHSA-6hp9-pxpj-9f64"
+        },
+        {
+          "id": "GHSA-jh4h-22hq-x74p",
+          "severity": "medium",
+          "url": "https://github.com/milvus-io/milvus/security/advisories/GHSA-jh4h-22hq-x74p"
+        },
+        {
+          "id": "GHSA-gg6q-4562-83ww",
+          "severity": "high",
+          "url": "https://github.com/milvus-io/milvus/security/advisories/GHSA-gg6q-4562-83ww"
+        },
+        {
+          "id": "GHSA-hr46-v5qw-wr2q",
+          "severity": "high",
+          "url": "https://github.com/milvus-io/milvus/security/advisories/GHSA-hr46-v5qw-wr2q"
+        },
+        {
+          "id": "GHSA-9xrh-vcf6-jc93",
+          "severity": "medium",
+          "url": "https://github.com/milvus-io/milvus/security/advisories/GHSA-9xrh-vcf6-jc93"
+        },
+        {
+          "id": "GHSA-cp38-9g49-9wvw",
+          "severity": "medium",
+          "url": "https://github.com/milvus-io/milvus/security/advisories/GHSA-cp38-9g49-9wvw"
+        },
+        {
+          "id": "GHSA-7ppg-37fh-vcr6",
+          "severity": "critical",
+          "url": "https://github.com/milvus-io/milvus/security/advisories/GHSA-7ppg-37fh-vcr6"
+        },
+        {
+          "id": "GHSA-mhjq-8c7m-3f7p",
+          "severity": "critical",
+          "url": "https://github.com/milvus-io/milvus/security/advisories/GHSA-mhjq-8c7m-3f7p"
+        }
+      ],
+      "category": "rag",
+      "name": "milvus",
+      "id": "github:208728772",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/weaviate/weaviate/blob/0532492aaebf1cb7d62f702dea6318eb800a94fc/README.md#L18",
+      "apiDocs": "https://github.com/weaviate/weaviate/blob/0532492aaebf1cb7d62f702dea6318eb800a94fc/README.md#L109",
+      "hardwareDocs": null,
+      "repoId": 55072677,
+      "repository": "weaviate/weaviate",
+      "source": "https://github.com/weaviate/weaviate",
+      "revision": "0532492aaebf1cb7d62f702dea6318eb800a94fc",
+      "docs": "https://github.com/weaviate/weaviate/tree/0532492aaebf1cb7d62f702dea6318eb800a94fc#readme",
+      "licenseUrl": "https://github.com/weaviate/weaviate/blob/0532492aaebf1cb7d62f702dea6318eb800a94fc/LICENSE",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T17:01:01Z",
+      "release": {
+        "tagName": "v1.40.6",
+        "url": "https://github.com/weaviate/weaviate/releases/tag/v1.40.6"
+      },
+      "language": "Go",
+      "stars": 16956,
+      "forks": 1439,
+      "dockerEvidence": [
+        "Dockerfile",
+        "docker-compose.yml"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-8697-479h-5mfp",
+          "severity": "low",
+          "url": "https://github.com/weaviate/weaviate/security/advisories/GHSA-8697-479h-5mfp"
+        }
+      ],
+      "category": "rag",
+      "name": "weaviate",
+      "id": "github:55072677",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/facebookresearch/faiss/blob/14392c952788ca1d6980361cf01d1c8736afc4db/README.md#L17",
+      "apiDocs": null,
+      "hardwareDocs": "https://github.com/facebookresearch/faiss/blob/14392c952788ca1d6980361cf01d1c8736afc4db/README.md#L15",
+      "repoId": 81227005,
+      "repository": "facebookresearch/faiss",
+      "source": "https://github.com/facebookresearch/faiss",
+      "revision": "14392c952788ca1d6980361cf01d1c8736afc4db",
+      "docs": "https://github.com/facebookresearch/faiss/tree/14392c952788ca1d6980361cf01d1c8736afc4db#readme",
+      "licenseUrl": "https://github.com/facebookresearch/faiss/blob/14392c952788ca1d6980361cf01d1c8736afc4db/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T16:32:44Z",
+      "release": {
+        "tagName": "v1.16.0",
+        "url": "https://github.com/facebookresearch/faiss/releases/tag/v1.16.0"
+      },
+      "language": "C++",
+      "stars": 41818,
+      "forks": 4656,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "rag",
+      "name": "faiss",
+      "id": "github:81227005",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/openai/whisper/blob/86098128c0b4f24f0e2aa2994de830614b474227/README.md#L22",
+      "apiDocs": null,
+      "hardwareDocs": "https://github.com/openai/whisper/blob/86098128c0b4f24f0e2aa2994de830614b474227/README.md#L64",
+      "repoId": 537603333,
+      "repository": "openai/whisper",
+      "source": "https://github.com/openai/whisper",
+      "revision": "86098128c0b4f24f0e2aa2994de830614b474227",
+      "docs": "https://github.com/openai/whisper/tree/86098128c0b4f24f0e2aa2994de830614b474227#readme",
+      "licenseUrl": "https://github.com/openai/whisper/blob/86098128c0b4f24f0e2aa2994de830614b474227/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-08-31T17:19:19Z",
+      "release": {
+        "tagName": "v20250625",
+        "url": "https://github.com/openai/whisper/releases/tag/v20250625"
+      },
+      "language": "Python",
+      "stars": 113109,
+      "forks": 13718,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "voice",
+      "name": "whisper",
+      "id": "github:537603333",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/OHF-Voice/piper1-gpl/blob/641ef891d4427b15b1501ac86b410ec725368c53/README.md#L8",
+      "apiDocs": "https://github.com/OHF-Voice/piper1-gpl/blob/641ef891d4427b15b1501ac86b410ec725368c53/README.md#L18",
+      "hardwareDocs": null,
+      "repoId": 956792596,
+      "repository": "OHF-Voice/piper1-gpl",
+      "source": "https://github.com/OHF-Voice/piper1-gpl",
+      "revision": "641ef891d4427b15b1501ac86b410ec725368c53",
+      "docs": "https://github.com/OHF-Voice/piper1-gpl/tree/641ef891d4427b15b1501ac86b410ec725368c53#readme",
+      "licenseUrl": "https://github.com/OHF-Voice/piper1-gpl/blob/641ef891d4427b15b1501ac86b410ec725368c53/COPYING",
+      "codeLicense": "GPL-3.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:07:41Z",
+      "release": {
+        "tagName": "v1.8.0",
+        "url": "https://github.com/OHF-Voice/piper1-gpl/releases/tag/v1.8.0"
+      },
+      "language": "C++",
+      "stars": 6330,
+      "forks": 635,
+      "dockerEvidence": [
+        "Dockerfile",
+        "docker"
+      ],
+      "advisories": [],
+      "category": "voice",
+      "name": "piper1-gpl",
+      "id": "github:956792596",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/coqui-ai/TTS/blob/dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e/README.md#L146",
+      "apiDocs": "https://github.com/coqui-ai/TTS/blob/dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e/README.md#L188",
+      "hardwareDocs": null,
+      "repoId": 265612440,
+      "repository": "coqui-ai/TTS",
+      "source": "https://github.com/coqui-ai/TTS",
+      "revision": "dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e",
+      "docs": "https://github.com/coqui-ai/TTS/tree/dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e#readme",
+      "licenseUrl": "https://github.com/coqui-ai/TTS/blob/dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e/LICENSE.txt",
+      "codeLicense": "MPL-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2024-08-16T12:07:14Z",
+      "release": {
+        "tagName": "v0.22.0",
+        "url": "https://github.com/coqui-ai/TTS/releases/tag/v0.22.0"
+      },
+      "language": "Python",
+      "stars": 46254,
+      "forks": 6162,
+      "dockerEvidence": [
+        "Dockerfile"
+      ],
+      "advisories": [],
+      "category": "voice",
+      "name": "TTS",
+      "id": "github:265612440",
+      "maintenance": "stale-review",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/hexgrad/kokoro/blob/dfb907a02bba8152ca444717ca5d78747ccb4bec/README.md#L3",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 915054134,
+      "repository": "hexgrad/kokoro",
+      "source": "https://github.com/hexgrad/kokoro",
+      "revision": "dfb907a02bba8152ca444717ca5d78747ccb4bec",
+      "docs": "https://github.com/hexgrad/kokoro/tree/dfb907a02bba8152ca444717ca5d78747ccb4bec#readme",
+      "licenseUrl": "https://github.com/hexgrad/kokoro/blob/dfb907a02bba8152ca444717ca5d78747ccb4bec/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2025-08-06T22:28:53Z",
+      "release": null,
+      "language": "JavaScript",
+      "stars": 10246,
+      "forks": 1164,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "voice",
+      "name": "kokoro",
+      "id": "github:915054134",
+      "maintenance": "stale-review",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/speechbrain/speechbrain/blob/c0241278f93ef02cd5191f03caf4e5f8e1292bf6/README.md#L86",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 259710503,
+      "repository": "speechbrain/speechbrain",
+      "source": "https://github.com/speechbrain/speechbrain",
+      "revision": "c0241278f93ef02cd5191f03caf4e5f8e1292bf6",
+      "docs": "https://github.com/speechbrain/speechbrain/tree/c0241278f93ef02cd5191f03caf4e5f8e1292bf6#readme",
+      "licenseUrl": "https://github.com/speechbrain/speechbrain/blob/c0241278f93ef02cd5191f03caf4e5f8e1292bf6/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-10-14T23:12:55Z",
+      "release": {
+        "tagName": "v1.1.2",
+        "url": "https://github.com/speechbrain/speechbrain/releases/tag/v1.1.2"
+      },
+      "language": "Python",
+      "stars": 11945,
+      "forks": 1764,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "voice",
+      "name": "speechbrain",
+      "id": "github:259710503",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/Comfy-Org/ComfyUI/blob/c8abeb00ad2736b649ca2fceb8395e25072c7ea3/README.md#L146",
+      "apiDocs": null,
+      "hardwareDocs": "https://github.com/Comfy-Org/ComfyUI/blob/c8abeb00ad2736b649ca2fceb8395e25072c7ea3/README.md#L41",
+      "repoId": 589831718,
+      "repository": "Comfy-Org/ComfyUI",
+      "source": "https://github.com/Comfy-Org/ComfyUI",
+      "revision": "c8abeb00ad2736b649ca2fceb8395e25072c7ea3",
+      "docs": "https://github.com/Comfy-Org/ComfyUI/tree/c8abeb00ad2736b649ca2fceb8395e25072c7ea3#readme",
+      "licenseUrl": "https://github.com/Comfy-Org/ComfyUI/blob/c8abeb00ad2736b649ca2fceb8395e25072c7ea3/LICENSE",
+      "codeLicense": "GPL-3.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T18:27:18Z",
+      "release": {
+        "tagName": "v0.46.0",
+        "url": "https://github.com/Comfy-Org/ComfyUI/releases/tag/v0.46.0"
+      },
+      "language": "Python",
+      "stars": 147648,
+      "forks": 17657,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-rj8c-c4p8-3c5h",
+          "severity": "high",
+          "url": "https://github.com/Comfy-Org/ComfyUI/security/advisories/GHSA-rj8c-c4p8-3c5h"
+        },
+        {
+          "id": "GHSA-53g8-45wq-pcv8",
+          "severity": "high",
+          "url": "https://github.com/Comfy-Org/ComfyUI/security/advisories/GHSA-53g8-45wq-pcv8"
+        },
+        {
+          "id": "GHSA-rvxv-29p8-pxgq",
+          "severity": "high",
+          "url": "https://github.com/Comfy-Org/ComfyUI/security/advisories/GHSA-rvxv-29p8-pxgq"
+        },
+        {
+          "id": "GHSA-pj59-g5vv-74q4",
+          "severity": "high",
+          "url": "https://github.com/Comfy-Org/ComfyUI/security/advisories/GHSA-pj59-g5vv-74q4"
+        }
+      ],
+      "category": "creative",
+      "name": "ComfyUI",
+      "id": "github:589831718",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/CompVis/stable-diffusion/blob/21f890f9da3cfbeaba8e2ac3c425ee9e998d5229/README.md#L36",
+      "apiDocs": null,
+      "hardwareDocs": "https://github.com/CompVis/stable-diffusion/blob/21f890f9da3cfbeaba8e2ac3c425ee9e998d5229/README.md#L19",
+      "repoId": 523379232,
+      "repository": "CompVis/stable-diffusion",
+      "source": "https://github.com/CompVis/stable-diffusion",
+      "revision": "21f890f9da3cfbeaba8e2ac3c425ee9e998d5229",
+      "docs": "https://github.com/CompVis/stable-diffusion/tree/21f890f9da3cfbeaba8e2ac3c425ee9e998d5229#readme",
+      "licenseUrl": "https://github.com/CompVis/stable-diffusion/blob/21f890f9da3cfbeaba8e2ac3c425ee9e998d5229/LICENSE",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2024-06-18T01:53:49Z",
+      "release": null,
+      "language": "Jupyter Notebook",
+      "stars": 73584,
+      "forks": 10673,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "creative",
+      "name": "stable-diffusion",
+      "id": "github:523379232",
+      "maintenance": "stale-review",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/black-forest-labs/flux/blob/802fb4713906133fcbd0d8dc5351620ca4773036/README.md#L17",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 836642963,
+      "repository": "black-forest-labs/flux",
+      "source": "https://github.com/black-forest-labs/flux",
+      "revision": "802fb4713906133fcbd0d8dc5351620ca4773036",
+      "docs": "https://github.com/black-forest-labs/flux/tree/802fb4713906133fcbd0d8dc5351620ca4773036#readme",
+      "licenseUrl": "https://github.com/black-forest-labs/flux/blob/802fb4713906133fcbd0d8dc5351620ca4773036/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2025-07-31T13:58:55Z",
+      "release": null,
+      "language": "Python",
+      "stars": 26072,
+      "forks": 1934,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "creative",
+      "name": "flux",
+      "id": "github:836642963",
+      "maintenance": "stale-review",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/invoke-ai/InvokeAI/blob/345d15d3d9b1f6949295c0013e7a93e58bd1feac/README.md#L28",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 525592995,
+      "repository": "invoke-ai/InvokeAI",
+      "source": "https://github.com/invoke-ai/InvokeAI",
+      "revision": "345d15d3d9b1f6949295c0013e7a93e58bd1feac",
+      "docs": "https://github.com/invoke-ai/InvokeAI/tree/345d15d3d9b1f6949295c0013e7a93e58bd1feac#readme",
+      "licenseUrl": "https://github.com/invoke-ai/InvokeAI/blob/345d15d3d9b1f6949295c0013e7a93e58bd1feac/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T11:43:39Z",
+      "release": {
+        "tagName": "v6.14.4",
+        "url": "https://github.com/invoke-ai/InvokeAI/releases/tag/v6.14.4"
+      },
+      "language": "TypeScript",
+      "stars": 29123,
+      "forks": 3122,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [],
+      "category": "creative",
+      "name": "InvokeAI",
+      "id": "github:525592995",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/AUTOMATIC1111/stable-diffusion-webui/blob/82a973c04367123ae98bd9abdf80d9eda9b910e2/README.md#L96",
+      "apiDocs": null,
+      "hardwareDocs": "https://github.com/AUTOMATIC1111/stable-diffusion-webui/blob/82a973c04367123ae98bd9abdf80d9eda9b910e2/README.md#L54",
+      "repoId": 527591471,
+      "repository": "AUTOMATIC1111/stable-diffusion-webui",
+      "source": "https://github.com/AUTOMATIC1111/stable-diffusion-webui",
+      "revision": "82a973c04367123ae98bd9abdf80d9eda9b910e2",
+      "docs": "https://github.com/AUTOMATIC1111/stable-diffusion-webui/tree/82a973c04367123ae98bd9abdf80d9eda9b910e2#readme",
+      "licenseUrl": "https://github.com/AUTOMATIC1111/stable-diffusion-webui/blob/82a973c04367123ae98bd9abdf80d9eda9b910e2/LICENSE.txt",
+      "codeLicense": "AGPL-3.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-03-02T07:00:53Z",
+      "release": {
+        "tagName": "v1.10.1",
+        "url": "https://github.com/AUTOMATIC1111/stable-diffusion-webui/releases/tag/v1.10.1"
+      },
+      "language": "Python",
+      "stars": 165347,
+      "forks": 31102,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "creative",
+      "name": "stable-diffusion-webui",
+      "id": "github:527591471",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 4118776,
+      "repository": "mltframework/shotcut",
+      "source": "https://github.com/mltframework/shotcut",
+      "revision": "7f7fab384e422e3d01525e50146fdc41be718e06",
+      "docs": "https://github.com/mltframework/shotcut/tree/7f7fab384e422e3d01525e50146fdc41be718e06#readme",
+      "licenseUrl": "https://github.com/mltframework/shotcut/blob/7f7fab384e422e3d01525e50146fdc41be718e06/COPYING",
+      "codeLicense": "GPL-3.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-17T03:11:41Z",
+      "release": {
+        "tagName": "v26.11.15",
+        "url": "https://github.com/mltframework/shotcut/releases/tag/v26.11.15"
+      },
+      "language": "C++",
+      "stars": 15731,
+      "forks": 1576,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-r3f6-m5ww-9r4p",
+          "severity": "high",
+          "url": "https://github.com/mltframework/shotcut/security/advisories/GHSA-r3f6-m5ww-9r4p"
+        }
+      ],
+      "category": "creative",
+      "name": "shotcut",
+      "id": "github:4118776",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 1291410,
+      "repository": "libvips/libvips",
+      "source": "https://github.com/libvips/libvips",
+      "revision": "2aa86844b42f47adf8e6103f9635f7a76c703a1a",
+      "docs": "https://github.com/libvips/libvips/tree/2aa86844b42f47adf8e6103f9635f7a76c703a1a#readme",
+      "licenseUrl": "https://github.com/libvips/libvips/blob/2aa86844b42f47adf8e6103f9635f7a76c703a1a/LICENSE",
+      "codeLicense": "LGPL-2.1",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T16:28:57Z",
+      "release": {
+        "tagName": "v8.18.7",
+        "url": "https://github.com/libvips/libvips/releases/tag/v8.18.7"
+      },
+      "language": "C",
+      "stars": 11826,
+      "forks": 808,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-h27h-jf9v-m8rg",
+          "severity": "low",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-h27h-jf9v-m8rg"
+        },
+        {
+          "id": "GHSA-fh99-55jf-5hj3",
+          "severity": "medium",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-fh99-55jf-5hj3"
+        },
+        {
+          "id": "GHSA-rjmm-3qch-m9rg",
+          "severity": "medium",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-rjmm-3qch-m9rg"
+        },
+        {
+          "id": "GHSA-7p29-wg2h-36q4",
+          "severity": "medium",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-7p29-wg2h-36q4"
+        },
+        {
+          "id": "GHSA-9rwc-f68v-4482",
+          "severity": "high",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-9rwc-f68v-4482"
+        },
+        {
+          "id": "GHSA-jmwm-wc68-mhwm",
+          "severity": "medium",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-jmwm-wc68-mhwm"
+        },
+        {
+          "id": "GHSA-523x-vhfw-6r76",
+          "severity": "high",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-523x-vhfw-6r76"
+        },
+        {
+          "id": "GHSA-2fcj-gj27-279x",
+          "severity": "high",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-2fcj-gj27-279x"
+        },
+        {
+          "id": "GHSA-r98w-4fp7-m9c7",
+          "severity": "medium",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-r98w-4fp7-m9c7"
+        },
+        {
+          "id": "GHSA-q8px-4w5q-c2r4",
+          "severity": "medium",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-q8px-4w5q-c2r4"
+        },
+        {
+          "id": "GHSA-f8r8-43hh-rghm",
+          "severity": "high",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-f8r8-43hh-rghm"
+        },
+        {
+          "id": "GHSA-33qp-9pq7-9584",
+          "severity": "medium",
+          "url": "https://github.com/libvips/libvips/security/advisories/GHSA-33qp-9pq7-9584"
+        }
+      ],
+      "category": "creative",
+      "name": "libvips",
+      "id": "github:1291410",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/n8n-io/n8n/blob/d31723fa1d48e8b73f6436e2d73cb3ed77ce30b9/README.md#L30",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 193215554,
+      "repository": "n8n-io/n8n",
+      "source": "https://github.com/n8n-io/n8n",
+      "revision": "d31723fa1d48e8b73f6436e2d73cb3ed77ce30b9",
+      "docs": "https://github.com/n8n-io/n8n/tree/d31723fa1d48e8b73f6436e2d73cb3ed77ce30b9#readme",
+      "licenseUrl": "https://github.com/n8n-io/n8n/blob/d31723fa1d48e8b73f6436e2d73cb3ed77ce30b9/LICENSE.md",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:12:22Z",
+      "release": {
+        "tagName": "n8n@2.48.6",
+        "url": "https://github.com/n8n-io/n8n/releases/tag/n8n%402.48.6"
+      },
+      "language": "TypeScript",
+      "stars": 211414,
+      "forks": 61590,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-c772-hjfp-gfc2",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-c772-hjfp-gfc2"
+        },
+        {
+          "id": "GHSA-q8rc-7m84-mfvj",
+          "severity": "high",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-q8rc-7m84-mfvj"
+        },
+        {
+          "id": "GHSA-g333-hr44-g82p",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-g333-hr44-g82p"
+        },
+        {
+          "id": "GHSA-h59h-rf6m-7jp5",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-h59h-rf6m-7jp5"
+        },
+        {
+          "id": "GHSA-2x68-96jw-5r6c",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-2x68-96jw-5r6c"
+        },
+        {
+          "id": "GHSA-9p7v-45m2-wxgj",
+          "severity": "high",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-9p7v-45m2-wxgj"
+        },
+        {
+          "id": "GHSA-mx4r-96jx-v278",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-mx4r-96jx-v278"
+        },
+        {
+          "id": "GHSA-4v22-g448-h4rg",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-4v22-g448-h4rg"
+        },
+        {
+          "id": "GHSA-f2cw-9483-7vcp",
+          "severity": "high",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-f2cw-9483-7vcp"
+        },
+        {
+          "id": "GHSA-426f-xmcv-g8pg",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-426f-xmcv-g8pg"
+        },
+        {
+          "id": "GHSA-rc3w-8jc8-7x3w",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-rc3w-8jc8-7x3w"
+        },
+        {
+          "id": "GHSA-9qx8-fhxv-w794",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-9qx8-fhxv-w794"
+        },
+        {
+          "id": "GHSA-prmc-fg87-r4gh",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-prmc-fg87-r4gh"
+        },
+        {
+          "id": "GHSA-pwj5-wwm6-g83j",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-pwj5-wwm6-g83j"
+        },
+        {
+          "id": "GHSA-jmcg-c7p5-q69g",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-jmcg-c7p5-q69g"
+        },
+        {
+          "id": "GHSA-gx3v-3x3v-f8r5",
+          "severity": "high",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-gx3v-3x3v-f8r5"
+        },
+        {
+          "id": "GHSA-43v8-hjhm-chjp",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-43v8-hjhm-chjp"
+        },
+        {
+          "id": "GHSA-mgpr-56r4-5c67",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-mgpr-56r4-5c67"
+        },
+        {
+          "id": "GHSA-8vrr-mgc5-jg55",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-8vrr-mgc5-jg55"
+        },
+        {
+          "id": "GHSA-qmvv-q3c9-wpp7",
+          "severity": "medium",
+          "url": "https://github.com/n8n-io/n8n/security/advisories/GHSA-qmvv-q3c9-wpp7"
+        }
+      ],
+      "category": "automation",
+      "name": "n8n",
+      "id": "github:193215554",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 573661753,
+      "repository": "activepieces/activepieces",
+      "source": "https://github.com/activepieces/activepieces",
+      "revision": "0955b83f0ed2edcd87eccddc6e152f69a4409512",
+      "docs": "https://github.com/activepieces/activepieces/tree/0955b83f0ed2edcd87eccddc6e152f69a4409512#readme",
+      "licenseUrl": "https://github.com/activepieces/activepieces/blob/0955b83f0ed2edcd87eccddc6e152f69a4409512/LICENSE",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T16:46:50Z",
+      "release": {
+        "tagName": "0.93.0",
+        "url": "https://github.com/activepieces/activepieces/releases/tag/0.93.0"
+      },
+      "language": "TypeScript",
+      "stars": 25622,
+      "forks": 4482,
+      "dockerEvidence": [
+        "Dockerfile",
+        "docker-compose.yml"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-m992-8rcw-vmrx",
+          "severity": "critical",
+          "url": "https://github.com/activepieces/activepieces/security/advisories/GHSA-m992-8rcw-vmrx"
+        },
+        {
+          "id": "GHSA-9723-fmff-mc24",
+          "severity": "medium",
+          "url": "https://github.com/activepieces/activepieces/security/advisories/GHSA-9723-fmff-mc24"
+        },
+        {
+          "id": "GHSA-qqcr-rg2x-97mm",
+          "severity": "medium",
+          "url": "https://github.com/activepieces/activepieces/security/advisories/GHSA-qqcr-rg2x-97mm"
+        },
+        {
+          "id": "GHSA-5h2x-g6m3-grmq",
+          "severity": "high",
+          "url": "https://github.com/activepieces/activepieces/security/advisories/GHSA-5h2x-g6m3-grmq"
+        },
+        {
+          "id": "GHSA-7qx9-q4xx-rh59",
+          "severity": "medium",
+          "url": "https://github.com/activepieces/activepieces/security/advisories/GHSA-7qx9-q4xx-rh59"
+        },
+        {
+          "id": "GHSA-3pfv-m69p-5fv5",
+          "severity": "high",
+          "url": "https://github.com/activepieces/activepieces/security/advisories/GHSA-3pfv-m69p-5fv5"
+        },
+        {
+          "id": "GHSA-gr3h-c2j7-r52g",
+          "severity": "high",
+          "url": "https://github.com/activepieces/activepieces/security/advisories/GHSA-gr3h-c2j7-r52g"
+        },
+        {
+          "id": "GHSA-hc39-cm5m-q8g7",
+          "severity": "medium",
+          "url": "https://github.com/activepieces/activepieces/security/advisories/GHSA-hc39-cm5m-q8g7"
+        },
+        {
+          "id": "GHSA-3w4h-jvcx-rw99",
+          "severity": "low",
+          "url": "https://github.com/activepieces/activepieces/security/advisories/GHSA-3w4h-jvcx-rw99"
+        }
+      ],
+      "category": "automation",
+      "name": "activepieces",
+      "id": "github:573661753",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/node-red/node-red/blob/f613ba109eff360a1c8f8cb9add7b39531c75f12/README.md#L22",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 12618379,
+      "repository": "node-red/node-red",
+      "source": "https://github.com/node-red/node-red",
+      "revision": "f613ba109eff360a1c8f8cb9add7b39531c75f12",
+      "docs": "https://github.com/node-red/node-red/tree/f613ba109eff360a1c8f8cb9add7b39531c75f12#readme",
+      "licenseUrl": "https://github.com/node-red/node-red/blob/f613ba109eff360a1c8f8cb9add7b39531c75f12/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-17T13:05:04Z",
+      "release": {
+        "tagName": "5.0.10",
+        "url": "https://github.com/node-red/node-red/releases/tag/5.0.10"
+      },
+      "language": "JavaScript",
+      "stars": 23861,
+      "forks": 4035,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-m33v-338h-4v9f",
+          "severity": "high",
+          "url": "https://github.com/node-red/node-red/security/advisories/GHSA-m33v-338h-4v9f"
+        },
+        {
+          "id": "GHSA-xp9c-82x8-7f67",
+          "severity": "medium",
+          "url": "https://github.com/node-red/node-red/security/advisories/GHSA-xp9c-82x8-7f67"
+        }
+      ],
+      "category": "automation",
+      "name": "node-red",
+      "id": "github:12618379",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/temporalio/temporal/blob/2433d4e477e6d74a108eff4f9bf0d04aa0c8076a/README.md#L38",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 215654064,
+      "repository": "temporalio/temporal",
+      "source": "https://github.com/temporalio/temporal",
+      "revision": "2433d4e477e6d74a108eff4f9bf0d04aa0c8076a",
+      "docs": "https://github.com/temporalio/temporal/tree/2433d4e477e6d74a108eff4f9bf0d04aa0c8076a#readme",
+      "licenseUrl": "https://github.com/temporalio/temporal/blob/2433d4e477e6d74a108eff4f9bf0d04aa0c8076a/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:02:45Z",
+      "release": {
+        "tagName": "v1.32.2",
+        "url": "https://github.com/temporalio/temporal/releases/tag/v1.32.2"
+      },
+      "language": "Go",
+      "stars": 24506,
+      "forks": 2138,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [],
+      "category": "automation",
+      "name": "temporal",
+      "id": "github:215654064",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 488804911,
+      "repository": "windmill-labs/windmill",
+      "source": "https://github.com/windmill-labs/windmill",
+      "revision": "b40552c5f4f3157148315a8788bb0c0946691bcc",
+      "docs": "https://github.com/windmill-labs/windmill/tree/b40552c5f4f3157148315a8788bb0c0946691bcc#readme",
+      "licenseUrl": "https://github.com/windmill-labs/windmill/blob/b40552c5f4f3157148315a8788bb0c0946691bcc/LICENSE",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T18:25:25Z",
+      "release": {
+        "tagName": "v1.880.0",
+        "url": "https://github.com/windmill-labs/windmill/releases/tag/v1.880.0"
+      },
+      "language": "Rust",
+      "stars": 18643,
+      "forks": 1168,
+      "dockerEvidence": [
+        "Dockerfile",
+        "docker-compose.yml",
+        "docker"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-2jfj-x8j7-7mfh",
+          "severity": "high",
+          "url": "https://github.com/windmill-labs/windmill/security/advisories/GHSA-2jfj-x8j7-7mfh"
+        },
+        {
+          "id": "GHSA-2ppx-66jv-wpw5",
+          "severity": "low",
+          "url": "https://github.com/windmill-labs/windmill/security/advisories/GHSA-2ppx-66jv-wpw5"
+        },
+        {
+          "id": "GHSA-8q8j-mm3g-5c2q",
+          "severity": "low",
+          "url": "https://github.com/windmill-labs/windmill/security/advisories/GHSA-8q8j-mm3g-5c2q"
+        },
+        {
+          "id": "GHSA-24fr-44f8-fqwg",
+          "severity": "high",
+          "url": "https://github.com/windmill-labs/windmill/security/advisories/GHSA-24fr-44f8-fqwg"
+        },
+        {
+          "id": "GHSA-f27g-j463-q85w",
+          "severity": "low",
+          "url": "https://github.com/windmill-labs/windmill/security/advisories/GHSA-f27g-j463-q85w"
+        }
+      ],
+      "category": "automation",
+      "name": "windmill",
+      "id": "github:488804911",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/kestra-io/kestra/blob/5fd7090ec0ecacf55bfe8597f6bcd62fd0c2fd59/README.md#L137",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 204164353,
+      "repository": "kestra-io/kestra",
+      "source": "https://github.com/kestra-io/kestra",
+      "revision": "5fd7090ec0ecacf55bfe8597f6bcd62fd0c2fd59",
+      "docs": "https://github.com/kestra-io/kestra/tree/5fd7090ec0ecacf55bfe8597f6bcd62fd0c2fd59#readme",
+      "licenseUrl": "https://github.com/kestra-io/kestra/blob/5fd7090ec0ecacf55bfe8597f6bcd62fd0c2fd59/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T17:19:02Z",
+      "release": {
+        "tagName": "v2.0.11",
+        "url": "https://github.com/kestra-io/kestra/releases/tag/v2.0.11"
+      },
+      "language": "Java",
+      "stars": 30288,
+      "forks": 3544,
+      "dockerEvidence": [
+        "Dockerfile",
+        "docker-compose.yml",
+        "docker"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-2355-646m-8m98",
+          "severity": "high",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-2355-646m-8m98"
+        },
+        {
+          "id": "GHSA-wv8g-gfwp-cj9w",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-wv8g-gfwp-cj9w"
+        },
+        {
+          "id": "GHSA-v3p3-qrvf-jgmr",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-v3p3-qrvf-jgmr"
+        },
+        {
+          "id": "GHSA-4cpw-cp2h-qh6q",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-4cpw-cp2h-qh6q"
+        },
+        {
+          "id": "GHSA-f5h6-rg96-px74",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-f5h6-rg96-px74"
+        },
+        {
+          "id": "GHSA-f9fr-gp36-h528",
+          "severity": "high",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-f9fr-gp36-h528"
+        },
+        {
+          "id": "GHSA-xh2h-59mw-8qr2",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-xh2h-59mw-8qr2"
+        },
+        {
+          "id": "GHSA-hrr4-xg8h-5p6f",
+          "severity": "high",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-hrr4-xg8h-5p6f"
+        },
+        {
+          "id": "GHSA-wvqw-j4rf-jhf8",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-wvqw-j4rf-jhf8"
+        },
+        {
+          "id": "GHSA-g769-pv29-qhff",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-g769-pv29-qhff"
+        },
+        {
+          "id": "GHSA-9gp7-896w-m3r7",
+          "severity": "low",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-9gp7-896w-m3r7"
+        },
+        {
+          "id": "GHSA-wq8c-j948-fxjx",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-wq8c-j948-fxjx"
+        },
+        {
+          "id": "GHSA-52wv-cgfg-4j6x",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-52wv-cgfg-4j6x"
+        },
+        {
+          "id": "GHSA-6wcq-4vx6-rx53",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-6wcq-4vx6-rx53"
+        },
+        {
+          "id": "GHSA-rjhm-qm6w-m7x9",
+          "severity": "critical",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-rjhm-qm6w-m7x9"
+        },
+        {
+          "id": "GHSA-hxgr-m653-65pw",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-hxgr-m653-65pw"
+        },
+        {
+          "id": "GHSA-8468-cj9j-hg26",
+          "severity": "high",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-8468-cj9j-hg26"
+        },
+        {
+          "id": "GHSA-j5cv-8rw9-vv2p",
+          "severity": "critical",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-j5cv-8rw9-vv2p"
+        },
+        {
+          "id": "GHSA-gxqx-8c54-274x",
+          "severity": "medium",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-gxqx-8c54-274x"
+        },
+        {
+          "id": "GHSA-crq7-3xg2-hjch",
+          "severity": "high",
+          "url": "https://github.com/kestra-io/kestra/security/advisories/GHSA-crq7-3xg2-hjch"
+        }
+      ],
+      "category": "automation",
+      "name": "kestra",
+      "id": "github:204164353",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/OpenHands/OpenHands/blob/32e0074fe971267170c0e839f6e245610b0c5dac/README.md#L70",
+      "apiDocs": "https://github.com/OpenHands/OpenHands/blob/32e0074fe971267170c0e839f6e245610b0c5dac/README.md#L199",
+      "hardwareDocs": null,
+      "repoId": 771302083,
+      "repository": "OpenHands/OpenHands",
+      "source": "https://github.com/OpenHands/OpenHands",
+      "revision": "32e0074fe971267170c0e839f6e245610b0c5dac",
+      "docs": "https://github.com/OpenHands/OpenHands/tree/32e0074fe971267170c0e839f6e245610b0c5dac#readme",
+      "licenseUrl": "https://github.com/OpenHands/OpenHands/blob/32e0074fe971267170c0e839f6e245610b0c5dac/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T17:42:49Z",
+      "release": {
+        "tagName": "v1.42.0",
+        "url": "https://github.com/OpenHands/OpenHands/releases/tag/v1.42.0"
+      },
+      "language": "TypeScript",
+      "stars": 93841,
+      "forks": 12561,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-7h8w-hj9j-8rjw",
+          "severity": "high",
+          "url": "https://github.com/OpenHands/OpenHands/security/advisories/GHSA-7h8w-hj9j-8rjw"
+        }
+      ],
+      "category": "developer",
+      "name": "OpenHands",
+      "id": "github:771302083",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/Aider-AI/aider/blob/5dc9490bb35f9729ef2c95d00a19ccd30c26339c/README.md#L106",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 638629097,
+      "repository": "Aider-AI/aider",
+      "source": "https://github.com/Aider-AI/aider",
+      "revision": "5dc9490bb35f9729ef2c95d00a19ccd30c26339c",
+      "docs": "https://github.com/Aider-AI/aider/tree/5dc9490bb35f9729ef2c95d00a19ccd30c26339c#readme",
+      "licenseUrl": "https://github.com/Aider-AI/aider/blob/5dc9490bb35f9729ef2c95d00a19ccd30c26339c/LICENSE.txt",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-05-22T14:02:20Z",
+      "release": {
+        "tagName": "v0.86.0",
+        "url": "https://github.com/Aider-AI/aider/releases/tag/v0.86.0"
+      },
+      "language": "Python",
+      "stars": 50185,
+      "forks": 5178,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [],
+      "category": "developer",
+      "name": "aider",
+      "id": "github:638629097",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 644686905,
+      "repository": "continuedev/continue",
+      "source": "https://github.com/continuedev/continue",
+      "revision": "5522c6f44ca0ac3528b37244818fbfa39b5af470",
+      "docs": "https://github.com/continuedev/continue/tree/5522c6f44ca0ac3528b37244818fbfa39b5af470#readme",
+      "licenseUrl": "https://github.com/continuedev/continue/blob/5522c6f44ca0ac3528b37244818fbfa39b5af470/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-18T21:58:11Z",
+      "release": {
+        "tagName": "v2.0.0-vscode",
+        "url": "https://github.com/continuedev/continue/releases/tag/v2.0.0-vscode"
+      },
+      "language": "TypeScript",
+      "stars": 36518,
+      "forks": 5576,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "developer",
+      "name": "continue",
+      "id": "github:644686905",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/cline/cline/blob/20b042723a14412f6c1e84230b008708534d6e8c/README.md#L110",
+      "apiDocs": "https://github.com/cline/cline/blob/20b042723a14412f6c1e84230b008708534d6e8c/README.md#L165",
+      "hardwareDocs": null,
+      "repoId": 824874689,
+      "repository": "cline/cline",
+      "source": "https://github.com/cline/cline",
+      "revision": "20b042723a14412f6c1e84230b008708534d6e8c",
+      "docs": "https://github.com/cline/cline/tree/20b042723a14412f6c1e84230b008708534d6e8c#readme",
+      "licenseUrl": "https://github.com/cline/cline/blob/20b042723a14412f6c1e84230b008708534d6e8c/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T18:47:28Z",
+      "release": {
+        "tagName": "v4.1.26",
+        "url": "https://github.com/cline/cline/releases/tag/v4.1.26"
+      },
+      "language": "TypeScript",
+      "stars": 71765,
+      "forks": 7943,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-3cj3-hqcr-g934",
+          "severity": "high",
+          "url": "https://github.com/cline/cline/security/advisories/GHSA-3cj3-hqcr-g934"
+        },
+        {
+          "id": "GHSA-5c57-rqjx-35g2",
+          "severity": "critical",
+          "url": "https://github.com/cline/cline/security/advisories/GHSA-5c57-rqjx-35g2"
+        },
+        {
+          "id": "GHSA-9ppg-jx86-fqw7",
+          "severity": "low",
+          "url": "https://github.com/cline/cline/security/advisories/GHSA-9ppg-jx86-fqw7"
+        }
+      ],
+      "category": "developer",
+      "name": "cline",
+      "id": "github:824874689",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 881506708,
+      "repository": "RooCodeInc/Roo-Code",
+      "source": "https://github.com/RooCodeInc/Roo-Code",
+      "revision": "b867ec9145750d0ae1ff7f02d35406e9bf2a0b16",
+      "docs": "https://github.com/RooCodeInc/Roo-Code/tree/b867ec9145750d0ae1ff7f02d35406e9bf2a0b16#readme",
+      "licenseUrl": "https://github.com/RooCodeInc/Roo-Code/blob/b867ec9145750d0ae1ff7f02d35406e9bf2a0b16/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": true,
+      "pushedAt": "2026-05-15T18:08:47Z",
+      "release": {
+        "tagName": "v3.54.0",
+        "url": "https://github.com/RooCodeInc/Roo-Code/releases/tag/v3.54.0"
+      },
+      "language": "TypeScript",
+      "stars": 24236,
+      "forks": 3439,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-hwm7-w97p-4h8p",
+          "severity": "high",
+          "url": "https://github.com/RooCodeInc/Roo-Code/security/advisories/GHSA-hwm7-w97p-4h8p"
+        },
+        {
+          "id": "GHSA-c292-qxq4-4p2v",
+          "severity": "high",
+          "url": "https://github.com/RooCodeInc/Roo-Code/security/advisories/GHSA-c292-qxq4-4p2v"
+        },
+        {
+          "id": "GHSA-p76r-7mc3-qh7c",
+          "severity": "medium",
+          "url": "https://github.com/RooCodeInc/Roo-Code/security/advisories/GHSA-p76r-7mc3-qh7c"
+        },
+        {
+          "id": "GHSA-4pqh-4ggm-jfmm",
+          "severity": "high",
+          "url": "https://github.com/RooCodeInc/Roo-Code/security/advisories/GHSA-4pqh-4ggm-jfmm"
+        },
+        {
+          "id": "GHSA-2rm5-cvcm-7592",
+          "severity": "high",
+          "url": "https://github.com/RooCodeInc/Roo-Code/security/advisories/GHSA-2rm5-cvcm-7592"
+        },
+        {
+          "id": "GHSA-xr6r-vj48-29f6",
+          "severity": "critical",
+          "url": "https://github.com/RooCodeInc/Roo-Code/security/advisories/GHSA-xr6r-vj48-29f6"
+        },
+        {
+          "id": "GHSA-wrh9-463x-7wvv",
+          "severity": "high",
+          "url": "https://github.com/RooCodeInc/Roo-Code/security/advisories/GHSA-wrh9-463x-7wvv"
+        },
+        {
+          "id": "GHSA-p278-52x9-cffx",
+          "severity": "high",
+          "url": "https://github.com/RooCodeInc/Roo-Code/security/advisories/GHSA-p278-52x9-cffx"
+        },
+        {
+          "id": "GHSA-3765-5vjr-qjgm",
+          "severity": "high",
+          "url": "https://github.com/RooCodeInc/Roo-Code/security/advisories/GHSA-3765-5vjr-qjgm"
+        },
+        {
+          "id": "GHSA-5x8h-m52g-5v54",
+          "severity": "high",
+          "url": "https://github.com/RooCodeInc/Roo-Code/security/advisories/GHSA-5x8h-m52g-5v54"
+        },
+        {
+          "id": "GHSA-wr2q-46pg-f228",
+          "severity": "medium",
+          "url": "https://github.com/RooCodeInc/Roo-Code/security/advisories/GHSA-wr2q-46pg-f228"
+        }
+      ],
+      "category": "developer",
+      "name": "Roo-Code",
+      "id": "github:881506708",
+      "maintenance": "archived",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 780737106,
+      "repository": "SWE-agent/SWE-agent",
+      "source": "https://github.com/SWE-agent/SWE-agent",
+      "revision": "3ea751c087f32b16e039a2233dd6eefecef325d5",
+      "docs": "https://github.com/SWE-agent/SWE-agent/tree/3ea751c087f32b16e039a2233dd6eefecef325d5#readme",
+      "licenseUrl": "https://github.com/SWE-agent/SWE-agent/blob/3ea751c087f32b16e039a2233dd6eefecef325d5/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-16T22:30:07Z",
+      "release": {
+        "tagName": "v1.1.0",
+        "url": "https://github.com/SWE-agent/SWE-agent/releases/tag/v1.1.0"
+      },
+      "language": "Python",
+      "stars": 20833,
+      "forks": 2281,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "developer",
+      "name": "SWE-agent",
+      "id": "github:780737106",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 927442,
+      "repository": "postgres/postgres",
+      "source": "https://github.com/postgres/postgres",
+      "revision": "736ecc413b38555637802ccd8dfd35f034235796",
+      "docs": "https://github.com/postgres/postgres/tree/736ecc413b38555637802ccd8dfd35f034235796#readme",
+      "licenseUrl": null,
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T18:24:31Z",
+      "release": null,
+      "language": "C",
+      "stars": 22886,
+      "forks": 6119,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "infrastructure",
+      "name": "postgres",
+      "id": "github:927442",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 176278485,
+      "repository": "sqlite/sqlite",
+      "source": "https://github.com/sqlite/sqlite",
+      "revision": "6f9d43469b47de16a198e114e0a037a069dba69c",
+      "docs": "https://github.com/sqlite/sqlite/tree/6f9d43469b47de16a198e114e0a037a069dba69c#readme",
+      "licenseUrl": "https://github.com/sqlite/sqlite/blob/6f9d43469b47de16a198e114e0a037a069dba69c/LICENSE.md",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:06:17Z",
+      "release": null,
+      "language": "C",
+      "stars": 11069,
+      "forks": 1731,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "infrastructure",
+      "name": "sqlite",
+      "id": "github:176278485",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/redis/redis/blob/fd7710ca2bf6ff025aedb3cf1d5da146854a6db2/README.md#L93",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 156018,
+      "repository": "redis/redis",
+      "source": "https://github.com/redis/redis",
+      "revision": "fd7710ca2bf6ff025aedb3cf1d5da146854a6db2",
+      "docs": "https://github.com/redis/redis/tree/fd7710ca2bf6ff025aedb3cf1d5da146854a6db2#readme",
+      "licenseUrl": "https://github.com/redis/redis/blob/fd7710ca2bf6ff025aedb3cf1d5da146854a6db2/LICENSE.txt",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T12:48:17Z",
+      "release": {
+        "tagName": "8.10.3",
+        "url": "https://github.com/redis/redis/releases/tag/8.10.3"
+      },
+      "language": "C",
+      "stars": 77562,
+      "forks": 25069,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-c8h9-259x-jff4",
+          "severity": "high",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-c8h9-259x-jff4"
+        },
+        {
+          "id": "GHSA-8ghh-qpmp-7826",
+          "severity": "medium",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-8ghh-qpmp-7826"
+        },
+        {
+          "id": "GHSA-93m2-935m-8rj3",
+          "severity": "high",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-93m2-935m-8rj3"
+        },
+        {
+          "id": "GHSA-jhjx-x4cf-4vm8",
+          "severity": "high",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-jhjx-x4cf-4vm8"
+        },
+        {
+          "id": "GHSA-4789-qfc9-5f9q",
+          "severity": "critical",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-4789-qfc9-5f9q"
+        },
+        {
+          "id": "GHSA-m8fj-85cg-7vhp",
+          "severity": "high",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-m8fj-85cg-7vhp"
+        },
+        {
+          "id": "GHSA-4c68-q8q8-3g4f",
+          "severity": "medium",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-4c68-q8q8-3g4f"
+        },
+        {
+          "id": "GHSA-qrv7-wcrx-q5jp",
+          "severity": "medium",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-qrv7-wcrx-q5jp"
+        },
+        {
+          "id": "GHSA-2r7g-8hpc-rpq9",
+          "severity": "high",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-2r7g-8hpc-rpq9"
+        },
+        {
+          "id": "GHSA-rp2m-q4j6-gr43",
+          "severity": "high",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-rp2m-q4j6-gr43"
+        },
+        {
+          "id": "GHSA-5453-q98w-cmvm",
+          "severity": "medium",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-5453-q98w-cmvm"
+        },
+        {
+          "id": "GHSA-r67f-p999-2gff",
+          "severity": "high",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-r67f-p999-2gff"
+        },
+        {
+          "id": "GHSA-4q32-c38c-pwgq",
+          "severity": "high",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-4q32-c38c-pwgq"
+        },
+        {
+          "id": "GHSA-prpq-rh5h-46g9",
+          "severity": "medium",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-prpq-rh5h-46g9"
+        },
+        {
+          "id": "GHSA-39h2-x6c4-6w4c",
+          "severity": "high",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-39h2-x6c4-6w4c"
+        },
+        {
+          "id": "GHSA-whxg-wx83-85p5",
+          "severity": "high",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-whxg-wx83-85p5"
+        },
+        {
+          "id": "GHSA-38p4-26x2-vqhh",
+          "severity": "medium",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-38p4-26x2-vqhh"
+        },
+        {
+          "id": "GHSA-66gq-c942-6976",
+          "severity": "medium",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-66gq-c942-6976"
+        },
+        {
+          "id": "GHSA-ghmp-889m-7cvx",
+          "severity": "low",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-ghmp-889m-7cvx"
+        },
+        {
+          "id": "GHSA-xr47-pcmx-fq2m",
+          "severity": "high",
+          "url": "https://github.com/redis/redis/security/advisories/GHSA-xr47-pcmx-fq2m"
+        }
+      ],
+      "category": "infrastructure",
+      "name": "redis",
+      "id": "github:156018",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 214587193,
+      "repository": "supabase/supabase",
+      "source": "https://github.com/supabase/supabase",
+      "revision": "81d5e239e21eaca86af6a77a98c1956b1a4608df",
+      "docs": "https://github.com/supabase/supabase/tree/81d5e239e21eaca86af6a77a98c1956b1a4608df#readme",
+      "licenseUrl": "https://github.com/supabase/supabase/blob/81d5e239e21eaca86af6a77a98c1956b1a4608df/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:01:56Z",
+      "release": {
+        "tagName": "v1.26.08",
+        "url": "https://github.com/supabase/supabase/releases/tag/v1.26.08"
+      },
+      "language": "TypeScript",
+      "stars": 115166,
+      "forks": 15134,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [],
+      "category": "infrastructure",
+      "name": "supabase",
+      "id": "github:214587193",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/minio/minio/blob/7aac2a2c5b7c882e68c1ce017d8256be2feea27f/README.md#L41",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 29261473,
+      "repository": "minio/minio",
+      "source": "https://github.com/minio/minio",
+      "revision": "7aac2a2c5b7c882e68c1ce017d8256be2feea27f",
+      "docs": "https://github.com/minio/minio/tree/7aac2a2c5b7c882e68c1ce017d8256be2feea27f#readme",
+      "licenseUrl": "https://github.com/minio/minio/blob/7aac2a2c5b7c882e68c1ce017d8256be2feea27f/LICENSE",
+      "codeLicense": "AGPL-3.0",
+      "codeClass": "verified-root-license",
+      "archived": true,
+      "pushedAt": "2026-04-24T17:54:39Z",
+      "release": {
+        "tagName": "RELEASE.2025-10-15T17-29-55Z",
+        "url": "https://github.com/minio/minio/releases/tag/RELEASE.2025-10-15T17-29-55Z"
+      },
+      "language": "Go",
+      "stars": 61253,
+      "forks": 8356,
+      "dockerEvidence": [
+        "Dockerfile"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-xh8f-g2qw-gcm7",
+          "severity": "medium",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-xh8f-g2qw-gcm7"
+        },
+        {
+          "id": "GHSA-hv4r-mvr4-25vw",
+          "severity": "high",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-hv4r-mvr4-25vw"
+        },
+        {
+          "id": "GHSA-9c4q-hq6p-c237",
+          "severity": "high",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-9c4q-hq6p-c237"
+        },
+        {
+          "id": "GHSA-h749-fxx7-pwpg",
+          "severity": "high",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-h749-fxx7-pwpg"
+        },
+        {
+          "id": "GHSA-3rh2-v3gr-35p9",
+          "severity": "high",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-3rh2-v3gr-35p9"
+        },
+        {
+          "id": "GHSA-jv87-32hw-hh99",
+          "severity": "medium",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-jv87-32hw-hh99"
+        },
+        {
+          "id": "GHSA-5cx5-wh4m-82fh",
+          "severity": "medium",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-5cx5-wh4m-82fh"
+        },
+        {
+          "id": "GHSA-jjjj-jwhf-8rgr",
+          "severity": "high",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-jjjj-jwhf-8rgr"
+        },
+        {
+          "id": "GHSA-wg47-6jq2-q2hh",
+          "severity": "high",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-wg47-6jq2-q2hh"
+        },
+        {
+          "id": "GHSA-wc79-7x8x-2p58",
+          "severity": "medium",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-wc79-7x8x-2p58"
+        },
+        {
+          "id": "GHSA-cwq8-g58r-32hg",
+          "severity": "critical",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-cwq8-g58r-32hg"
+        },
+        {
+          "id": "GHSA-95fr-cm4m-q5p9",
+          "severity": "medium",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-95fr-cm4m-q5p9"
+        },
+        {
+          "id": "GHSA-xx8w-mq23-29g4",
+          "severity": "high",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-xx8w-mq23-29g4"
+        },
+        {
+          "id": "GHSA-6xvq-wj2x-3h3q",
+          "severity": "critical",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-6xvq-wj2x-3h3q"
+        },
+        {
+          "id": "GHSA-2pxw-r47w-4p8c",
+          "severity": "critical",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-2pxw-r47w-4p8c"
+        },
+        {
+          "id": "GHSA-w23q-4hw3-2pp6",
+          "severity": "critical",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-w23q-4hw3-2pp6"
+        },
+        {
+          "id": "GHSA-9wfv-wmf7-6753",
+          "severity": "medium",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-9wfv-wmf7-6753"
+        },
+        {
+          "id": "GHSA-c8fc-mjj8-fc63",
+          "severity": "high",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-c8fc-mjj8-fc63"
+        },
+        {
+          "id": "GHSA-gr9v-6pcm-rqvg",
+          "severity": "high",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-gr9v-6pcm-rqvg"
+        },
+        {
+          "id": "GHSA-qrpr-r3pw-f636",
+          "severity": "high",
+          "url": "https://github.com/minio/minio/security/advisories/GHSA-qrpr-r3pw-f636"
+        }
+      ],
+      "category": "infrastructure",
+      "name": "minio",
+      "id": "github:29261473",
+      "maintenance": "archived",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/prometheus/prometheus/blob/2b311b9762bb5834a17374fcf45a8e5b2043293f/README.md#L60",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 6838921,
+      "repository": "prometheus/prometheus",
+      "source": "https://github.com/prometheus/prometheus",
+      "revision": "2b311b9762bb5834a17374fcf45a8e5b2043293f",
+      "docs": "https://github.com/prometheus/prometheus/tree/2b311b9762bb5834a17374fcf45a8e5b2043293f#readme",
+      "licenseUrl": "https://github.com/prometheus/prometheus/blob/2b311b9762bb5834a17374fcf45a8e5b2043293f/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T15:03:26Z",
+      "release": {
+        "tagName": "v3.16.0",
+        "url": "https://github.com/prometheus/prometheus/releases/tag/v3.16.0"
+      },
+      "language": "Go",
+      "stars": 67719,
+      "forks": 11050,
+      "dockerEvidence": [
+        "Dockerfile"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-fw8g-cg8f-9j28",
+          "severity": "medium",
+          "url": "https://github.com/prometheus/prometheus/security/advisories/GHSA-fw8g-cg8f-9j28"
+        },
+        {
+          "id": "GHSA-8rm2-7qqf-34qm",
+          "severity": "high",
+          "url": "https://github.com/prometheus/prometheus/security/advisories/GHSA-8rm2-7qqf-34qm"
+        },
+        {
+          "id": "GHSA-wg65-39gg-5wfj",
+          "severity": "high",
+          "url": "https://github.com/prometheus/prometheus/security/advisories/GHSA-wg65-39gg-5wfj"
+        },
+        {
+          "id": "GHSA-vffh-x6r8-xx99",
+          "severity": "medium",
+          "url": "https://github.com/prometheus/prometheus/security/advisories/GHSA-vffh-x6r8-xx99"
+        },
+        {
+          "id": "GHSA-4v48-4q5m-8vx4",
+          "severity": "high",
+          "url": "https://github.com/prometheus/prometheus/security/advisories/GHSA-4v48-4q5m-8vx4"
+        },
+        {
+          "id": "GHSA-vx57-7f4q-fpc7",
+          "severity": "medium",
+          "url": "https://github.com/prometheus/prometheus/security/advisories/GHSA-vx57-7f4q-fpc7"
+        }
+      ],
+      "category": "infrastructure",
+      "name": "prometheus",
+      "id": "github:6838921",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 15111821,
+      "repository": "grafana/grafana",
+      "source": "https://github.com/grafana/grafana",
+      "revision": "e9493f6005ca6eea776275b8d6d474e77f9f95d7",
+      "docs": "https://github.com/grafana/grafana/tree/e9493f6005ca6eea776275b8d6d474e77f9f95d7#readme",
+      "licenseUrl": "https://github.com/grafana/grafana/blob/e9493f6005ca6eea776275b8d6d474e77f9f95d7/LICENSE",
+      "codeLicense": "AGPL-3.0",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:10:06Z",
+      "release": {
+        "tagName": "v13.3.1",
+        "url": "https://github.com/grafana/grafana/releases/tag/v13.3.1"
+      },
+      "language": "TypeScript",
+      "stars": 78000,
+      "forks": 14999,
+      "dockerEvidence": [
+        "Dockerfile"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-7rqg-hjwc-6mjf",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-7rqg-hjwc-6mjf"
+        },
+        {
+          "id": "GHSA-8xmm-x63g-f6xv",
+          "severity": "high",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-8xmm-x63g-f6xv"
+        },
+        {
+          "id": "GHSA-2j8f-6whh-frc8",
+          "severity": "high",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-2j8f-6whh-frc8"
+        },
+        {
+          "id": "GHSA-5hcf-rqj9-xh96",
+          "severity": "high",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-5hcf-rqj9-xh96"
+        },
+        {
+          "id": "GHSA-vqc4-mpj8-jxch",
+          "severity": "critical",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-vqc4-mpj8-jxch"
+        },
+        {
+          "id": "GHSA-4724-7jwc-3fpw",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-4724-7jwc-3fpw"
+        },
+        {
+          "id": "GHSA-3p62-42x7-gxg5",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-3p62-42x7-gxg5"
+        },
+        {
+          "id": "GHSA-2x6g-h2hg-rq84",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-2x6g-h2hg-rq84"
+        },
+        {
+          "id": "GHSA-gj7m-853r-289r",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-gj7m-853r-289r"
+        },
+        {
+          "id": "GHSA-x744-mm8v-vpgr",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-x744-mm8v-vpgr"
+        },
+        {
+          "id": "GHSA-p978-56hq-r492",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-p978-56hq-r492"
+        },
+        {
+          "id": "GHSA-ff5c-938w-8c9q",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-ff5c-938w-8c9q"
+        },
+        {
+          "id": "GHSA-jv32-5578-pxjc",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-jv32-5578-pxjc"
+        },
+        {
+          "id": "GHSA-rhxj-gh46-jvw8",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-rhxj-gh46-jvw8"
+        },
+        {
+          "id": "GHSA-mx47-6497-3fv2",
+          "severity": "high",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-mx47-6497-3fv2"
+        },
+        {
+          "id": "GHSA-vw7q-p2qg-4m5f",
+          "severity": "high",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-vw7q-p2qg-4m5f"
+        },
+        {
+          "id": "GHSA-9rrr-6fq2-4f99",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-9rrr-6fq2-4f99"
+        },
+        {
+          "id": "GHSA-82gq-xfg3-5j7v",
+          "severity": "high",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-82gq-xfg3-5j7v"
+        },
+        {
+          "id": "GHSA-63g3-9jq3-mccv",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-63g3-9jq3-mccv"
+        },
+        {
+          "id": "GHSA-cmf4-h3xc-jw8w",
+          "severity": "medium",
+          "url": "https://github.com/grafana/grafana/security/advisories/GHSA-cmf4-h3xc-jw8w"
+        }
+      ],
+      "category": "infrastructure",
+      "name": "grafana",
+      "id": "github:15111821",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 185861173,
+      "repository": "open-telemetry/opentelemetry-collector",
+      "source": "https://github.com/open-telemetry/opentelemetry-collector",
+      "revision": "06b3e8ad2c71492544a68bacc59e831a70995218",
+      "docs": "https://github.com/open-telemetry/opentelemetry-collector/tree/06b3e8ad2c71492544a68bacc59e831a70995218#readme",
+      "licenseUrl": "https://github.com/open-telemetry/opentelemetry-collector/blob/06b3e8ad2c71492544a68bacc59e831a70995218/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T17:32:43Z",
+      "release": {
+        "tagName": "v0.165.0",
+        "url": "https://github.com/open-telemetry/opentelemetry-collector/releases/tag/v0.165.0"
+      },
+      "language": "Go",
+      "stars": 7785,
+      "forks": 2364,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-cx3c-rmcx-ff35",
+          "severity": "medium",
+          "url": "https://github.com/open-telemetry/opentelemetry-collector/security/advisories/GHSA-cx3c-rmcx-ff35"
+        },
+        {
+          "id": "GHSA-vf52-ppm4-c35w",
+          "severity": "high",
+          "url": "https://github.com/open-telemetry/opentelemetry-collector/security/advisories/GHSA-vf52-ppm4-c35w"
+        },
+        {
+          "id": "GHSA-xcv6-86p2-hfq3",
+          "severity": "medium",
+          "url": "https://github.com/open-telemetry/opentelemetry-collector/security/advisories/GHSA-xcv6-86p2-hfq3"
+        },
+        {
+          "id": "GHSA-c74f-6mfw-mm4v",
+          "severity": "high",
+          "url": "https://github.com/open-telemetry/opentelemetry-collector/security/advisories/GHSA-c74f-6mfw-mm4v"
+        }
+      ],
+      "category": "infrastructure",
+      "name": "opentelemetry-collector",
+      "id": "github:185861173",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/open-webui/open-webui/blob/0666e59d26a4d056e0bacee41742486badd71cf8/README.md#L42",
+      "apiDocs": "https://github.com/open-webui/open-webui/blob/0666e59d26a4d056e0bacee41742486badd71cf8/README.md#L3",
+      "hardwareDocs": null,
+      "repoId": 701547123,
+      "repository": "open-webui/open-webui",
+      "source": "https://github.com/open-webui/open-webui",
+      "revision": "0666e59d26a4d056e0bacee41742486badd71cf8",
+      "docs": "https://github.com/open-webui/open-webui/tree/0666e59d26a4d056e0bacee41742486badd71cf8#readme",
+      "licenseUrl": "https://github.com/open-webui/open-webui/blob/0666e59d26a4d056e0bacee41742486badd71cf8/LICENSE",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T15:38:22Z",
+      "release": {
+        "tagName": "v0.13.4",
+        "url": "https://github.com/open-webui/open-webui/releases/tag/v0.13.4"
+      },
+      "language": "Svelte",
+      "stars": 159093,
+      "forks": 23115,
+      "dockerEvidence": [
+        "Dockerfile",
+        "docker-compose.yaml"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-2rr4-q6pg-m5g3",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-2rr4-q6pg-m5g3"
+        },
+        {
+          "id": "GHSA-6fjc-5cg3-mgvh",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-6fjc-5cg3-mgvh"
+        },
+        {
+          "id": "GHSA-3vvh-g22g-jq6r",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-3vvh-g22g-jq6r"
+        },
+        {
+          "id": "GHSA-9cxp-636w-4997",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-9cxp-636w-4997"
+        },
+        {
+          "id": "GHSA-vpq8-f445-hcq7",
+          "severity": "high",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-vpq8-f445-hcq7"
+        },
+        {
+          "id": "GHSA-jx3w-3pqq-7f3w",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-jx3w-3pqq-7f3w"
+        },
+        {
+          "id": "GHSA-wvm9-9g5j-623f",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-wvm9-9g5j-623f"
+        },
+        {
+          "id": "GHSA-wf9m-46cp-c6h6",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-wf9m-46cp-c6h6"
+        },
+        {
+          "id": "GHSA-6g45-8g27-fh8q",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-6g45-8g27-fh8q"
+        },
+        {
+          "id": "GHSA-q46m-r89w-j74p",
+          "severity": "high",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-q46m-r89w-j74p"
+        },
+        {
+          "id": "GHSA-f9xp-mfmq-x6cg",
+          "severity": "high",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-f9xp-mfmq-x6cg"
+        },
+        {
+          "id": "GHSA-qpqv-xwg8-cqpj",
+          "severity": "high",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-qpqv-xwg8-cqpj"
+        },
+        {
+          "id": "GHSA-gqfh-jxvw-74rp",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-gqfh-jxvw-74rp"
+        },
+        {
+          "id": "GHSA-2h26-836q-4jh2",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-2h26-836q-4jh2"
+        },
+        {
+          "id": "GHSA-w8j8-jv6j-3m47",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-w8j8-jv6j-3m47"
+        },
+        {
+          "id": "GHSA-34r3-9m95-vq73",
+          "severity": "high",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-34r3-9m95-vq73"
+        },
+        {
+          "id": "GHSA-v39v-59xw-j98g",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-v39v-59xw-j98g"
+        },
+        {
+          "id": "GHSA-gfjp-5hc9-852r",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-gfjp-5hc9-852r"
+        },
+        {
+          "id": "GHSA-8r35-5x5r-hv74",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-8r35-5x5r-hv74"
+        },
+        {
+          "id": "GHSA-p78m-89r6-pgf7",
+          "severity": "medium",
+          "url": "https://github.com/open-webui/open-webui/security/advisories/GHSA-p78m-89r6-pgf7"
+        }
+      ],
+      "category": "application",
+      "name": "open-webui",
+      "id": "github:701547123",
+      "maintenance": "recent-push",
+      "kind": "application",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 202291859,
+      "repository": "chatwoot/chatwoot",
+      "source": "https://github.com/chatwoot/chatwoot",
+      "revision": "dfbb8d4eb94282bfbbe81dae0df18cf72af8d77d",
+      "docs": "https://github.com/chatwoot/chatwoot/tree/dfbb8d4eb94282bfbbe81dae0df18cf72af8d77d#readme",
+      "licenseUrl": "https://github.com/chatwoot/chatwoot/blob/dfbb8d4eb94282bfbbe81dae0df18cf72af8d77d/LICENSE",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:05:38Z",
+      "release": {
+        "tagName": "v4.20.0",
+        "url": "https://github.com/chatwoot/chatwoot/releases/tag/v4.20.0"
+      },
+      "language": "Ruby",
+      "stars": 40200,
+      "forks": 9773,
+      "dockerEvidence": [
+        "docker-compose.yaml",
+        "docker"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-x288-jh8j-348c",
+          "severity": "medium",
+          "url": "https://github.com/chatwoot/chatwoot/security/advisories/GHSA-x288-jh8j-348c"
+        },
+        {
+          "id": "GHSA-8qxm-4p4p-cfhm",
+          "severity": "medium",
+          "url": "https://github.com/chatwoot/chatwoot/security/advisories/GHSA-8qxm-4p4p-cfhm"
+        },
+        {
+          "id": "GHSA-9pgm-75gg-6948",
+          "severity": "high",
+          "url": "https://github.com/chatwoot/chatwoot/security/advisories/GHSA-9pgm-75gg-6948"
+        },
+        {
+          "id": "GHSA-g8f9-hh83-rcq9",
+          "severity": "critical",
+          "url": "https://github.com/chatwoot/chatwoot/security/advisories/GHSA-g8f9-hh83-rcq9"
+        }
+      ],
+      "category": "application",
+      "name": "chatwoot",
+      "id": "github:202291859",
+      "maintenance": "recent-push",
+      "kind": "application",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/twentyhq/twenty/blob/b97fde2578d0a665e44d78df8a1bb128e31979c1/README.md#L31",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 572984571,
+      "repository": "twentyhq/twenty",
+      "source": "https://github.com/twentyhq/twenty",
+      "revision": "b97fde2578d0a665e44d78df8a1bb128e31979c1",
+      "docs": "https://github.com/twentyhq/twenty/tree/b97fde2578d0a665e44d78df8a1bb128e31979c1#readme",
+      "licenseUrl": "https://github.com/twentyhq/twenty/blob/b97fde2578d0a665e44d78df8a1bb128e31979c1/LICENSE",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:12:25Z",
+      "release": {
+        "tagName": "sdk/v2.59.0",
+        "url": "https://github.com/twentyhq/twenty/releases/tag/sdk/v2.59.0"
+      },
+      "language": "TypeScript",
+      "stars": 61213,
+      "forks": 10146,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-qf3h-pmgc-fcw6",
+          "severity": "medium",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-qf3h-pmgc-fcw6"
+        },
+        {
+          "id": "GHSA-j86q-q8c2-f8x7",
+          "severity": "medium",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-j86q-q8c2-f8x7"
+        },
+        {
+          "id": "GHSA-9pfj-h2fx-29hg",
+          "severity": "medium",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-9pfj-h2fx-29hg"
+        },
+        {
+          "id": "GHSA-m4vm-35cw-44rq",
+          "severity": "high",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-m4vm-35cw-44rq"
+        },
+        {
+          "id": "GHSA-pg47-7c3r-fwfx",
+          "severity": "medium",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-pg47-7c3r-fwfx"
+        },
+        {
+          "id": "GHSA-8w82-h3w4-62r5",
+          "severity": "medium",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-8w82-h3w4-62r5"
+        },
+        {
+          "id": "GHSA-v93q-4jcx-7p9m",
+          "severity": "medium",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-v93q-4jcx-7p9m"
+        },
+        {
+          "id": "GHSA-mm7j-q9q3-qqwj",
+          "severity": "critical",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-mm7j-q9q3-qqwj"
+        },
+        {
+          "id": "GHSA-v39r-w5vg-j9pp",
+          "severity": "high",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-v39r-w5vg-j9pp"
+        },
+        {
+          "id": "GHSA-mq5c-qp77-2cv3",
+          "severity": "critical",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-mq5c-qp77-2cv3"
+        },
+        {
+          "id": "GHSA-jgx4-6mr9-9573",
+          "severity": "critical",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-jgx4-6mr9-9573"
+        },
+        {
+          "id": "GHSA-7w89-7q26-gj7q",
+          "severity": "medium",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-7w89-7q26-gj7q"
+        },
+        {
+          "id": "GHSA-f5h2-3qw5-3qp7",
+          "severity": "high",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-f5h2-3qw5-3qp7"
+        },
+        {
+          "id": "GHSA-vrcj-hv2q-c58m",
+          "severity": "medium",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-vrcj-hv2q-c58m"
+        },
+        {
+          "id": "GHSA-wm7q-rvq3-x8q9",
+          "severity": "medium",
+          "url": "https://github.com/twentyhq/twenty/security/advisories/GHSA-wm7q-rvq3-x8q9"
+        }
+      ],
+      "category": "application",
+      "name": "twenty",
+      "id": "github:572984571",
+      "maintenance": "recent-push",
+      "kind": "application",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/pipecat-ai/pipecat/blob/834903d9a0ccc95038fb7890c7e35a47d680bcbd/README.md#L131",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 736272311,
+      "repository": "pipecat-ai/pipecat",
+      "source": "https://github.com/pipecat-ai/pipecat",
+      "revision": "834903d9a0ccc95038fb7890c7e35a47d680bcbd",
+      "docs": "https://github.com/pipecat-ai/pipecat/tree/834903d9a0ccc95038fb7890c7e35a47d680bcbd#readme",
+      "licenseUrl": "https://github.com/pipecat-ai/pipecat/blob/834903d9a0ccc95038fb7890c7e35a47d680bcbd/LICENSE",
+      "codeLicense": "BSD-2-Clause",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:10:12Z",
+      "release": {
+        "tagName": "v1.16.0",
+        "url": "https://github.com/pipecat-ai/pipecat/releases/tag/v1.16.0"
+      },
+      "language": "Python",
+      "stars": 17344,
+      "forks": 3143,
+      "dockerEvidence": [],
+      "advisories": [
+        {
+          "id": "GHSA-hqm2-cfx2-2vgh",
+          "severity": "medium",
+          "url": "https://github.com/pipecat-ai/pipecat/security/advisories/GHSA-hqm2-cfx2-2vgh"
+        },
+        {
+          "id": "GHSA-j8cv-x86q-rj85",
+          "severity": "high",
+          "url": "https://github.com/pipecat-ai/pipecat/security/advisories/GHSA-j8cv-x86q-rj85"
+        },
+        {
+          "id": "GHSA-3363-2ph6-35wh",
+          "severity": "high",
+          "url": "https://github.com/pipecat-ai/pipecat/security/advisories/GHSA-3363-2ph6-35wh"
+        },
+        {
+          "id": "GHSA-c2jg-5cp7-6wc7",
+          "severity": "critical",
+          "url": "https://github.com/pipecat-ai/pipecat/security/advisories/GHSA-c2jg-5cp7-6wc7"
+        }
+      ],
+      "category": "application",
+      "name": "pipecat",
+      "id": "github:736272311",
+      "maintenance": "recent-push",
+      "kind": "application",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/microsoft/playwright/blob/b7cc538524d6b4b1c3eb0450e350e4306c0f5ed1/README.md#L118",
+      "apiDocs": "https://github.com/microsoft/playwright/blob/b7cc538524d6b4b1c3eb0450e350e4306c0f5ed1/README.md#L5",
+      "hardwareDocs": null,
+      "repoId": 221981891,
+      "repository": "microsoft/playwright",
+      "source": "https://github.com/microsoft/playwright",
+      "revision": "b7cc538524d6b4b1c3eb0450e350e4306c0f5ed1",
+      "docs": "https://github.com/microsoft/playwright/tree/b7cc538524d6b4b1c3eb0450e350e4306c0f5ed1#readme",
+      "licenseUrl": "https://github.com/microsoft/playwright/blob/b7cc538524d6b4b1c3eb0450e350e4306c0f5ed1/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T19:12:13Z",
+      "release": {
+        "tagName": "v1.65.1",
+        "url": "https://github.com/microsoft/playwright/releases/tag/v1.65.1"
+      },
+      "language": "TypeScript",
+      "stars": 100604,
+      "forks": 6932,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "application",
+      "name": "playwright",
+      "id": "github:221981891",
+      "maintenance": "recent-push",
+      "kind": "application",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": "https://github.com/docling-project/docling/blob/825c77458b4d05ed7071d0789dc8e40ba9d18211/README.md#L71",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 826168160,
+      "repository": "docling-project/docling",
+      "source": "https://github.com/docling-project/docling",
+      "revision": "825c77458b4d05ed7071d0789dc8e40ba9d18211",
+      "docs": "https://github.com/docling-project/docling/tree/825c77458b4d05ed7071d0789dc8e40ba9d18211#readme",
+      "licenseUrl": "https://github.com/docling-project/docling/blob/825c77458b4d05ed7071d0789dc8e40ba9d18211/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T16:32:45Z",
+      "release": {
+        "tagName": "v2.151.1",
+        "url": "https://github.com/docling-project/docling/releases/tag/v2.151.1"
+      },
+      "language": "Python",
+      "stars": 70793,
+      "forks": 5389,
+      "dockerEvidence": [
+        "Dockerfile"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-39r3-7827-8r2r",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-39r3-7827-8r2r"
+        },
+        {
+          "id": "GHSA-4gw8-58r9-7492",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-4gw8-58r9-7492"
+        },
+        {
+          "id": "GHSA-g38r-q9hq-84mq",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-g38r-q9hq-84mq"
+        },
+        {
+          "id": "GHSA-fjj3-mv58-3ggf",
+          "severity": "low",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-fjj3-mv58-3ggf"
+        },
+        {
+          "id": "GHSA-5246-gwx6-qh49",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-5246-gwx6-qh49"
+        },
+        {
+          "id": "GHSA-7hgp-2gq7-jfvr",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-7hgp-2gq7-jfvr"
+        },
+        {
+          "id": "GHSA-p85c-4jcv-5vh7",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-p85c-4jcv-5vh7"
+        },
+        {
+          "id": "GHSA-gv93-x34v-mgwq",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-gv93-x34v-mgwq"
+        },
+        {
+          "id": "GHSA-cvvj-vhrh-gxp9",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-cvvj-vhrh-gxp9"
+        },
+        {
+          "id": "GHSA-h8jf-9f4f-2v9h",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-h8jf-9f4f-2v9h"
+        },
+        {
+          "id": "GHSA-m5xp-wvrj-48wx",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-m5xp-wvrj-48wx"
+        },
+        {
+          "id": "GHSA-969p-q7h6-6fr8",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-969p-q7h6-6fr8"
+        },
+        {
+          "id": "GHSA-c2w9-g7hj-xcr8",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-c2w9-g7hj-xcr8"
+        },
+        {
+          "id": "GHSA-9x7c-8865-v96p",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-9x7c-8865-v96p"
+        },
+        {
+          "id": "GHSA-75hv-jmgq-436v",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-75hv-jmgq-436v"
+        },
+        {
+          "id": "GHSA-48p5-hc4j-vw33",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-48p5-hc4j-vw33"
+        },
+        {
+          "id": "GHSA-69wq-5mw3-2r48",
+          "severity": "low",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-69wq-5mw3-2r48"
+        },
+        {
+          "id": "GHSA-c96j-6mjg-cc9q",
+          "severity": "low",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-c96j-6mjg-cc9q"
+        },
+        {
+          "id": "GHSA-g7gr-w7v4-9mxc",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-g7gr-w7v4-9mxc"
+        },
+        {
+          "id": "GHSA-cgc7-9qp3-86m3",
+          "severity": "medium",
+          "url": "https://github.com/docling-project/docling/security/advisories/GHSA-cgc7-9qp3-86m3"
+        }
+      ],
+      "category": "application",
+      "name": "docling",
+      "id": "github:826168160",
+      "maintenance": "recent-push",
+      "kind": "application",
+      "weightTermsStatus": null
+    },
+    {
+      "installDocs": null,
+      "apiDocs": "https://github.com/QwenLM/Qwen3/blob/7a2f61ffc7a20d47efcd2bf97f6f2bf52729042e/README.md#L210",
+      "hardwareDocs": "https://github.com/QwenLM/Qwen3/blob/7a2f61ffc7a20d47efcd2bf97f6f2bf52729042e/README.md#L83",
+      "repoId": 752925682,
+      "repository": "QwenLM/Qwen3",
+      "source": "https://github.com/QwenLM/Qwen3",
+      "revision": "7a2f61ffc7a20d47efcd2bf97f6f2bf52729042e",
+      "docs": "https://github.com/QwenLM/Qwen3/tree/7a2f61ffc7a20d47efcd2bf97f6f2bf52729042e#readme",
+      "licenseUrl": null,
+      "codeLicense": null,
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-01-09T03:05:47Z",
+      "release": null,
+      "language": "Python",
+      "stars": 27750,
+      "forks": 2112,
+      "dockerEvidence": [
+        "docker"
+      ],
+      "advisories": [],
+      "category": "model",
+      "name": "Qwen3-8B",
+      "weights": "https://huggingface.co/Qwen/Qwen3-8B",
+      "weightsTerms": "Apache-2.0",
+      "ollamaTag": "qwen3:8b",
+      "termsReadmeEvidence": "All our open-weight models are licensed under Apache 2.0.",
+      "parameterBillions": 8,
+      "context": null,
+      "id": "model:qwen/qwen3-8b",
+      "maintenance": "recent-push",
+      "kind": "model-weights",
+      "weightTermsStatus": "upstream-readme-evidence"
+    },
+    {
+      "installDocs": null,
+      "apiDocs": "https://github.com/deepseek-ai/DeepSeek-R1/blob/0cf78561f1d51c84a21b2190626b21116d5c68bb/README.md#L160",
+      "hardwareDocs": null,
+      "repoId": 919443098,
+      "repository": "deepseek-ai/DeepSeek-R1",
+      "source": "https://github.com/deepseek-ai/DeepSeek-R1",
+      "revision": "0cf78561f1d51c84a21b2190626b21116d5c68bb",
+      "docs": "https://github.com/deepseek-ai/DeepSeek-R1/tree/0cf78561f1d51c84a21b2190626b21116d5c68bb#readme",
+      "licenseUrl": "https://github.com/deepseek-ai/DeepSeek-R1/blob/0cf78561f1d51c84a21b2190626b21116d5c68bb/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2025-06-27T08:35:54Z",
+      "release": {
+        "tagName": "v1.0.0",
+        "url": "https://github.com/deepseek-ai/DeepSeek-R1/releases/tag/v1.0.0"
+      },
+      "language": null,
+      "stars": 92047,
+      "forks": 11682,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "model",
+      "name": "DeepSeek-R1",
+      "weights": "https://huggingface.co/deepseek-ai/DeepSeek-R1",
+      "weightsTerms": "MIT",
+      "ollamaTag": null,
+      "termsReadmeEvidence": "This code repository and the model weights are licensed under",
+      "parameterBillions": 671,
+      "context": "128K",
+      "id": "model:deepseek-ai/deepseek-r1",
+      "maintenance": "stale-review",
+      "kind": "model-weights",
+      "weightTermsStatus": "upstream-readme-evidence"
+    },
+    {
+      "installDocs": "https://github.com/meta-llama/llama-models/blob/0e0b8c519242d5833d8c11bffc1232b77ad7f301/README.md#L42",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 821134374,
+      "repository": "meta-llama/llama-models",
+      "source": "https://github.com/meta-llama/llama-models",
+      "revision": "0e0b8c519242d5833d8c11bffc1232b77ad7f301",
+      "docs": "https://github.com/meta-llama/llama-models/tree/0e0b8c519242d5833d8c11bffc1232b77ad7f301#readme",
+      "licenseUrl": "https://github.com/meta-llama/llama-models/blob/0e0b8c519242d5833d8c11bffc1232b77ad7f301/LICENSE",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-02-11T16:38:31Z",
+      "release": {
+        "tagName": "v0.2.0",
+        "url": "https://github.com/meta-llama/llama-models/releases/tag/v0.2.0"
+      },
+      "language": "Python",
+      "stars": 7726,
+      "forks": 1409,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "model",
+      "name": "Llama 3.2 1B",
+      "weights": "https://huggingface.co/meta-llama/Llama-3.2-1B",
+      "weightsTerms": "Llama 3.2 Community License",
+      "ollamaTag": null,
+      "termsReadmeEvidence": "models/llama3_2/LICENSE",
+      "parameterBillions": 1,
+      "context": "128K",
+      "id": "model:meta-llama/llama-3.2-1b",
+      "maintenance": "recent-push",
+      "kind": "model-weights",
+      "weightTermsStatus": "upstream-readme-evidence"
+    },
+    {
+      "installDocs": "https://github.com/mistralai/mistral-inference/blob/9eaeb91c17450e09021b6065a1d5cc69876507c8/README.md#L31",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 697302510,
+      "repository": "mistralai/mistral-inference",
+      "source": "https://github.com/mistralai/mistral-inference",
+      "revision": "9eaeb91c17450e09021b6065a1d5cc69876507c8",
+      "docs": "https://github.com/mistralai/mistral-inference/tree/9eaeb91c17450e09021b6065a1d5cc69876507c8#readme",
+      "licenseUrl": "https://github.com/mistralai/mistral-inference/blob/9eaeb91c17450e09021b6065a1d5cc69876507c8/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": true,
+      "pushedAt": "2026-06-16T15:40:44Z",
+      "release": {
+        "tagName": "v1.6.0",
+        "url": "https://github.com/mistralai/mistral-inference/releases/tag/v1.6.0"
+      },
+      "language": "Jupyter Notebook",
+      "stars": 10815,
+      "forks": 1066,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "model",
+      "name": "Mistral 7B Instruct v0.3",
+      "weights": "https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3",
+      "weightsTerms": "Apache-2.0",
+      "ollamaTag": null,
+      "termsReadmeEvidence": null,
+      "parameterBillions": null,
+      "context": null,
+      "id": "model:mistralai/mistral-7b-instruct-v0.3",
+      "maintenance": "archived",
+      "kind": "model-weights",
+      "weightTermsStatus": "checkpoint-review-required"
+    },
+    {
+      "installDocs": "https://github.com/google-deepmind/gemma/blob/9e1f74131ba9d45e5fe6ae7bb3941d9f2abb39c3/README.md#L20",
+      "apiDocs": null,
+      "hardwareDocs": "https://github.com/google-deepmind/gemma/blob/9e1f74131ba9d45e5fe6ae7bb3941d9f2abb39c3/README.md#L90",
+      "repoId": 760683276,
+      "repository": "google-deepmind/gemma",
+      "source": "https://github.com/google-deepmind/gemma",
+      "revision": "9e1f74131ba9d45e5fe6ae7bb3941d9f2abb39c3",
+      "docs": "https://github.com/google-deepmind/gemma/tree/9e1f74131ba9d45e5fe6ae7bb3941d9f2abb39c3#readme",
+      "licenseUrl": "https://github.com/google-deepmind/gemma/blob/9e1f74131ba9d45e5fe6ae7bb3941d9f2abb39c3/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-19T10:01:48Z",
+      "release": {
+        "tagName": "v4.0.1",
+        "url": "https://github.com/google-deepmind/gemma/releases/tag/v4.0.1"
+      },
+      "language": "Python",
+      "stars": 5861,
+      "forks": 1050,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "model",
+      "name": "Gemma 2 2B",
+      "weights": "https://huggingface.co/google/gemma-2-2b",
+      "weightsTerms": "Gemma Terms of Use",
+      "ollamaTag": null,
+      "termsReadmeEvidence": null,
+      "parameterBillions": null,
+      "context": null,
+      "id": "model:google/gemma-2-2b",
+      "maintenance": "recent-push",
+      "kind": "model-weights",
+      "weightTermsStatus": "checkpoint-review-required"
+    },
+    {
+      "installDocs": null,
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 797465563,
+      "repository": "microsoft/PhiCookBook",
+      "source": "https://github.com/microsoft/PhiCookBook",
+      "revision": "791dd7fff6c37bae76bed40a2ecc73299b71ecb8",
+      "docs": "https://github.com/microsoft/PhiCookBook/tree/791dd7fff6c37bae76bed40a2ecc73299b71ecb8#readme",
+      "licenseUrl": "https://github.com/microsoft/PhiCookBook/blob/791dd7fff6c37bae76bed40a2ecc73299b71ecb8/LICENSE",
+      "codeLicense": "MIT",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-11-16T22:46:32Z",
+      "release": null,
+      "language": "Jupyter Notebook",
+      "stars": 3908,
+      "forks": 536,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "model",
+      "name": "Phi-3 Mini 4K Instruct",
+      "weights": "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct",
+      "weightsTerms": "MIT",
+      "ollamaTag": null,
+      "termsReadmeEvidence": null,
+      "parameterBillions": null,
+      "context": null,
+      "id": "model:microsoft/phi-3-mini-4k-instruct",
+      "maintenance": "recent-push",
+      "kind": "model-weights",
+      "weightTermsStatus": "checkpoint-review-required"
+    },
+    {
+      "installDocs": "https://github.com/zai-org/GLM-4/blob/024d8fd48e62cf53785b68d657f1e018f87b5674/README.md#L218",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 800839481,
+      "repository": "zai-org/GLM-4",
+      "source": "https://github.com/zai-org/GLM-4",
+      "revision": "024d8fd48e62cf53785b68d657f1e018f87b5674",
+      "docs": "https://github.com/zai-org/GLM-4/tree/024d8fd48e62cf53785b68d657f1e018f87b5674#readme",
+      "licenseUrl": "https://github.com/zai-org/GLM-4/blob/024d8fd48e62cf53785b68d657f1e018f87b5674/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2026-08-05T07:08:46Z",
+      "release": null,
+      "language": "Python",
+      "stars": 7073,
+      "forks": 622,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "model",
+      "name": "GLM-4-9B-Chat",
+      "weights": "https://huggingface.co/zai-org/glm-4-9b-chat",
+      "weightsTerms": null,
+      "ollamaTag": null,
+      "termsReadmeEvidence": null,
+      "parameterBillions": null,
+      "context": "128K",
+      "id": "model:zai-org/glm-4-9b-chat",
+      "maintenance": "recent-push",
+      "kind": "model-weights",
+      "weightTermsStatus": "checkpoint-review-required"
+    },
+    {
+      "installDocs": "https://github.com/01-ai/Yi/blob/f73194cc16e82df438bc01240b8e4b622209f3eb/README.md#L403",
+      "apiDocs": "https://github.com/01-ai/Yi/blob/f73194cc16e82df438bc01240b8e4b622209f3eb/README.md#L1272",
+      "hardwareDocs": "https://github.com/01-ai/Yi/blob/f73194cc16e82df438bc01240b8e4b622209f3eb/README.md#L233",
+      "repoId": 713967573,
+      "repository": "01-ai/Yi",
+      "source": "https://github.com/01-ai/Yi",
+      "revision": "f73194cc16e82df438bc01240b8e4b622209f3eb",
+      "docs": "https://github.com/01-ai/Yi/tree/f73194cc16e82df438bc01240b8e4b622209f3eb#readme",
+      "licenseUrl": "https://github.com/01-ai/Yi/blob/f73194cc16e82df438bc01240b8e4b622209f3eb/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2024-11-27T09:25:57Z",
+      "release": null,
+      "language": "Jupyter Notebook",
+      "stars": 7830,
+      "forks": 500,
+      "dockerEvidence": [
+        "Dockerfile"
+      ],
+      "advisories": [],
+      "category": "model",
+      "name": "Yi-1.5-6B",
+      "weights": "https://huggingface.co/01-ai/Yi-1.5-6B",
+      "weightsTerms": "Apache-2.0",
+      "ollamaTag": null,
+      "termsReadmeEvidence": "The code and weights of the Yi-1.5 series models are distributed under",
+      "parameterBillions": 6,
+      "context": null,
+      "id": "model:01-ai/yi-1.5-6b",
+      "maintenance": "stale-review",
+      "kind": "model-weights",
+      "weightTermsStatus": "upstream-readme-evidence"
+    },
+    {
+      "installDocs": "https://github.com/tiiuae/Falcon-H1/blob/eaa040e922ca34d0f02cd9fe8fe9e0917f67ec8b/README.md#L102",
+      "apiDocs": "https://github.com/tiiuae/Falcon-H1/blob/eaa040e922ca34d0f02cd9fe8fe9e0917f67ec8b/README.md#L177",
+      "hardwareDocs": null,
+      "repoId": 978630280,
+      "repository": "tiiuae/Falcon-H1",
+      "source": "https://github.com/tiiuae/Falcon-H1",
+      "revision": "eaa040e922ca34d0f02cd9fe8fe9e0917f67ec8b",
+      "docs": "https://github.com/tiiuae/Falcon-H1/tree/eaa040e922ca34d0f02cd9fe8fe9e0917f67ec8b#readme",
+      "licenseUrl": null,
+      "codeLicense": null,
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2025-10-09T21:08:32Z",
+      "release": null,
+      "language": null,
+      "stars": 129,
+      "forks": 18,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "model",
+      "name": "Falcon-H1-1.5B-Instruct-GGUF",
+      "weights": "https://huggingface.co/tiiuae/Falcon-H1-1.5B-Instruct-GGUF",
+      "weightsTerms": null,
+      "ollamaTag": null,
+      "termsReadmeEvidence": null,
+      "parameterBillions": null,
+      "context": null,
+      "id": "model:tiiuae/falcon-h1-1.5b-instruct-gguf",
+      "maintenance": "stale-review",
+      "kind": "model-weights",
+      "weightTermsStatus": "checkpoint-review-required"
+    },
+    {
+      "installDocs": "https://github.com/coqui-ai/TTS/blob/dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e/README.md#L146",
+      "apiDocs": "https://github.com/coqui-ai/TTS/blob/dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e/README.md#L188",
+      "hardwareDocs": null,
+      "repoId": 265612440,
+      "repository": "coqui-ai/TTS",
+      "source": "https://github.com/coqui-ai/TTS",
+      "revision": "dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e",
+      "docs": "https://github.com/coqui-ai/TTS/tree/dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e#readme",
+      "licenseUrl": "https://github.com/coqui-ai/TTS/blob/dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e/LICENSE.txt",
+      "codeLicense": "MPL-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2024-08-16T12:07:14Z",
+      "release": {
+        "tagName": "v0.22.0",
+        "url": "https://github.com/coqui-ai/TTS/releases/tag/v0.22.0"
+      },
+      "language": "Python",
+      "stars": 46254,
+      "forks": 6162,
+      "dockerEvidence": [
+        "Dockerfile"
+      ],
+      "advisories": [],
+      "category": "model",
+      "name": "XTTS v2",
+      "weights": "https://huggingface.co/coqui/XTTS-v2",
+      "weightsTerms": "Coqui Public Model License",
+      "ollamaTag": null,
+      "termsReadmeEvidence": null,
+      "parameterBillions": null,
+      "context": null,
+      "id": "model:coqui/xtts-v2",
+      "maintenance": "stale-review",
+      "kind": "model-weights",
+      "weightTermsStatus": "checkpoint-review-required"
+    },
+    {
+      "installDocs": "https://github.com/hexgrad/kokoro/blob/dfb907a02bba8152ca444717ca5d78747ccb4bec/README.md#L3",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 915054134,
+      "repository": "hexgrad/kokoro",
+      "source": "https://github.com/hexgrad/kokoro",
+      "revision": "dfb907a02bba8152ca444717ca5d78747ccb4bec",
+      "docs": "https://github.com/hexgrad/kokoro/tree/dfb907a02bba8152ca444717ca5d78747ccb4bec#readme",
+      "licenseUrl": "https://github.com/hexgrad/kokoro/blob/dfb907a02bba8152ca444717ca5d78747ccb4bec/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2025-08-06T22:28:53Z",
+      "release": null,
+      "language": "JavaScript",
+      "stars": 10246,
+      "forks": 1164,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "model",
+      "name": "Kokoro-82M",
+      "weights": "https://huggingface.co/hexgrad/Kokoro-82M",
+      "weightsTerms": "Apache-2.0",
+      "ollamaTag": null,
+      "termsReadmeEvidence": "Apache-licensed weights",
+      "parameterBillions": 0.082,
+      "context": null,
+      "id": "model:hexgrad/kokoro-82m",
+      "maintenance": "stale-review",
+      "kind": "model-weights",
+      "weightTermsStatus": "upstream-readme-evidence"
+    },
+    {
+      "installDocs": "https://github.com/black-forest-labs/flux/blob/802fb4713906133fcbd0d8dc5351620ca4773036/README.md#L17",
+      "apiDocs": null,
+      "hardwareDocs": null,
+      "repoId": 836642963,
+      "repository": "black-forest-labs/flux",
+      "source": "https://github.com/black-forest-labs/flux",
+      "revision": "802fb4713906133fcbd0d8dc5351620ca4773036",
+      "docs": "https://github.com/black-forest-labs/flux/tree/802fb4713906133fcbd0d8dc5351620ca4773036#readme",
+      "licenseUrl": "https://github.com/black-forest-labs/flux/blob/802fb4713906133fcbd0d8dc5351620ca4773036/LICENSE",
+      "codeLicense": "Apache-2.0",
+      "codeClass": "verified-root-license",
+      "archived": false,
+      "pushedAt": "2025-07-31T13:58:55Z",
+      "release": null,
+      "language": "Python",
+      "stars": 26072,
+      "forks": 1934,
+      "dockerEvidence": [],
+      "advisories": [],
+      "category": "model",
+      "name": "FLUX.1 schnell",
+      "weights": "https://huggingface.co/black-forest-labs/FLUX.1-schnell",
+      "weightsTerms": "Apache-2.0",
+      "ollamaTag": null,
+      "termsReadmeEvidence": "model_licenses/LICENSE-FLUX1-schnell",
+      "parameterBillions": null,
+      "context": null,
+      "id": "model:black-forest-labs/flux.1-schnell",
+      "maintenance": "stale-review",
+      "kind": "model-weights",
+      "weightTermsStatus": "upstream-readme-evidence"
+    },
+    {
+      "installDocs": "https://github.com/cmusphinx/pocketsphinx/blob/f20ff1b7a5db64c5e892a798479e20df86e79a35/README.md#L52",
+      "apiDocs": "https://github.com/cmusphinx/pocketsphinx/blob/f20ff1b7a5db64c5e892a798479e20df86e79a35/README.md#L194",
+      "hardwareDocs": null,
+      "repoId": 18513454,
+      "repository": "cmusphinx/pocketsphinx",
+      "source": "https://github.com/cmusphinx/pocketsphinx",
+      "revision": "f20ff1b7a5db64c5e892a798479e20df86e79a35",
+      "docs": "https://github.com/cmusphinx/pocketsphinx/tree/f20ff1b7a5db64c5e892a798479e20df86e79a35#readme",
+      "licenseUrl": "https://github.com/cmusphinx/pocketsphinx/blob/f20ff1b7a5db64c5e892a798479e20df86e79a35/LICENSE",
+      "codeLicense": "NOASSERTION",
+      "codeClass": "review",
+      "archived": false,
+      "pushedAt": "2026-10-13T18:10:01Z",
+      "release": {
+        "tagName": "v5.1.1",
+        "url": "https://github.com/cmusphinx/pocketsphinx/releases/tag/v5.1.1"
+      },
+      "language": "C",
+      "stars": 4357,
+      "forks": 729,
+      "dockerEvidence": [
+        "Dockerfile"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-56r5-2p2f-7cxp",
+          "severity": "medium",
+          "url": "https://github.com/cmusphinx/pocketsphinx/security/advisories/GHSA-56r5-2p2f-7cxp"
+        }
+      ],
+      "category": "voice",
+      "name": "pocketsphinx",
+      "id": "github:18513454",
+      "maintenance": "recent-push",
+      "kind": "tool-or-library",
+      "weightTermsStatus": null
+    }
+  ],
+  "unavailable": []
+}

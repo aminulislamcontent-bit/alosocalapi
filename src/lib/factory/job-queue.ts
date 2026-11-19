@@ -15,22 +15,32 @@ export async function enqueueFactoryJob(params: {
   actor: string;
 }) {
   const key = params.idempotencyKey?.trim() || `job-${crypto.randomUUID()}`;
-  const existing = await db.factoryJob.findUnique({ where: { idempotencyKey: key } });
-  if (existing) return { job: existing, deduplicated: true };
-
-  const job = await db.factoryJob.create({
-    data: {
-      workspaceId: params.workspaceId,
-      moduleKey: params.moduleKey,
-      jobType: params.jobType,
-      idempotencyKey: key,
-      payload: JSON.stringify(params.payload ?? {}),
-      status: 'queued',
-      maxAttempts: params.maxAttempts ?? 3,
-      scheduledFor: params.scheduledFor ?? new Date(),
-    },
-  });
-
+  if (
+    !Number.isInteger(params.maxAttempts ?? 3) ||
+    (params.maxAttempts ?? 3) < 1 ||
+    (params.maxAttempts ?? 3) > 20
+  )
+    throw new Error('Invalid retry budget.');
+  let job;
+  try {
+    job = await db.factoryJob.create({
+      data: {
+        workspaceId: params.workspaceId,
+        moduleKey: params.moduleKey,
+        jobType: params.jobType,
+        idempotencyKey: key,
+        payload: JSON.stringify(params.payload ?? {}),
+        maxAttempts: params.maxAttempts ?? 3,
+        scheduledFor: params.scheduledFor ?? new Date(),
+      },
+    });
+  } catch (err) {
+    if ((err as { code?: string }).code !== 'P2002') throw err;
+    job = await db.factoryJob.findUniqueOrThrow({
+      where: { workspaceId_idempotencyKey: { workspaceId: params.workspaceId, idempotencyKey: key } },
+    });
+    return { job, deduplicated: true };
+  }
   await auditEvent({
     actor: params.actor,
     action: 'factory.job.enqueue',
@@ -41,96 +51,144 @@ export async function enqueueFactoryJob(params: {
   return { job, deduplicated: false };
 }
 
+const LEASE_MS = 60_000;
+function dueAt(now: Date) {
+  return {
+    OR: [
+      {
+        status: { in: ['queued', 'retrying'] },
+        scheduledFor: { lte: now },
+        OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
+      },
+      { status: 'running', OR: [{ leaseExpiresAt: { lte: now } }, { leaseExpiresAt: null }] },
+    ],
+  };
+}
+type Lease = { id: string; workspaceId: string; lockedBy: string };
+function currentLease(lease: Lease) {
+  return { ...lease, status: 'running', leaseExpiresAt: { gt: new Date() } };
+}
+export function heartbeatFactoryJob(lease: Lease) {
+  return db.factoryJob.updateMany({
+    where: currentLease(lease),
+    data: { lastHeartbeatAt: new Date(), leaseExpiresAt: new Date(Date.now() + LEASE_MS) },
+  });
+}
+export function completeFactoryJob(lease: Lease, result: unknown) {
+  return db.factoryJob.updateMany({
+    where: currentLease(lease),
+    data: {
+      status: 'completed',
+      completedAt: new Date(),
+      result: JSON.stringify(result),
+      lockedBy: null,
+      leaseExpiresAt: null,
+      lastError: null,
+    },
+  });
+}
 export async function processDueFactoryJobs(params: {
   workspaceId: string;
   limit?: number;
   actor: string;
+  jobId?: string;
 }) {
-  const now = new Date();
+  const scope = { workspaceId: params.workspaceId, id: params.jobId };
   const due = await db.factoryJob.findMany({
-    where: {
-      workspaceId: params.workspaceId,
-      status: { in: ['queued', 'retrying'] },
-      scheduledFor: { lte: now },
-      OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
-    },
+    where: { ...scope, ...dueAt(new Date()) },
     orderBy: { scheduledFor: 'asc' },
-    take: Math.min(25, params.limit ?? 10),
+    take: Math.max(1, Math.min(25, params.limit ?? 10)),
   });
-
-  const results: { jobId: string; status: string; detail: string }[] = [];
-
+  const results: { jobId: string; status: string }[] = [];
   for (const job of due) {
-    await db.factoryJob.update({
-      where: { id: job.id },
-      data: { status: 'running', startedAt: new Date() },
+    const now = new Date(),
+      owner = crypto.randomUUID();
+    const where = { workspaceId: params.workspaceId, id: job.id, attempts: job.attempts, ...dueAt(now) };
+    if (job.attempts >= job.maxAttempts) {
+      await db.factoryJob.updateMany({
+        where,
+        data: {
+          status: 'dead_letter',
+          lastError: 'Retry budget exhausted',
+          lockedBy: null,
+          leaseExpiresAt: null,
+        },
+      });
+      continue;
+    }
+    const claim = await db.factoryJob.updateMany({
+      where,
+      data: {
+        status: 'running',
+        startedAt: now,
+        lockedBy: owner,
+        lastHeartbeatAt: now,
+        leaseExpiresAt: new Date(+now + LEASE_MS),
+        attempts: { increment: 1 },
+      },
     });
-
+    if (!claim.count) continue;
+    const lease = { id: job.id, workspaceId: job.workspaceId, lockedBy: owner };
+    const pulse = setInterval(() => {
+      void heartbeatFactoryJob(lease).catch(() => {});
+    }, LEASE_MS / 3);
     try {
-      const payload = JSON.parse(job.payload) as Record<string, unknown>;
-      let outcome: unknown = { ok: true, jobType: job.jobType };
-
-      if (payload.simulateFailure) {
-        throw new Error('Simulated worker failure for queue retry/DLQ test.');
-      }
-
+      await db.integrationAuditEvent.create({
+        data: {
+          actor: params.actor || 'worker',
+          action: job.status === 'running' ? 'factory.job.recover' : 'factory.job.claim',
+          detail: JSON.stringify({
+            workspaceId: job.workspaceId,
+            jobId: job.id,
+            owner,
+            attempt: job.attempts + 1,
+          }),
+        },
+      });
+      const payload = JSON.parse(job.payload);
+      let result;
       if (job.jobType === 'email.campaign.dispatch' && typeof payload.campaignId === 'string') {
-        outcome = await dispatchEmailCampaign({
+        result = await dispatchEmailCampaign({
           workspaceId: job.workspaceId,
           campaignId: payload.campaignId,
           actor: params.actor,
         });
+        if (result.campaign.status !== 'completed') throw new Error('Dispatch needs reconciliation.');
       } else if (job.jobType === 'automation.workflow.retry' && typeof payload.runId === 'string') {
-        outcome = await recoverFailedAutomationRun({
+        result = await recoverFailedAutomationRun({
           workspaceId: job.workspaceId,
           runId: payload.runId,
           markRecovered: Boolean(payload.markRecovered),
           actor: params.actor,
         });
-      }
-
-      await db.factoryJob.update({
-        where: { id: job.id },
+      } else throw new Error('No configured handler for job.');
+      const done = await completeFactoryJob(lease, result);
+      if (done.count) results.push({ jobId: job.id, status: 'completed' });
+    } catch {
+      const status = job.attempts + 1 >= job.maxAttempts ? 'dead_letter' : 'retrying';
+      const done = await db.factoryJob.updateMany({
+        where: currentLease(lease),
         data: {
-          status: 'completed',
-          completedAt: new Date(),
-          result: JSON.stringify(outcome),
-          lastError: null,
+          status,
+          lastError: 'Job handler failed',
+          nextRetryAt: new Date(Date.now() + 10000 * (job.attempts + 1)),
+          lockedBy: null,
+          leaseExpiresAt: null,
         },
       });
-      results.push({ jobId: job.id, status: 'completed', detail: `Completed ${job.jobType}` });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Job execution error';
-      const nextAttempts = job.attempts + 1;
-      const deadLetter = nextAttempts >= job.maxAttempts;
-      await db.factoryJob.update({
-        where: { id: job.id },
-        data: {
-          status: deadLetter ? 'dead_letter' : 'retrying',
-          attempts: nextAttempts,
-          nextRetryAt: deadLetter ? null : new Date(Date.now() + 10_000 * nextAttempts),
-          lastError: msg,
-        },
-      });
-      results.push({ jobId: job.id, status: deadLetter ? 'dead_letter' : 'retrying', detail: msg });
+      if (done.count) results.push({ jobId: job.id, status });
+    } finally {
+      clearInterval(pulse);
     }
   }
-
   return { processedCount: results.length, results };
 }
-
 export async function retryDeadLetterFactoryJob(workspaceId: string, jobId: string, actor: string) {
-  const job = await db.factoryJob.findFirst({ where: { id: jobId, workspaceId } });
-  if (!job) throw new Error('Job not found.');
-  await db.factoryJob.update({
-    where: { id: job.id },
-    data: {
-      status: 'queued',
-      attempts: 0,
-      nextRetryAt: null,
-      lastError: null,
-      payload: JSON.stringify({ ...JSON.parse(job.payload), simulateFailure: false }),
-    },
+  // Explicit administrative intervention grants one additional attempt, never resets history.
+  const claim = await db.factoryJob.updateMany({
+    where: { workspaceId, id: jobId, status: 'dead_letter', maxAttempts: { lt: 20 } },
+    data: { status: 'queued', maxAttempts: { increment: 1 }, scheduledFor: new Date(), nextRetryAt: null },
   });
-  return processDueFactoryJobs({ workspaceId, limit: 1, actor });
+  if (!claim.count) throw new Error('Job is not eligible for manual retry.');
+  return processDueFactoryJobs({ workspaceId, jobId, actor });
 }

@@ -66,7 +66,14 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
   const baseUrl = `http://127.0.0.1:${port}`;
   const serverLogs = [];
 
-  const child = spawn(process.execPath, [STANDALONE_SERVER], {
+  // Only the exact registered token URL is mapped to this disposable provider fixture.
+  const crypto = require('node:crypto'); const tokenSentinel = crypto.randomUUID(), refreshSentinel=crypto.randomUUID(); let exchanges=0;
+  const tokenServer=require('node:http').createServer((req,res)=>{let body='';req.on('data',c=>body+=c);req.on('end',()=>{
+    if(req.method!=='POST' || new URLSearchParams(body).get('code')!=='owner-approved-test-code'){res.writeHead(400);res.end();return;}
+    exchanges++;res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({access_token:tokenSentinel,refresh_token:refreshSentinel}));
+  });});await new Promise(r=>tokenServer.listen(0,'127.0.0.1',r));t.after(()=>tokenServer.close());
+  const preload=path.join(tmpDir,'provider-fixture.cjs');fs.writeFileSync(preload,`const fetch=global.fetch;global.fetch=(url,init)=>fetch(String(url)==='https://qa-store.myshopify.com/admin/oauth/access_token'?'http://127.0.0.1:${tokenServer.address().port}/exchange':url,init);`);
+  const child = spawn(process.execPath, ['-r',preload,STANDALONE_SERVER], {
     cwd: path.join(ROOT, '.next', 'standalone'),
     env: {
       ...process.env,
@@ -159,11 +166,12 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     const { client } = await clientRes.json();
     assert.ok(client?.id);
 
+    const identityTenant='identity-handover-fixture';
     // 6b. Identity-first integration handover: strict inputs, tenant scope, real DB snapshot, owner portal checkpoint.
     const badPhoneHandover = await api('/api/onboarding/handover', {
       method: 'POST',
       body: JSON.stringify({
-        tenantId: client.id,
+        tenantId: identityTenant,
         providerKey: 'whatsapp_cloud_api',
         identityKind: 'phone',
         identityValue: '8801711000001',
@@ -174,7 +182,7 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     const badUrlHandover = await api('/api/onboarding/handover', {
       method: 'POST',
       body: JSON.stringify({
-        tenantId: client.id,
+        tenantId: identityTenant,
         providerKey: 'meta_facebook_pages',
         identityKind: 'url',
         identityValue: 'http://facebook.com/example',
@@ -185,7 +193,7 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     const whatsappHandover = await api('/api/onboarding/handover', {
       method: 'POST',
       body: JSON.stringify({
-        tenantId: client.id,
+        tenantId: identityTenant,
         providerKey: 'whatsapp_cloud_api',
         identityKind: 'phone',
         identityValue: '+8801711000001',
@@ -202,7 +210,7 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
       method: 'POST',
       body: JSON.stringify({
         action: 'discover_accounts',
-        tenantId: client.id,
+        tenantId: identityTenant,
         providerKey: 'whatsapp_cloud_api',
         identityValue: '+8801711000001',
       }),
@@ -220,7 +228,7 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
         method: 'POST',
         body: JSON.stringify({
           action: 'store',
-          tenantId: client.id,
+          tenantId: identityTenant,
           providerKey: credential.providerKey,
           credentialType: credential.credentialType,
           label: credential.label,
@@ -233,7 +241,7 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     const idHandover = await api('/api/onboarding/handover', {
       method: 'POST',
       body: JSON.stringify({
-        tenantId: client.id,
+        tenantId: identityTenant,
         providerKey: 'whatsapp_cloud_api',
         identityKind: 'phone',
         identityValue: '+8801711000001',
@@ -250,7 +258,7 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
       method: 'POST',
       body: JSON.stringify({
         action: 'store',
-        tenantId: client.id,
+        tenantId: identityTenant,
         providerKey: 'hubspot_crm_api',
         credentialType: 'api_key',
         label: 'access_only_test',
@@ -260,18 +268,18 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     assert.equal(accessOnlyVault.status, 200);
     const honestProbe = await api('/api/onboarding/discovery', {
       method: 'POST',
-      body: JSON.stringify({ action: 'verify_live', tenantId: client.id, providerKey: 'hubspot_crm_api' }),
+      body: JSON.stringify({ action: 'verify_live', tenantId: identityTenant, providerKey: 'hubspot_crm_api' }),
     });
     assert.equal(honestProbe.status, 200);
     assert.equal((await honestProbe.json()).verification.verified, false);
-    const accessOnlyMetadata = await api(`/api/onboarding/vault?tenantId=${encodeURIComponent(client.id)}&providerKey=hubspot_crm_api`);
+    const accessOnlyMetadata = await api(`/api/onboarding/vault?tenantId=${encodeURIComponent(identityTenant)}&providerKey=hubspot_crm_api`);
     const accessOnlyRows = (await accessOnlyMetadata.json()).credentials;
     assert.equal(accessOnlyRows.find(row => row.credentialType === 'api_key')?.lastVerifiedAt, null, 'Reading/decrypting a credential must not mark it API-verified.');
 
     const facebookHandover = await api('/api/onboarding/handover', {
       method: 'POST',
       body: JSON.stringify({
-        tenantId: client.id,
+        tenantId: identityTenant,
         providerKey: 'meta_facebook_pages',
         identityKind: 'url',
         identityValue: 'https://www.facebook.com/alo.education',
@@ -389,6 +397,25 @@ test('full end-to-end runtime: migration -> post-login init -> 13 onboarding API
     const replayCb = await api(`/api/onboarding/oauth/callback?state=${encodeURIComponent(oauthData.stateToken)}&code=abc`);
     assert.equal(replayCb.status, 400);
     assert.match(await replayCb.text(), /replay rejected/i);
+
+    const instanceTenant='shop-test-only';
+    const db=require('../scripts/prisma-client.mjs').createPrismaClient(dbUrl);t.after(()=>db.$disconnect());
+    const post=(url,body)=>api(url,{method:'POST',body:JSON.stringify(body)});
+    const shopSecret=crypto.randomUUID();
+    for(const type of ['oauth_client_id','oauth_client_secret'])assert.equal((await post('/api/onboarding/vault',{tenantId:instanceTenant,providerKey:'shopify_admin_api',credentialType:type,label:'primary',value:type==='oauth_client_secret'?shopSecret:crypto.randomUUID()})).status,200);
+    const flow=shop=>post('/api/onboarding/oauth',{action:'create_flow',tenantId:instanceTenant,providerKey:'shopify_admin_api',redirectUri:`${baseUrl}/api/onboarding/oauth/callback`,dynamicParams:{shop}});
+    assert.equal((await flow('invalid.instance')).status,400);
+    const good=await (await flow('QA-Store')).json();assert.equal(new URL(good.authorizationUrl).hostname,'qa-store.myshopify.com');
+    function signedCallback(state){const q=new URLSearchParams({state,code:'owner-approved-test-code',shop:'qa-store.myshopify.com',timestamp:String(Math.floor(Date.now()/1000))});q.sort();q.set('hmac',crypto.createHmac('sha256',shopSecret).update(q.toString()).digest('hex'));return '/api/onboarding/oauth/callback?'+q;}
+    const callback=signedCallback(good.stateToken);
+    for (const mismatch of ['tenantId=other','providerKey=other']) assert.equal((await api(`${callback}&${mismatch}`)).status,400);
+    assert.equal(exchanges,0);const completed=await api(callback);assert.equal(completed.status,200);const response=await completed.text();
+    assert.equal((await api(callback)).status,400);assert.equal(exchanges,1);
+    const expired=await (await flow('qa-store')).json();await db.oAuthAuthorizationState.update({where:{state:crypto.createHash('sha256').update(expired.stateToken).digest('base64url')},data:{expiresAt:new Date(0)}});
+    assert.equal((await api(signedCallback(expired.stateToken))).status,400);assert.equal(exchanges,1);
+    const rows=await db.vaultCredential.findMany({where:{clientId:instanceTenant,credentialType:{in:['oauth_access_token','oauth_refresh_token']}}});assert.equal(rows.length,2);
+    for(const sentinel of [tokenSentinel,refreshSentinel])assert.ok(![response,JSON.stringify(rows),serverLogs.join('')].some(text=>text.includes(sentinel)));
+    assert.ok(rows.every(r=>r.ciphertext.startsWith('v1:')));
 
     const revokeOAuth = await api('/api/onboarding/oauth', {
       method: 'POST',

@@ -54,6 +54,12 @@ jobs:
       - name: ESLint
         run: npm run lint
 
+      - name: Validate callback-only Caddy routing
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y caddy
+          node --test tests/caddy-policy.test.cjs
+
       - name: Unit and integration tests
         run: npm test
 
@@ -69,3 +75,24 @@ jobs:
 
       - name: End-to-end runtime and browser tests
         run: npm run test:e2e
+
+  offline-adapters:
+    name: Offline speech and retrieval adapters
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install reviewed binary wheels in an isolated environment
+        run: |
+          python -m venv "$RUNNER_TEMP/adapter-env"
+          "$RUNNER_TEMP/adapter-env/bin/pip" install --only-binary=:all: --require-hashes -r ecosystem/requirements-linux-py311.txt
+          "$RUNNER_TEMP/adapter-env/bin/pip" check
+      - name: Verify upstream public fixture and run local adapters
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api 'repos/cmusphinx/pocketsphinx/contents/test/data/goforward.raw?ref=f20ff1b7a5db64c5e892a798479e20df86e79a35' --jq .content | base64 -d > "$RUNNER_TEMP/goforward.raw"
+          "$RUNNER_TEMP/adapter-env/bin/python" tests/ecosystem-adapters.py "$RUNNER_TEMP/goforward.raw"

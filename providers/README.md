@@ -57,3 +57,5 @@ OBS Studio (separate media machine/process) ── websocket (OBS_WEBSOCKET_URL)
 4. Like the previous topic catalogue (`docs/mern-projects/`), these pins are
    the committed form. The ~170 MB of cloned code is *not* committed — any
    developer/CI restores it with one `providers.sh init`.
+
+Related discovery catalog: [MetaGPT frameworks, examples, and a local model guide](../docs/metagpt-projects/README.md). These references are separate from the seven pinned submodules above.

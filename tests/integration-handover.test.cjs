@@ -181,6 +181,8 @@ test('integration handover manifest is tenant-scoped, secret-free, honest about 
   await db.onboardingWorkflow.create({
     data: { clientId: tenantId, providerKey, state: 'VERIFIED' },
   });
+  assert.equal((await buildIntegrationHandoverPackage({tenantId,providerKey,identity})).verification.verified,false,'workflow label alone is not verification evidence');
+  await db.vaultCredential.updateMany({where:{clientId:tenantId,providerKey},data:{lastVerifiedAt:new Date()}});
   const third = await buildIntegrationHandoverPackage({ tenantId, providerKey, identity });
   assert.equal(third.verification.verified, true);
   assert.equal(third.preparation.workflowState, 'VERIFIED');

@@ -1,0 +1,89 @@
+{
+  "topic": "metagpt",
+  "query": "is:public topic:metagpt fork:false",
+  "date": "2026-11-19",
+  "total": 24,
+  "excluded": 14,
+  "projects": [
+    {
+      "repository": "Creator54/metagpt-runner",
+      "url": "https://github.com/Creator54/metagpt-runner",
+      "license": "MIT",
+      "archived": false,
+      "language": "Shell",
+      "description": "A simple wrapper/runner for metagpt"
+    },
+    {
+      "repository": "FoundationAgents/MetaGPT",
+      "url": "https://github.com/FoundationAgents/MetaGPT",
+      "license": "MIT",
+      "archived": false,
+      "language": "Python",
+      "description": "🌟 The Multi-Agent Framework: First AI Software Company, Towards Natural Language Programming"
+    },
+    {
+      "repository": "FSoft-AI4Code/AgileCoder",
+      "url": "https://github.com/FSoft-AI4Code/AgileCoder",
+      "license": "MIT",
+      "archived": false,
+      "language": "Python",
+      "description": "[FORGE 2025] Incorporating Agile methodology into agents to create complex real-world softwares"
+    },
+    {
+      "repository": "imMamdouhaboammar/Riftbook",
+      "url": "https://github.com/imMamdouhaboammar/Riftbook",
+      "license": "MIT",
+      "archived": true,
+      "language": "JavaScript",
+      "description": "Tools, prompts, workflows, and practical ideas for building better vibe-coded apps with less guesswork and more reusable systems"
+    },
+    {
+      "repository": "RightRudderAI/right-rudder",
+      "url": "https://github.com/RightRudderAI/right-rudder",
+      "license": "MIT",
+      "archived": false,
+      "language": "Python",
+      "description": "Catch the step where an AI agent contradicts its own earlier decision. CLI and adapters for LangGraph, CrewAI, Letta, OpenInference, DBOS and multi-agent logs, plus an expiry read for long-running agents."
+    },
+    {
+      "repository": "scmpevatrons/ai-chatverse",
+      "url": "https://github.com/scmpevatrons/ai-chatverse",
+      "license": "Apache-2.0",
+      "archived": false,
+      "language": "Python",
+      "description": "A streamlit application to play with LLM Models"
+    },
+    {
+      "repository": "stephen-devops/metaGPT_Volopa_OOP",
+      "url": "https://github.com/stephen-devops/metaGPT_Volopa_OOP",
+      "license": "MIT",
+      "archived": false,
+      "language": "Python",
+      "description": "Extended MetaGPT framework to operationalise client Volopa's OOP expense feature."
+    },
+    {
+      "repository": "svignesh7/po-gen-ai",
+      "url": "https://github.com/svignesh7/po-gen-ai",
+      "license": "MIT",
+      "archived": false,
+      "language": "HTML",
+      "description": "A PM's operating system: turn a PRD into a full SDLC by orchestrating MetaGPT, OpenHands, Promptfoo. Built by a Senior PM for regulated AI (BFSI · Healthcare)."
+    },
+    {
+      "repository": "vignesh-s7/product-management",
+      "url": "https://github.com/vignesh-s7/product-management",
+      "license": "MIT",
+      "archived": false,
+      "language": "HTML",
+      "description": "A PM's operating system: turn a PRD into a full SDLC by orchestrating MetaGPT, OpenHands, Promptfoo. Built by a Senior PM for regulated AI (BFSI · Healthcare)."
+    },
+    {
+      "repository": "Vincentwei1021/awesome-ai-agent-frameworks",
+      "url": "https://github.com/Vincentwei1021/awesome-ai-agent-frameworks",
+      "license": "MIT",
+      "archived": false,
+      "language": null,
+      "description": "🤖 AI Agent Framework Guide (中文) | Scion · AutoGen · CrewAI · LangGraph · MetaGPT · Dify · Coze — 深度对比 + 选型决策树 | Chinese developer guide for choosing the right multi-agent framework"
+    }
+  ]
+}

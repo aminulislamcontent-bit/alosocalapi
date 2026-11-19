@@ -115,7 +115,6 @@ export function EmailMarketingWorkbench({
               </div>
               <div className="flex gap-2">
                 <button onClick={() => void act({ action: 'verify_domain', domainId: d.id }, 'Checked live DNS records.')} className="rounded border border-slate-700 px-2 py-1 text-[10px] text-slate-200">Run DNS Check</button>
-                <button onClick={() => void act({ action: 'verify_domain', domainId: d.id, spfVerified: true, dkimVerified: true, dmarcVerified: true }, 'Marked DNS records verified.')} className="rounded border border-emerald-500/40 px-2 py-1 text-[10px] text-emerald-300">Confirm TXT Records</button>
               </div>
             </div>
           ))}
@@ -188,8 +187,9 @@ export function EmailMarketingWorkbench({
                 <span className="ml-2 text-[11px] font-mono text-cyan-300">{c.status} · {c.adapterType}</span>
                 <div className="text-[11px] text-slate-400">{c.stats}</div>
               </div>
-              <button onClick={() => void act({ action: 'dispatch_campaign', campaignId: c.id, approveNow: true }, `Dispatched ${c.name}`)} className="inline-flex items-center gap-1 rounded bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-1 text-[11px] text-emerald-200">
-                <Play className="w-3 h-3" /> Approve &amp; Dispatch
+              <button onClick={() => void act({action:'approve_campaign',campaignId:c.id}, 'Campaign approved')}>Approve version</button>
+              <button onClick={() => void act({ action: 'dispatch_campaign', campaignId: c.id }, `Dispatched ${c.name}`)} className="inline-flex items-center gap-1 rounded bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-1 text-[11px] text-emerald-200">
+                <Play className="w-3 h-3" /> Dispatch
               </button>
             </div>
           ))}

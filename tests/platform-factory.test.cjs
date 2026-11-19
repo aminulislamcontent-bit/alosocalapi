@@ -190,21 +190,35 @@ test('Shared Platform Infrastructure: tenancy isolation, RBAC, job retry/DLQ, AI
   });
   assert.equal(dupEnqueue.deduplicated, true);
 
-  await jobs.processDueFactoryJobs({ workspaceId: wsA.id, limit: 10 });
+  await Promise.all([jobs.processDueFactoryJobs({ workspaceId: wsA.id, limit: 10 }),jobs.processDueFactoryJobs({ workspaceId: wsA.id, limit: 10 })]);
+  assert.equal((await db.factoryJob.findUniqueOrThrow({where:{id:firstEnqueue.job.id}})).attempts,1);
   await db.factoryJob.update({ where: { id: firstEnqueue.job.id }, data: { nextRetryAt: new Date(Date.now() - 1000) } });
   await jobs.processDueFactoryJobs({ workspaceId: wsA.id, limit: 10 });
   const afterDlq = await db.factoryJob.findUnique({ where: { id: firstEnqueue.job.id } });
   assert.equal(afterDlq.status, 'dead_letter');
 
+  const foreign = await jobs.enqueueFactoryJob({workspaceId:wsB.id,moduleKey:'test',jobType:'unconfigured',idempotencyKey:'idem-dlq-1',actor:'bob'});
+  assert.notEqual(foreign.job.id,firstEnqueue.job.id);
+  const untouched = await jobs.enqueueFactoryJob({workspaceId:wsA.id,moduleKey:'test',jobType:'unconfigured',actor:'alice'});
   await jobs.retryDeadLetterFactoryJob(wsA.id, firstEnqueue.job.id, 'alice');
-  await db.factoryJob.update({
-    where: { id: firstEnqueue.job.id },
-    data: { payload: JSON.stringify({ simulateFailure: false }), nextRetryAt: new Date(Date.now() - 1000), scheduledFor: new Date(Date.now() - 1000) },
-  });
-  await jobs.processDueFactoryJobs({ workspaceId: wsA.id, limit: 10 });
-  const recovered = await db.factoryJob.findUnique({ where: { id: firstEnqueue.job.id } });
-  assert.equal(recovered.status, 'completed');
+  const recovered = await db.factoryJob.findUniqueOrThrow({where:{id:firstEnqueue.job.id}});
+  assert.equal(recovered.status,'dead_letter');
+  assert.equal(recovered.attempts,3);
+  assert.equal((await db.factoryJob.findUniqueOrThrow({where:{id:untouched.job.id}})).attempts,0);
 
+  const input={workspaceId:wsA.id,moduleKey:'test',jobType:'no_handler',actor:'alice',idempotencyKey:'concurrent-key'};
+  const pair=await Promise.all([jobs.enqueueFactoryJob(input),jobs.enqueueFactoryJob(input)]);
+  assert.equal(pair[0].job.id,pair[1].job.id);const id=pair[0].job.id;
+  const lease={workspaceId:wsA.id,id,lockedBy:'original-worker'};const deadline=new Date(Date.now()+10000);
+  await db.factoryJob.update({where:{id},data:{status:'running',lockedBy:lease.lockedBy,leaseExpiresAt:deadline,attempts:1}});
+  assert.equal((await jobs.processDueFactoryJobs({workspaceId:wsA.id,jobId:id,actor:'another'})).processedCount,0);
+  assert.equal((await jobs.completeFactoryJob({...lease,lockedBy:'another'},{})).count,0);
+  assert.equal((await jobs.heartbeatFactoryJob(lease)).count,1);assert.ok((await db.factoryJob.findUniqueOrThrow({where:{id}})).leaseExpiresAt>deadline);
+  await db.factoryJob.update({where:{id},data:{leaseExpiresAt:new Date(0)}});
+  assert.equal((await jobs.heartbeatFactoryJob(lease)).count,0);
+  assert.equal((await jobs.processDueFactoryJobs({workspaceId:wsB.id,jobId:id,actor:'bob'})).processedCount,0);
+  assert.equal((await jobs.processDueFactoryJobs({workspaceId:wsA.id,jobId:id,actor:'replacement'})).processedCount,1);
+  assert.equal((await db.factoryJob.findUniqueOrThrow({where:{id}})).attempts,2);
   // AI Router: Bangla local inference + non-loopback SSRF guard
   const bnAi = await ai.runFactoryAiInference({
     workspaceId: wsA.id,
@@ -272,8 +286,9 @@ test('Priority Module #1 (AI Email Marketing): enforces domain verification, con
     segment: 'vip',
     adapterType: 'smtp_custom',
   });
+  await emailMod.approveEmailCampaign({workspaceId:ws.id,campaignId:smtpCamp.id,actor:'admin'});
   await assert.rejects(
-    () => emailMod.dispatchEmailCampaign({ workspaceId: ws.id, campaignId: smtpCamp.id, approveNow: true, actor: 'admin' }),
+    () => emailMod.dispatchEmailCampaign({ workspaceId: ws.id, campaignId: smtpCamp.id, actor: 'admin' }),
     /verified SPF, DKIM, and DMARC/,
   );
 
@@ -286,11 +301,12 @@ test('Priority Module #1 (AI Email Marketing): enforces domain verification, con
     segment: 'vip',
     adapterType: 'sandbox_mock_adapter',
   });
-  const dispatched = await emailMod.dispatchEmailCampaign({ workspaceId: ws.id, campaignId: mockCamp.id, approveNow: true, actor: 'admin' });
-  assert.equal(dispatched.stats.sent, 1);
+  await emailMod.approveEmailCampaign({workspaceId:ws.id,campaignId:mockCamp.id,actor:'admin'});
+  const dispatched = await emailMod.dispatchEmailCampaign({ workspaceId: ws.id, campaignId: mockCamp.id, actor: 'admin' });
+  assert.equal(dispatched.stats.sent, 0);
   assert.equal(dispatched.stats.blocked, 1);
-  assert.equal(dispatched.stats.mocked, true);
-  assert.match(dispatched.stats.adapterLabel, /MOCKED/);
+  assert.equal(dispatched.stats.outcomes.NOT_CONFIGURED,1);
+  assert.equal(dispatched.campaign.sentAt,null);
 
   // Bounce triggers reputation drop & auto-pause
   const bounceRes = await emailMod.recordEmailBounce({

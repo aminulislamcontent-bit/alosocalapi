@@ -1,0 +1,16 @@
+# Run only after operator review of image digest, host capacity, and local volume permissions.
+services:
+  ollama:
+    image: ollama/ollama@sha256:${OLLAMA_IMAGE_SHA256:?review and provide the exact official image digest}
+    pull_policy: never
+    ports:
+      - '127.0.0.1:11434:11434'
+    volumes:
+      - weights:/root/.ollama
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    pids_limit: 256
+    restart: 'no'
+volumes:
+  weights:

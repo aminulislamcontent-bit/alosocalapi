@@ -205,6 +205,12 @@ test('startup preflight allows only known, completed migration histories with ma
   recordMigration(current, '20261117000300_first_party_platform_factory');
   current.exec(additiveV4Sql);
   recordMigration(current, '20261117000400_integration_engineering_handover');
+  const scopedSql=fs.readFileSync(path.resolve(__dirname,'../prisma/migrations/20261119000100_scoped_operations/migration.sql'),'utf8');
+  assert.doesNotMatch(scopedSql,/\b(?:DROP\s+TABLE|DROP\s+COLUMN|DELETE\s+FROM|TRUNCATE)\b/i);
+  current.exec(`INSERT INTO FactoryWorkspace(id,slug,name,ownerUsername,updatedAt) VALUES('alpha','alpha','alpha','owner',CURRENT_TIMESTAMP);
+    INSERT INTO FactoryJob(id,workspaceId,moduleKey,jobType,idempotencyKey,payload,updatedAt) VALUES('old-job','alpha','email_marketing','email.campaign.dispatch','legacy-key','{}',CURRENT_TIMESTAMP)`);
+  current.exec(scopedSql);recordMigration(current,'20261119000100_scoped_operations');
+  assert.equal(current.prepare("SELECT payload FROM FactoryJob WHERE workspaceId='alpha' AND idempotencyKey='legacy-key' AND id='old-job'").get().payload,'{}');
   current.close();
   assert.equal(inspectMigrationReadiness(currentPath).ok, true);
 
@@ -228,10 +234,10 @@ test('checked-in migration SQL contains no destructive table or row operation', 
   assert.doesNotMatch(baselineSql, /\b(?:DROP\s+TABLE|DROP\s+COLUMN|DELETE\s+FROM|TRUNCATE)\b/i);
 });
 
-test('prisma schema defines all 75 models including 10 onboarding, 22 factory, and 6 engineering models matching migrations and lockfile dependencies', () => {
+test('prisma schema defines all 76 models including 10 onboarding, 22 factory, and 6 engineering models matching migrations and lockfile dependencies', () => {
   const schemaText = fs.readFileSync(path.resolve(__dirname, '../prisma/schema.prisma'), 'utf8');
   const modelNames = [...schemaText.matchAll(/^model\s+(\w+)\s+\{/gm)].map(m => m[1]);
-  assert.equal(modelNames.length, 75, `Expected 75 Prisma models, got ${modelNames.length}`);
+  assert.equal(modelNames.length, 76, `Expected 76 Prisma models, got ${modelNames.length}`);
 
   const expectedOnboardingModels = [
     'OnboardingWorkflow',

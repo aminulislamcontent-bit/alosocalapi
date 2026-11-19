@@ -1,3 +1,4 @@
+import { callbackUrl } from '@/lib/onboarding/callback-url';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdminApi } from '@/lib/security/admin-guard';
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     if (action === 'create_flow') {
       const tenantId = String(body.tenantId || '').trim();
       const providerKey = String(body.providerKey || '').trim();
-      const redirectUri = String(body.redirectUri || `${req.nextUrl.origin}/api/onboarding/oauth/callback`).trim();
+      const redirectUri = String(body.redirectUri || callbackUrl(req)).trim();
       if (!tenantId || !providerKey) {
         return NextResponse.json({ error: 'tenantId and providerKey are required.' }, { status: 400 });
       }
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
       const stateToken = String(body.stateToken || body.state || '').trim();
       if (!stateToken) return NextResponse.json({ error: 'stateToken is required.' }, { status: 400 });
       const res = await handleOAuthCallback({
-        stateToken,
+        stateToken, tenantId:body.tenantId ? String(body.tenantId):undefined,providerKey:body.providerKey ? String(body.providerKey):undefined,
         code: body.code ? String(body.code) : undefined,
         error: body.error ? String(body.error) : undefined,
         errorDescription: body.errorDescription ? String(body.errorDescription) : undefined,

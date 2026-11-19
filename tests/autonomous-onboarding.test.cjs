@@ -97,7 +97,7 @@ test('canonical platform catalog covers >=100 marketing platforms across all 10 
 
 test('OAuth redirect URI validator enforces HTTPS/loopback and rejects fragments or unsafe schemes', () => {
   const oauth = loadTsModule('src/lib/onboarding/oauth-service.ts');
-  assert.equal(oauth.validateOAuthRedirectUri('https://app.example.com/api/onboarding/oauth/callback').ok, true);
+  assert.equal(oauth.validateOAuthRedirectUri('https://app.example.com/api/onboarding/oauth/callback').ok, false);
   assert.equal(oauth.validateOAuthRedirectUri('http://127.0.0.1:47831/api/onboarding/oauth/callback').ok, true);
   assert.equal(oauth.validateOAuthRedirectUri('http://evil.example.com/callback').ok, false);
   assert.equal(oauth.validateOAuthRedirectUri('javascript:alert(1)').ok, false);
@@ -220,7 +220,7 @@ test('[MOCKED TOKEN ENDPOINT] OAuth PKCE S256 token exchange verifies code_verif
     const flow = await oauth.createOAuthAuthorizationFlow({
       tenantId,
       providerKey: 'google_analytics4',
-      redirectUri: 'https://aloapi.test/api/onboarding/oauth/callback',
+      redirectUri: 'http://localhost:47831/api/onboarding/oauth/callback',
       actor: 'tester',
     });
 
@@ -270,7 +270,7 @@ test('[MOCKED TOKEN ENDPOINT] OAuth PKCE S256 token exchange verifies code_verif
     const raceFlow = await oauth.createOAuthAuthorizationFlow({
       tenantId,
       providerKey: 'google_analytics4',
-      redirectUri: 'https://aloapi.test/api/onboarding/oauth/callback',
+      redirectUri: 'http://localhost:47831/api/onboarding/oauth/callback',
       actor: 'tester',
     });
     let raceTokenCalls = 0;

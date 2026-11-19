@@ -67,11 +67,9 @@ All 131 external providers expose `executionMode` (`FULLY_AUTOMATED`, `OFFICIAL_
 
 ## 6. Authorized Autonomous Client API Execution Engine (`src/lib/engineering/client-api-executor.ts`)
 
-| Impact Level | Matching Criteria | Approval Gate | Credential & Domain Guard |
-| :--- | :--- | :--- | :--- |
-| **`READ_ONLY`** | `GET` / `HEAD` methods (when not matching mutation verbs) | Not required beyond admin/operator session + project binding | Secret resolved server-side from AES-256-GCM `VaultCredential` (`access_token` / `api_key`); URL validated against provider `apiBaseUrls` |
-| **`LOW_IMPACT_WRITE`** | Non-destructive `POST`/`PUT`/`PATCH` draft operations | Session + CSRF verified | Same Vault + HTTPS allowlist; response redacted via `redactSecretText` |
-| **`HIGH_IMPACT_ACTION`** | `DELETE` HTTP method OR action tokens (`publish`, `send`, `broadcast`, `spend`, `billing`, `charge`, `invoice`, `delete`, `revoke`, `permission`, `role`, `transfer`, `dns`, `webhook_mutate`, `payout`, `ad_launch`) | **MANDATORY EXPLICIT APPROVAL GATE:** Refuses execution (`HTTP 403`, `APPROVAL_REQUIRED`, `AgentExecutionRun.complianceDecision = 'DENIED_APPROVAL_REQUIRED'`) unless `ownerApprovalGranted === true` AND a valid `VerificationCheckpoint` ID or explicit `approvalReference` is supplied | Fails honestly with `CLIENT_ACTIVATION_REQUIRED` when Vault has no issued client credential |
+`src/lib/engineering/operations.ts` is the allowlist. Only `sendgrid_api/read_sender_status` and `sendgrid_api/publish_campaign_broadcast` are registered; other operations fail closed. The server selects the method, endpoint, schema and impact. A project is the engineering workspace inside the `clientId` tenant.
+
+An authenticated master administrator with owner authority uses `approve_operation` for a specific numeric campaign ID, then `execute_client_api` with the returned `approvalId` and identical project, provider, action and payload. Approval expires after five minutes and is consumed once, including if no credential is available. This is ALOAPI authorization, not proof of external provider consent: the provider must separately issue a suitable credential. Checkpoints, impact overrides and text references cannot grant approval. Do not retry an ambiguous mutation; reconcile it with the provider first.
 
 See `docs/PROVIDER_CAPABILITY_PORTABILITY_MATRIX.md` for the full tabulated capability, execution mode, and handover portability matrix across all **131 external providers** and **20 first-party AI marketing platforms**.
 

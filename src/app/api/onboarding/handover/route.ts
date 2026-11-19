@@ -8,14 +8,6 @@ import { auditEvent } from '@/lib/security/audit';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type BrowserSessionSummary = {
-  id: string;
-  officialUrl: string;
-  status: string;
-  executionMode: 'isolated_browser' | 'guided_official_handoff';
-  note: string;
-};
-
 export async function POST(req: NextRequest) {
   const guard = await requireAdminApi(req, true);
   if (!guard.ok) return guard.response;
@@ -30,6 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'tenantId, providerKey, identityKind (url|phone|account), and identityValue are required.' }, { status: 400 });
   }
 
+  if (kind==='phone' && !value.startsWith('+')) return NextResponse.json({error:'Supply a phone number with explicit international + prefix.'},{status:400});
   try {
     const identity: IntegrationIdentityInput = { kind: kind as IntegrationIdentityInput['kind'], value };
     const handover = await buildIntegrationHandoverPackage({ tenantId, providerKey, identity, actor: guard.user.username });
@@ -55,6 +48,7 @@ export async function POST(req: NextRequest) {
     // Step 8 of the handover contract: an explicit, least-privilege, read-only
     // probe that reports the real result. It never marks an integration VERIFIED
     // on its own and never substitutes a saved credential for a live API check.
+    let liveVerification: Awaited<ReturnType<typeof runLiveReadOnlyVerification>> | null = null;
     if (body.runLiveProbe === true) {
       liveVerification = await runLiveReadOnlyVerification({
         tenantId,
