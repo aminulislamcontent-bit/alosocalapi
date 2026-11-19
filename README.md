@@ -89,3 +89,7 @@ All production migrations are checked into `prisma/migrations/`. The normal star
 The seven pinned provider submodules under `providers/` are retained at their existing commits. They are not automatically initialized, installed, launched, or connected.
 
 Before any database migration, follow the [database and vault recovery drill](docs/DATABASE_AND_VAULT_RECOVERY.md).
+
+## Open-source agents and local models
+
+Browse the [MetaGPT project catalog and local Qwen/Ollama guide](docs/metagpt-projects/README.md) for license-filtered GitHub repositories and an example using ALOAPI's existing local inference endpoint.
