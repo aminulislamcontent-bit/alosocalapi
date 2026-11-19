@@ -2,6 +2,10 @@
 
 ALOAPI is a self-hosted, browser-based integration engineering workspace. Run `aloapi` from a terminal to start the local service and open its dashboard. The workspace brings together business/website discovery, provider and channel mapping, OAuth authorization lifecycle, webhook preparation and signature checks, encrypted credential storage, supported live read-only verification, workflow orchestration, and client-ready handover packages. Provider-specific automation depends on each provider's documented API and supported adapter capabilities; ALOAPI never fabricates provider-issued credentials or bypasses account-owner verification.
 
+## Local AI ecosystem
+
+Open **Admin Control Center → AI Ecosystem** for the reviewed model and tool catalog. The [operator guide](docs/OPEN_SOURCE_AI_ECOSYSTEM.md) separates locally tested adapters, license evidence, read-only discovery and production gates. See the [project matrix](docs/PROJECT_INTEGRATION_MATRIX.md) for repository coverage.
+
 ## Stack
 
 - Node.js 22.x starting at 22.17.0, or Node.js 24 and later, with npm (the checked-in `package-lock.json` is the reproducible install source)

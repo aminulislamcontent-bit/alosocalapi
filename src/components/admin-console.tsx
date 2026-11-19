@@ -31,6 +31,7 @@ import AutomationsTab from '@/components/crm/automations-tab';
 import SetupBotAdminTab from '@/components/setupbot/setupbot-admin';
 import EngineTab from '@/components/engine/engine-tab';
 import OnboardingHub from '@/components/onboarding/onboarding-hub';
+import CatalogPanel from '@/components/ecosystem/catalog-panel';
 import CommandCenter from '@/components/factory/command-center';
 import EngineeringHub from '@/components/engineering/engineering-hub';
 import { BUSINESS } from '@/lib/business';
@@ -43,7 +44,7 @@ import PlannerTab from '@/components/planner-tab';
 import { usePersistentState } from '@/lib/usePersistentState';
 import { CHANNELS, LAUNCH_PHASES, type CompanyProfile, type ChannelStatusMap } from '@/lib/channels-data';
 
-type TabId = 'engineering' | 'factory' | 'onboarding' | 'access' | 'crm' | 'tasks' | 'automation' | 'setupbot' | 'engine' | 'integrations' | 'security' | 'dashboard' | 'channels' | 'planner' | 'wizard' | 'credentials' | 'otp' | 'rotation' | 'env';
+type TabId = 'ecosystem' | 'engineering' | 'factory' | 'onboarding' | 'access' | 'crm' | 'tasks' | 'automation' | 'setupbot' | 'engine' | 'integrations' | 'security' | 'dashboard' | 'channels' | 'planner' | 'wizard' | 'credentials' | 'otp' | 'rotation' | 'env';
 
 export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
   // Navigation
@@ -178,6 +179,8 @@ export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
             Integration Engineering
             <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[9px] font-mono">HANDOVER</span>
           </button>
+
+          <button className={activeTab === 'ecosystem' ? 'text-cyan-300 whitespace-nowrap' : 'text-slate-400 whitespace-nowrap'} onClick={() => setActiveTab('ecosystem')}>AI Ecosystem</button>
 
           <button
             onClick={() => setActiveTab('factory')}
@@ -415,6 +418,7 @@ export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
       {/* Main Content Viewport */}
       <main className="max-w-7xl mx-auto px-4 lg:px-8 pt-6">
 
+        {activeTab === 'ecosystem' && <CatalogPanel />}
         {activeTab === 'engineering' && <EngineeringHub onToast={showToast} />}
 
         {activeTab === 'factory' && <CommandCenter onToast={showToast} />}
@@ -431,7 +435,7 @@ export default function AdminConsole({ onLogout }: { onLogout: () => void }) {
         {activeTab === 'integrations' && <IntegrationIntelligenceTab />}
         {activeTab === 'security' && <AdminSecurityTab onLogout={onLogout} />}
 
-        {activeTab !== 'onboarding' && activeTab !== 'access' && activeTab !== 'crm' && activeTab !== 'tasks' && activeTab !== 'automation' && activeTab !== 'setupbot' && activeTab !== 'engine' && activeTab !== 'integrations' && activeTab !== 'security' && (
+        {activeTab !== 'ecosystem' && activeTab !== 'onboarding' && activeTab !== 'access' && activeTab !== 'crm' && activeTab !== 'tasks' && activeTab !== 'automation' && activeTab !== 'setupbot' && activeTab !== 'engine' && activeTab !== 'integrations' && activeTab !== 'security' && (
         <>
         <div className="mb-6 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm text-amber-100">
           <strong>State boundary:</strong> this dashboard's launch checkboxes are local planning notes. They are not provider status. API Intelligence records only user-supplied setup data; no provider authorization or live verification has been performed here.

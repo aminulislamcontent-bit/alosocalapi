@@ -203,7 +203,7 @@ test('Real Playwright Chromium click-through acceptance across login, discovery,
 
     // 7. Smoke every administrator top-level navigation view in an isolated test database.
     const adminViews = [
-      'Integration Engineering', 'Platform Factory (20)', 'Onboarding Hub (19 Views)',
+      'Integration Engineering', 'AI Ecosystem', 'Platform Factory (20)', 'Onboarding Hub (19 Views)',
       'ক্লায়েন্ট অ্যাক্সেস', 'CRM পাইপলাইন', 'ফলো-আপ টাস্ক', 'অটোমেশন ও নলেজ বেস',
       'SetupBot Pro', 'গ্রোথ ইঞ্জিন', 'API Intelligence', 'Security', 'Ops Dashboard',
       'Channel Matrix', 'Launch Planner', 'Access Workflow', 'Official setup references',
@@ -222,6 +222,12 @@ test('Real Playwright Chromium click-through acceptance across login, discovery,
         undefined,
         { timeout: 10_000 },
       );
+      if (label === 'AI Ecosystem') {
+        await page.getByLabel('Search ecosystem').fill('Qwen3-8B');
+        await page.getByText('1 matching entries', {exact:false}).waitFor();
+        await page.getByRole('checkbox', {name:'Qwen3-8B'}).check();
+        assert.ok(await page.getByRole('button', {name:'Export shortlist (1)'}).isVisible());
+      }
       const mainText = (await page.locator('main').innerText()).trim();
       assert.ok(mainText.length > 20, 'Admin view should render after navigation: ' + label);
     }

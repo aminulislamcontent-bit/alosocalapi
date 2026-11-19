@@ -1,0 +1,106 @@
+{
+  "inspectedAt": "2026-11-19",
+  "projects": [
+    {
+      "project": "alosocalapi",
+      "url": "https://github.com/aminulislamcontent-bit/alosocalapi",
+      "branch": "main",
+      "sha": "b648a2ff8958965af832da7f024a8aa464608b28",
+      "status": "PARTIALLY COMPLETE",
+      "assessment": "Next.js, Prisma/SQLite. Catalog API/admin UI and local Ollama adapter; separate 20 factory modules and external SaaS registry. Includes CRM, marketing automation, voice, WhatsApp. No live dispatch or customer-data integration."
+    },
+    {
+      "project": "ALAMINN",
+      "url": "https://github.com/aminulislamcontent-bit/ALAMINN",
+      "branch": "main",
+      "sha": "15c183db9cb1cb1c522452987eddcc4c6ebe38cb",
+      "status": "BLOCKED",
+      "assessment": "Next.js, Bun, Prisma SQLite/MySQL. AgentOS foundation and standalone fixed-contract worker; WhatsApp agent, n8n guide, external free-tier router and Education referral. Extending worker requires separate branch, audited isolation and approval. Do not connect external providers to student data."
+    },
+    {
+      "project": "thedreamerit",
+      "url": "https://github.com/aminulislamcontent-bit/thedreamerit",
+      "branch": "main",
+      "sha": "0f5a0031c26e6ced995256af0487d2e2b8aed8ec",
+      "status": "BLOCKED",
+      "assessment": "Next.js, Node SQLite ERP/store. Optional bilingual Content Studio, verified fields and human approval. Candidate: local product drafts, not autonomous publication. Separate branch and auto-preview deployment guard required."
+    },
+    {
+      "project": "sr",
+      "url": "https://github.com/aminulislamcontent-bit/sr",
+      "branch": null,
+      "sha": null,
+      "status": "NOT APPLICABLE",
+      "assessment": "Empty repository, no source, default head or lockfile."
+    },
+    {
+      "project": "ALO Education",
+      "url": null,
+      "branch": null,
+      "sha": null,
+      "status": "BLOCKED",
+      "assessment": "ALAMINN documents a separate application and HMAC referral boundary. Supabase project mapping unverified; no RLS or private record access."
+    },
+    {
+      "project": "Hosting-Portal",
+      "url": null,
+      "branch": null,
+      "sha": null,
+      "status": "BLOCKED",
+      "assessment": "No verified source. Capacity preflight in ALOAPI does not establish hosting integration."
+    },
+    {
+      "project": "PULSEGRID",
+      "url": null,
+      "branch": null,
+      "sha": null,
+      "status": "BLOCKED",
+      "assessment": "No verified source or governance contract. No scoring changes."
+    },
+    {
+      "project": "ALO Labs AgentOS",
+      "url": "https://github.com/aminulislamcontent-bit/ALAMINN",
+      "branch": "main",
+      "sha": "15c183db9cb1cb1c522452987eddcc4c6ebe38cb",
+      "status": "BLOCKED",
+      "assessment": "Experimental fixed-contract SQLite worker, NOT a general multi-agent runtime. Existing read-only catalog assessment in docs/audit/agentos-phase0. No model, shell or network added to worker.",
+      "evidence": "src/lib/agentos/foundation.ts"
+    },
+    {
+      "project": "Marketing CRM / AI CRM",
+      "url": "https://github.com/aminulislamcontent-bit/alosocalapi",
+      "branch": "main",
+      "sha": "b648a2ff8958965af832da7f024a8aa464608b28",
+      "status": "PARTIALLY COMPLETE",
+      "assessment": "Factory AI catalog path available through existing permission and metering; no CRM rows sent or modified. Legacy CRM and factory CRM remain separate.",
+      "evidence": "src/lib/factory/modules/crm-factory.ts"
+    },
+    {
+      "project": "WhatsApp / messaging",
+      "url": "https://github.com/aminulislamcontent-bit/ALAMINN",
+      "branch": "main",
+      "sha": "15c183db9cb1cb1c522452987eddcc4c6ebe38cb",
+      "status": "PARTIALLY COMPLETE",
+      "assessment": "ALAMINN WhatsApp agent and ALOAPI whatsapp_marketing are different integration surfaces. No chat, template, dispatch or provider permission changed.",
+      "evidence": "src/lib/whatsapp"
+    },
+    {
+      "project": "AI voice / call center",
+      "url": "https://github.com/aminulislamcontent-bit/alosocalapi",
+      "branch": "main",
+      "sha": "b648a2ff8958965af832da7f024a8aa464608b28",
+      "status": "PARTIALLY COMPLETE",
+      "assessment": "Offline consent-gated speech CLI tested on public sample. Not wired to live telephony, recording or voice consent systems.",
+      "evidence": "src/lib/factory/modules/registry.ts"
+    },
+    {
+      "project": "Automation / n8n",
+      "url": "https://github.com/aminulislamcontent-bit/ALAMINN",
+      "branch": "main",
+      "sha": "15c183db9cb1cb1c522452987eddcc4c6ebe38cb",
+      "status": "PARTIALLY COMPLETE",
+      "assessment": "ALAMINN has an n8n guide; ALOAPI has marketing_automation. n8n metadata reviewed, no workflow imported, enabled or executed.",
+      "evidence": "docs/N8N-WORKFLOW-GUIDE.md"
+    }
+  ]
+}

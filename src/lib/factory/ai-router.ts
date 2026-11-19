@@ -1,3 +1,5 @@
+import { loopback, localPreflight } from '@/lib/ecosystem/ollama';
+import { localModel } from '@/lib/ecosystem/catalog';
 import { resolveVaultSecretForServer } from '@/lib/onboarding/vault-service';
 import { recordFactoryUsage } from './billing';
 
@@ -21,6 +23,7 @@ export interface AiInferenceRequest {
   model?: string;
   ollamaBaseUrl?: string;
   openAiBaseUrl?: string;
+  catalogId?: string;
   actor: string;
 }
 
@@ -142,15 +145,17 @@ export async function runFactoryAiInference(req: AiInferenceRequest): Promise<Ai
   let result: AiInferenceResult;
 
   if (adapter === 'ollama_local_http') {
-    const baseUrl = (req.ollamaBaseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
-    const parsed = new URL(baseUrl);
-    if (!['127.0.0.1', 'localhost', '::1'].includes(parsed.hostname)) {
-      throw new Error('ollama_local_http adapter permits only local loopback addresses unless explicitly configured.');
+    if (req.catalogId !== undefined && (req.ollamaBaseUrl || req.model)) throw Error('Catalog execution does not accept runtime overrides.');
+    const model = req.catalogId !== undefined ? localModel(req.catalogId) : req.model || 'llama3.2';
+    const baseUrl = loopback((req.catalogId === undefined && req.ollamaBaseUrl) || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434');
+    if (req.catalogId !== undefined) {
+      const preflight = await localPreflight(req.catalogId);
+      if (preflight.reason !== 'ready') throw Error(`Catalog execution blocked: ${preflight.reason}`);
     }
-    const model = req.model || 'llama3.2';
     const res = await fetch(`${baseUrl}/api/generate`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
+      redirect: 'error',
       body: JSON.stringify({ model, prompt: req.prompt, stream: false }),
       signal: AbortSignal.timeout(15_000),
     });
@@ -159,6 +164,7 @@ export async function runFactoryAiInference(req: AiInferenceRequest): Promise<Ai
     }
     const body = (await res.json()) as { response?: string; eval_count?: number; prompt_eval_count?: number };
     const text = String(body.response || '').trim();
+    if (!text) throw Error('Local Ollama returned no completion.');
     const tokens = Number(body.eval_count || 0) + Number(body.prompt_eval_count || 0) || Math.ceil(text.length / 4);
     result = {
       adapterUsed: 'ollama_local_http',

@@ -1,0 +1,22 @@
+name: Ecosystem metadata review
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Discover and compare (no write credentials or installation)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/ecosystem/refresh.py
+      - name: Preserve review and unavailable-source evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-${{ github.run_id }}
+          path: reports/candidate/
+          if-no-files-found: error
+          retention-days: 30

@@ -30,3 +30,7 @@ skills/
 
 # Cloned third-party MERN topic repos (see scripts/clone-mern-projects.sh) — never commit these
 /mern-projects/
+
+# Review-only ecosystem refresh artifacts
+/reports/candidate/
+__pycache__/
